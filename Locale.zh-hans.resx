@@ -58,7 +58,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="DummyKey" xml:space="preserve">
-    <value>你好</value>
+  <data name="AssertionFailed" xml:space="preserve">
+    <value>很抱歉，MuConvert发生内部错误(AssertionFailed)。您可将问题报告至 https://github.com/MuNet-OSS/MuConvert/issues 。（{0}）</value>
   </data>
 </root>

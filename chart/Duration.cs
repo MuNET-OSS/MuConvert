@@ -1,0 +1,158 @@
+using Rationals;
+
+namespace MuConvert.chart;
+
+/**
+ * 用于表示持续时间的类，使用于hold和slide的持续时长以及slide的等待时长中。
+ *
+ * 本类底层存储的时间分为三种类型：
+ * Bar (Fraction)：以小节为单位的时间，考虑持续期间BPM的变化。
+ * InvariantBar (Fraction)：以小节为单位的时间，但不考虑持续期间BPM的变化、以关联的Note开始的那一刻的BPM作为基准。
+ * Seconds (double)：以秒为单位的绝对时间。
+ *
+ * 更多的细节，请参见“开发者指南”的“关于时间格式”部分。
+ */
+public class Duration(Note note)
+{
+    private enum Type 
+    {
+        Bar, // 以小节为单位，且考虑了当前谱面的BPM变化。从MA2中读出持续时间的就属于这一类。
+        InvariantBar, // 以小节为单位，但是只根据当前音符开始位置的bpm来计算、无视这期间可能的bpm变化。
+        Seconds, // 以绝对的秒为单位
+    }
+    
+    private Type _type = Type.Seconds;
+    private Rational _data = 0;
+
+    private BPMList BpmList => note.Chart.BpmList;
+
+    public Rational Bar
+    {
+        get
+        {
+            switch (_type)
+            {
+                case Type.Bar:
+                    return _data;
+                case Type.InvariantBar:
+                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
+                    return ConvertTime(_data, (Rational)(decimal)invariantBpm, null);
+                case Type.Seconds:
+                    return ConvertTime(_data, 240, null); // seconds秒数可以等效为240bpm下的小节数
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+        set
+        {
+            _type = Type.Bar;
+            _data = value;
+        }
+    }
+
+    public Rational InvariantBar
+    {
+        get
+        {
+            switch (_type)
+            {
+                case Type.InvariantBar:
+                    return _data;
+                case Type.Bar:
+                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
+                    return ConvertTime(_data, null, (Rational)(decimal)invariantBpm);
+                case Type.Seconds:
+                    bpmIndex = BpmList.FindIndex(note.Time);
+                    invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
+                    return ConvertTime(_data, 240, (Rational)(decimal)invariantBpm); // seconds秒数可以等效为240bpm下的小节数
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+        set
+        {
+            _type = Type.InvariantBar;
+            _data = value;
+        }
+    }
+    
+    public Rational Seconds
+    {
+        get
+        {
+            switch (_type)
+            {
+                case Type.Seconds:
+                    return _data;
+                case Type.Bar:
+                    return ConvertTime(_data, null, 240); // seconds秒数可以等效为240bpm下的小节数
+                case Type.InvariantBar:
+                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
+                    return ConvertTime(_data, (Rational)(decimal)invariantBpm, 240);
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+        set
+        {
+            _type = Type.Bar;
+            _data = value;
+        }
+    }
+
+    /**
+     * 用于在不同格式的时间数值之间转换的函数。
+     *
+     * 首先指出一个重要原理：Seconds格式下以秒为单位的时间，在数值上实际等价于 240bpm下的不变小节时间。这就是为什么可以构造一个通用的转换函数的原理。
+     *
+     * <param name="value">要被转换的时间值</param>
+     * <param name="srcBpm">指定value所对应的源bpm。若为None，表示使用BPMList中动态的bpm(对应把Bar转换为其他类型的情况)</param>
+     * <param name="dstBpm">转换的目标bpm。若为None，表示使用BPMList中动态的bpm(对应把其他类型转换为Bar的情况)</param>
+     */
+    private Rational ConvertTime(Rational value, Rational? srcBpm, Rational? dstBpm)
+    {
+        if (srcBpm != null && dstBpm != null)
+        {
+            // 静态的src和dst，直接算一下即可，无需遍历bpm表
+            return value * (dstBpm.Value / srcBpm.Value);
+        }
+        else
+        {
+            var bpmIndex = BpmList.FindIndex(note.Time);
+            var rangeStart = note.Time;
+            Rational result = 0;
+            Rational remain = value;
+            while (remain > 0)
+            {
+                // 当前所处bpm区间的结束位置。如果当前已经是最后一个区间了，则结束位置写成一个很大的数就可以了，反正本轮remain一定会被清空
+                var bpmRangeEnd = bpmIndex < BpmList.Count - 1 ? BpmList[bpmIndex + 1].Time : 9999999;
+                // 本区间可以消耗掉remain的最大数量，以src的bpm为单位。
+                Rational curRangeCapacity = bpmRangeEnd - rangeStart;
+                
+                if (srcBpm == null)
+                { // 如果srcBpm传入的是None，说明应该使用当前的实时bpm作为srcBpm
+                    srcBpm = (Rational)(decimal)BpmList[bpmIndex].Bpm;
+                    // 此时capacity已经是以srcBpm为单位了，无需再转换
+                }
+                else if (dstBpm == null)
+                {
+                    dstBpm = (Rational)(decimal)BpmList[bpmIndex].Bpm;
+                    // 此时capacity是基于可变bpm即dstBpm的，需要换算到srcBpm上
+                    curRangeCapacity *= (srcBpm.Value / dstBpm.Value);
+                }
+
+                Rational toSubtract = curRangeCapacity < remain ? curRangeCapacity : remain; // 要从remain中减掉的量，应该是（剩余量，本bpm区间允许消耗量）的最小值
+                remain -= toSubtract;
+                result += toSubtract * (dstBpm.Value / srcBpm.Value);
+                
+                bpmIndex += 1;
+                rangeStart = bpmRangeEnd;
+            }
+
+            return result;
+        }
+    }
+}

@@ -60,11 +60,11 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Hello.
+        ///   Looks up a localized string similar to TODO.
         /// </summary>
-        public static string DummyKey {
+        public static string AssertionFailed {
             get {
-                return ResourceManager.GetString("DummyKey", resourceCulture);
+                return ResourceManager.GetString("AssertionFailed", resourceCulture);
             }
         }
     }
