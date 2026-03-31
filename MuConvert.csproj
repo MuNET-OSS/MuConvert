@@ -10,6 +10,22 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <EmbeddedResource Update="Locale.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Locale.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+        <EmbeddedResource Update="Locale.zh-hans.resx">
+            <DependentUpon>Locale.resx</DependentUpon>
+            <WithCulture>true</WithCulture>
+        </EmbeddedResource>
+        <Compile Update="Locale.Designer.cs">
+            <DesignTime>true</DesignTime>
+            <AutoGen>true</AutoGen>
+            <DependentUpon>Locale.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
       <PackageReference Include="Rationals" Version="2.3.0" />
     </ItemGroup>
