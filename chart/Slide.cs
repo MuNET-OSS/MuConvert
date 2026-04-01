@@ -20,7 +20,7 @@ public class Slide : Note
 
     public Slide(Chart chart, Rational time) : base(chart, time)
     {
-       WaitTime = new Duration(this) { InvariantBar = (Rational)(1f / 4) };
+       WaitTime = new Duration(this) { InvariantBar = new Rational(1, 4) };
     }
 
     public int StartKey

@@ -13,7 +13,7 @@ public abstract class Note
     public bool IsBreak;
     public bool IsEx;
 
-    public bool FalseEach = false; // 如果为true，表示这是一个伪双押
+    public int FalseEachIdx = 0; // 如果>0，表示这是一个伪双押，数字越大、延后的时刻越多
 
     public virtual Duration Duration
     {

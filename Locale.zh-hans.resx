@@ -103,4 +103,7 @@
   <data name="AbsoluteStepNotImplemented" xml:space="preserve">
     <value>本程序暂不支持直接指定绝对时间步长的写法。请使用类似"(120){4}"这种BPM+几分音符的表示形式。</value>
   </data>
+  <data name="ExtraModifiersIgnored" xml:space="preserve">
+    <value>不应出现的修饰符: {0}. 已忽略。</value>
+  </data>
 </root>

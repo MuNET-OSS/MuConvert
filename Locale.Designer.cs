@@ -96,6 +96,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string ExtraModifiersIgnored {
+            get {
+                return ResourceManager.GetString("ExtraModifiersIgnored", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to INFO:.
         /// </summary>
         public static string Info {

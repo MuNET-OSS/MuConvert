@@ -15,6 +15,7 @@ WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 TAP_TO_STAR: '$$' | '$';
 STAR_TO_TAP: '?' | '!';
+SHARED_HEAD: '*';
 
 SIMPLE_SLIDE: '-' | 'v' | '<' | '>' | '^' | 'p' | 'q' | 'pp' | 'qq' | 's' | 'z' | 'w';
 
@@ -78,7 +79,7 @@ slideDuration: '[' (
 waitTime: number;
 asBpm: number;
 
-slide: (tap | '*') slideSegment* finalSlideSegment;
+slide: (tap | SHARED_HEAD) slideSegment* finalSlideSegment;
 slideSegment: slideType KEY slideDuration?;
 finalSlideSegment: slideType KEY modifiers slideDuration? modifiers;
 
