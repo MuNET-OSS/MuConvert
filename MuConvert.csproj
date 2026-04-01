@@ -27,7 +27,17 @@
 
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+      <PackageReference Include="Antlr4BuildTasks" Version="12.14.0" />
       <PackageReference Include="Rationals" Version="2.3.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Antlr4 Include="parser\\simai\\Simai.g4">
+        <Generator>MSBuild:Compile</Generator>
+        <Listener>false</Listener>
+        <Visitor>true</Visitor>
+        <Package>MuConvert.Antlr</Package>
+      </Antlr4>
     </ItemGroup>
 
 </Project>

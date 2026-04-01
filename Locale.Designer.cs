@@ -62,6 +62,15 @@ namespace MuConvert {
         /// <summary>
         ///   Looks up a localized string similar to TODO.
         /// </summary>
+        public static string AbsoluteStepNotImplemented {
+            get {
+                return ResourceManager.GetString("AbsoluteStepNotImplemented", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
         public static string AssertionFailed {
             get {
                 return ResourceManager.GetString("AssertionFailed", resourceCulture);
@@ -164,6 +173,15 @@ namespace MuConvert {
         public static string NoDuration {
             get {
                 return ResourceManager.GetString("NoDuration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string SimaiGrammarFailed {
+            get {
+                return ResourceManager.GetString("SimaiGrammarFailed", resourceCulture);
             }
         }
         

@@ -33,7 +33,7 @@ public class Message
             tags.Add(string.Format(Locale.MessageTime, time, (float)chart.ToSecond(time)));
         }
         if (RelevantNote != null) tags.Add(string.Format(Locale.MessageParsing, RelevantNote));
-        var tagString = string.Join(", ", tags);
+        var tagString = tags.Count > 0 ? $"(${Locale.MessageAt} {string.Join(", ", tags)}) " : "";
         
         string head = "";
         switch (Level)
@@ -52,6 +52,6 @@ public class Message
                 break;
         }
         
-        return $"(${Locale.MessageAt} {tagString}){head} {Description}";
+        return $"{tagString}{head} {Description}";
     }
 }

@@ -36,16 +36,14 @@ modifiers: (MODIFIER | TAP_TO_STAR | STAR_TO_TAP)*;
 // 语法
 // ---------------------------------------------------------------------------
 
-chart: (chartElement ',')* CHART_END? EOF;
+chart: (notations ',')* CHART_END? EOF;
 
-chartElements: chartElement*;
-
-chartElement
-    : bpmTag 
+notations // 同一时刻的所有标记，包括note标记、bpm标记等等
+    : (bpmTag 
     | absulouteStepTag // 暂不支持，但这毕竟是合法的语法
     | metTag
     | noteGroup
-    ;
+    )*;
     
 noteGroup: note (eachNote | falseEachNote)*;
 

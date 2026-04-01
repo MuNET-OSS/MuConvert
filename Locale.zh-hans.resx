@@ -97,4 +97,10 @@
   <data name="Debug" xml:space="preserve">
     <value>调试:</value>
   </data>
+  <data name="SimaiGrammarFailed" xml:space="preserve">
+    <value>解析Simai语法时失败！</value>
+  </data>
+  <data name="AbsoluteStepNotImplemented" xml:space="preserve">
+    <value>本程序暂不支持直接指定绝对时间步长的写法。请使用类似"(120){4}"这种BPM+几分音符的表示形式。</value>
+  </data>
 </root>

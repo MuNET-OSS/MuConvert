@@ -97,4 +97,10 @@
   <data name="Debug" xml:space="preserve">
     <value>DEBUG:</value>
   </data>
+  <data name="SimaiGrammarFailed" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="AbsoluteStepNotImplemented" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>
