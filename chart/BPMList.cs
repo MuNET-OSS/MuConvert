@@ -19,6 +19,14 @@ public class BPMList : List<BPM>
         }
         return result;
     }
+
+    public Rational ToSecond(Rational barTime)
+    {
+        var bpmIdx = FindIndex(barTime);
+        var seconds = ToSeconds()[bpmIdx].Time;
+        seconds += (barTime - this[bpmIdx].Time) * (240 / (Rational)(decimal)this[bpmIdx].Bpm);
+        return seconds;
+    }
     
     public int FindIndex(Rational time)
     {

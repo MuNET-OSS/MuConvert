@@ -73,4 +73,28 @@
   <data name="InvalidSlide" xml:space="preserve">
     <value>TODO</value>
   </data>
+  <data name="MessageAt" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="MessageLine" xml:space="preserve">
+    <value>line {0}</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>bar time {0:W}({1:F2}s)</value>
+  </data>
+  <data name="MessageParsing" xml:space="preserve">
+    <value>parsing {0}</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>ERROR:</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>WARNING:</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>INFO:</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>DEBUG:</value>
+  </data>
 </root>

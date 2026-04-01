@@ -69,6 +69,33 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to DEBUG:.
+        /// </summary>
+        public static string Debug {
+            get {
+                return ResourceManager.GetString("Debug", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ERROR:.
+        /// </summary>
+        public static string Error {
+            get {
+                return ResourceManager.GetString("Error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to INFO:.
+        /// </summary>
+        public static string Info {
+            get {
+                return ResourceManager.GetString("Info", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to TODO.
         /// </summary>
         public static string InvalidKey {
@@ -96,11 +123,56 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to At.
+        /// </summary>
+        public static string MessageAt {
+            get {
+                return ResourceManager.GetString("MessageAt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to line {0}.
+        /// </summary>
+        public static string MessageLine {
+            get {
+                return ResourceManager.GetString("MessageLine", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to parsing {0}.
+        /// </summary>
+        public static string MessageParsing {
+            get {
+                return ResourceManager.GetString("MessageParsing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to bar time {0:W}({1:F2}s).
+        /// </summary>
+        public static string MessageTime {
+            get {
+                return ResourceManager.GetString("MessageTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to TODO.
         /// </summary>
         public static string NoDuration {
             get {
                 return ResourceManager.GetString("NoDuration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to WARNING:.
+        /// </summary>
+        public static string Warning {
+            get {
+                return ResourceManager.GetString("Warning", resourceCulture);
             }
         }
     }

@@ -1,4 +1,6 @@
-﻿namespace MuConvert.chart;
+﻿using Rationals;
+
+namespace MuConvert.chart;
 
 public class Chart
 {
@@ -6,4 +8,6 @@ public class Chart
     public List<Note> Notes = [];
     
     public string DefaultTouchSize = "M1";
+    
+    public Rational ToSecond(Rational barTime) => BpmList.ToSecond(barTime);
 }

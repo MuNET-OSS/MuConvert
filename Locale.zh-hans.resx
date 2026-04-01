@@ -73,4 +73,28 @@
   <data name="InvalidSlide" xml:space="preserve">
     <value>星星定义不合法: {0}</value>
   </data>
+  <data name="MessageAt" xml:space="preserve">
+    <value>在</value>
+  </data>
+  <data name="MessageLine" xml:space="preserve">
+    <value>第{0}行</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>第{0:W}小节({1:F2}秒)</value>
+  </data>
+  <data name="MessageParsing" xml:space="preserve">
+    <value>解析 {0} 时</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>发生错误:</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>警告:</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>信息:</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>调试:</value>
+  </data>
 </root>
