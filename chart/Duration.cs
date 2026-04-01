@@ -154,7 +154,7 @@ public class Duration
 
                 Rational toSubtract = curRangeCapacity < remain ? curRangeCapacity : remain; // 要从remain中减掉的量，应该是（剩余量，本bpm区间允许消耗量）的最小值
                 remain -= toSubtract;
-                result += toSubtract * (dstBpm.Value / srcBpm.Value);
+                result += toSubtract * (dstBpm!.Value / srcBpm.Value);
                 
                 bpmIndex += 1;
                 rangeStart = bpmRangeEnd;

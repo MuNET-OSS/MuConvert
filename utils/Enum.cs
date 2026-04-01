@@ -86,7 +86,6 @@ public static class SlideTypeTool
                 if (distance == 2) return SlideType.SLR;
                 else if (distance == 6) return SlideType.SSL;
                 else throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}"));
-                break;
             case 's': return SlideType.SSL;
             case 'z': return SlideType.SSR;
             case 'w': return SlideType.SF_;
