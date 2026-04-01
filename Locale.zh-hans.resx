@@ -61,4 +61,13 @@
   <data name="AssertionFailed" xml:space="preserve">
     <value>很抱歉，MuConvert发生内部错误(AssertionFailed)。您可将问题报告至 https://github.com/MuNet-OSS/MuConvert/issues 。（{0}）</value>
   </data>
+  <data name="InvalidKey" xml:space="preserve">
+    <value>使用了不合法的判定区标记: {0}</value>
+  </data>
+  <data name="InvalidTouchArea" xml:space="preserve">
+    <value>使用了不合法的键位标记: {0}</value>
+  </data>
+  <data name="NoDuration" xml:space="preserve">
+    <value>不能为Tap或Touch设置持续时间</value>
+  </data>
 </root>

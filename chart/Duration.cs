@@ -12,7 +12,7 @@ namespace MuConvert.chart;
  *
  * 更多的细节，请参见“开发者指南”的“关于时间格式”部分。
  */
-public class Duration(Note note)
+public class Duration
 {
     private enum Type 
     {
@@ -23,8 +23,14 @@ public class Duration(Note note)
     
     private Type _type = Type.Seconds;
     private Rational _data = 0;
+    private Note _note;
+    
+    public Duration(Note note)
+    {
+        _note = note;
+    }
 
-    private BPMList BpmList => note.Chart.BpmList;
+    private BPMList BpmList => _note.Chart.BpmList;
 
     public Rational Bar
     {
@@ -35,7 +41,7 @@ public class Duration(Note note)
                 case Type.Bar:
                     return _data;
                 case Type.InvariantBar:
-                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
                     return ConvertTime(_data, (Rational)(decimal)invariantBpm, null);
                 case Type.Seconds:
@@ -60,11 +66,11 @@ public class Duration(Note note)
                 case Type.InvariantBar:
                     return _data;
                 case Type.Bar:
-                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
                     return ConvertTime(_data, null, (Rational)(decimal)invariantBpm);
                 case Type.Seconds:
-                    bpmIndex = BpmList.FindIndex(note.Time);
+                    bpmIndex = BpmList.FindIndex(_note.Time);
                     invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
                     return ConvertTime(_data, 240, (Rational)(decimal)invariantBpm); // seconds秒数可以等效为240bpm下的小节数
                 default:
@@ -89,7 +95,7 @@ public class Duration(Note note)
                 case Type.Bar:
                     return ConvertTime(_data, null, 240); // seconds秒数可以等效为240bpm下的小节数
                 case Type.InvariantBar:
-                    var bpmIndex = BpmList.FindIndex(note.Time);
+                    var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
                     return ConvertTime(_data, (Rational)(decimal)invariantBpm, 240);
                 default:
@@ -121,8 +127,8 @@ public class Duration(Note note)
         }
         else
         {
-            var bpmIndex = BpmList.FindIndex(note.Time);
-            var rangeStart = note.Time;
+            var bpmIndex = BpmList.FindIndex(_note.Time);
+            var rangeStart = _note.Time;
             Rational result = 0;
             Rational remain = value;
             while (remain > 0)
@@ -154,5 +160,29 @@ public class Duration(Note note)
 
             return result;
         }
+    }
+    
+    public static Duration operator +(Duration a, Duration b)
+    {
+        var result = new Duration(a._note){_type = a._type, _data = a._data};
+        switch (result._type)
+        {
+            case Type.Bar:
+                result._data += b.Bar;
+                break;
+            case Type.InvariantBar:
+                result._data += b.InvariantBar;
+                break;
+            case Type.Seconds:
+                result._data += b.Seconds;
+                break;
+        }
+
+        return result;
+    }
+
+    public static Duration operator /(Duration a, int b)
+    {
+        return new Duration(a._note){_type = a._type, _data = a._data / b};
     }
 }

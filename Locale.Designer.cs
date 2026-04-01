@@ -67,5 +67,32 @@ namespace MuConvert {
                 return ResourceManager.GetString("AssertionFailed", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string InvalidKey {
+            get {
+                return ResourceManager.GetString("InvalidKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string InvalidTouchArea {
+            get {
+                return ResourceManager.GetString("InvalidTouchArea", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string NoDuration {
+            get {
+                return ResourceManager.GetString("NoDuration", resourceCulture);
+            }
+        }
     }
 }

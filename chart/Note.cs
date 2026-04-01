@@ -1,15 +1,96 @@
-﻿using Rationals;
+﻿using MuConvert.utils;
+using Rationals;
 
 namespace MuConvert.chart;
 
-public class Note
+public abstract class Note
 {
-    public Chart chart;
-    public Rational time;
+    public readonly Chart Chart;
+    public Rational Time;
+    protected int _key;
+    
+    public bool IsBreak;
+    public bool IsEx;
 
-    public Note(Chart chart, Rational time)
+    public virtual Duration Duration
     {
-        this.chart = chart;
-        this.time = time;
+        get => new Duration(this);
+        set => throw new InvalidOperationException(Locale.NoDuration);
+    }
+    
+    public int Key
+    {
+        get => _key;
+        set
+        {
+            if (value < 1 || value > 8) throw new ArgumentException(string.Format(Locale.InvalidKey, value));
+            _key = value;
+        }
+    }
+
+    protected Note(Chart chart, Rational time)
+    {
+        Chart = chart;
+        Time = time;
+    }
+}
+
+public class Tap(Chart chart, Rational time) : Note(chart, time);
+
+public class Hold : Tap
+{
+    public override Duration Duration
+    {
+        get => field;
+        set => field = value;
+    }
+    
+    public Hold(Chart chart, Rational time, Duration duration) : base(chart, time)
+    {
+        Duration = duration;
+    }
+}
+
+public class Touch(Chart chart, Rational time) : Note(chart, time)
+{
+    private TouchSeries _touchSeries;
+
+    public bool IsFirework;
+    public string TouchSize = chart.DefaultTouchSize;
+
+    public string TouchArea
+    {
+        get => _touchSeries.ToString() + Key;
+        set 
+        {
+            if (value == "C") // 只有一个C字母的情况
+            {
+                _touchSeries = TouchSeries.C;
+                _key = 0;
+                return;
+            }
+            // 两个字符，字母+数字的情况
+            if (value.Length != 2 || 
+                !Enum.TryParse<TouchSeries>(value[..1], out var s) ||
+                !int.TryParse(value[1..2], out var k) || 
+                k < 1 || k > 8 || (s == TouchSeries.C && k > 2)
+                ) throw new ArgumentException(string.Format(Locale.InvalidTouchArea, value));
+            _touchSeries = s;
+            _key = k;
+        }
+    }
+}
+
+public class TouchHold : Touch
+{
+    public override Duration Duration
+    {
+        get => field;
+        set => field = value;
+    }
+    
+    public  TouchHold(Chart chart, Rational time, Duration duration): base(chart, time)
+    {
+        Duration = duration;
     }
 }

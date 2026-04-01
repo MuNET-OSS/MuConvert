@@ -61,4 +61,13 @@
   <data name="AssertionFailed" xml:space="preserve">
     <value>TODO</value>
   </data>
+  <data name="InvalidTouchArea" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="InvalidKey" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="NoDuration" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>
