@@ -1,14 +1,16 @@
-using System.Data;
+using System.Diagnostics;
+using MuConvert.utils;
 using Rationals;
 
 namespace MuConvert.chart;
 
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class BPMList : List<BPM>
 {
     private List<BPM> ToSeconds()
     {
         List<BPM> result = [this[0]];
-        if (this[0].Time != 0) throw new InvalidConstraintException(string.Format(Locale.AssertionFailed, "BPM列表的开头必须为0时刻"));
+        Utils.Assert(this[0].Time == 0, "BPM列表的开头必须为0时刻");
         Rational accumulation = 0;
         for (int i = 1; i < Count; i++)
         {
@@ -26,6 +28,17 @@ public class BPMList : List<BPM>
             if (this[i].Time > time) break;
         }
         return i-1;
+    }
+
+    private string DebuggerDisplay()
+    {
+        var result = "";
+        foreach (var bpm in this)
+        {
+            result += $"{bpm.Time:W}:{bpm.Bpm}; ";
+        }
+
+        return result;
     }
 }
 

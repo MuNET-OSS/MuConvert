@@ -70,4 +70,7 @@
   <data name="NoDuration" xml:space="preserve">
     <value>不能为Tap或Touch设置持续时间</value>
   </data>
+  <data name="InvalidSlide" xml:space="preserve">
+    <value>星星定义不合法: {0}</value>
+  </data>
 </root>

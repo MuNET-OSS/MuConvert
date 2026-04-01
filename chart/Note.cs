@@ -1,4 +1,5 @@
-﻿using MuConvert.utils;
+﻿using System.Diagnostics;
+using MuConvert.utils;
 using Rationals;
 
 namespace MuConvert.chart;
@@ -11,6 +12,8 @@ public abstract class Note
     
     public bool IsBreak;
     public bool IsEx;
+
+    public bool FalseEach = false; // 如果为true，表示这是一个伪双押
 
     public virtual Duration Duration
     {
@@ -33,10 +36,17 @@ public abstract class Note
         Chart = chart;
         Time = time;
     }
+    
+    public virtual string Modifiers => (IsBreak ? "b" : "") + (IsEx ? "b" : "");
 }
 
-public class Tap(Chart chart, Rational time) : Note(chart, time);
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
+public class Tap(Chart chart, Rational time) : Note(chart, time)
+{
+    private string DebuggerDisplay() => $"{Key}{Modifiers}";
+}
 
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Hold : Tap
 {
     public override Duration Duration
@@ -49,8 +59,11 @@ public class Hold : Tap
     {
         Duration = duration;
     }
+    
+    private string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Touch(Chart chart, Rational time) : Note(chart, time)
 {
     private TouchSeries _touchSeries;
@@ -79,8 +92,13 @@ public class Touch(Chart chart, Rational time) : Note(chart, time)
             _key = k;
         }
     }
+
+    public override string Modifiers => base.Modifiers + (IsFirework ? "f" : "");
+    
+    private string DebuggerDisplay() => $"{TouchArea}{Modifiers}";
 }
 
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class TouchHold : Touch
 {
     public override Duration Duration
@@ -93,4 +111,6 @@ public class TouchHold : Touch
     {
         Duration = duration;
     }
+    
+    private string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
 }

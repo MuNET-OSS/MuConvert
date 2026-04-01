@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Rationals;
 
 namespace MuConvert.chart;
@@ -12,6 +13,7 @@ namespace MuConvert.chart;
  *
  * 更多的细节，请参见“开发者指南”的“关于时间格式”部分。
  */
+[DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Duration
 {
     private enum Type 
@@ -185,4 +187,6 @@ public class Duration
     {
         return new Duration(a._note){_type = a._type, _data = a._data / b};
     }
+    
+    public string DebuggerDisplay() => _type == Type.Seconds ? $"[#{(float)_data}]" : $"[{_data.Denominator}:{_data.Numerator}]";
 }

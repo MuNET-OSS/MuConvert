@@ -80,6 +80,15 @@ namespace MuConvert {
         /// <summary>
         ///   Looks up a localized string similar to TODO.
         /// </summary>
+        public static string InvalidSlide {
+            get {
+                return ResourceManager.GetString("InvalidSlide", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
         public static string InvalidTouchArea {
             get {
                 return ResourceManager.GetString("InvalidTouchArea", resourceCulture);
