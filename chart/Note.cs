@@ -7,7 +7,7 @@ namespace MuConvert.chart;
 public abstract class Note
 {
     public readonly Chart Chart;
-    public Rational Time;
+    public Rational Time { get; set => field = value.CanonicalForm; }
     protected int _key;
     
     public bool IsBreak;
@@ -43,7 +43,7 @@ public abstract class Note
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Tap(Chart chart, Rational time) : Note(chart, time)
 {
-    private string DebuggerDisplay() => $"{Key}{Modifiers}";
+    public string DebuggerDisplay() => $"{Key}{Modifiers}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

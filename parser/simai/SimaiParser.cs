@@ -108,7 +108,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         foreach (var notations in context.notations())
         {
             VisitNotations(notations);
-            now += step;
+            now = (now + step).CanonicalForm;
         }
         return true;
     }

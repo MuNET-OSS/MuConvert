@@ -55,7 +55,7 @@ public class Duration
         set
         {
             _type = Type.Bar;
-            _data = value;
+            _data = value.CanonicalForm;
         }
     }
 
@@ -82,7 +82,7 @@ public class Duration
         set
         {
             _type = Type.InvariantBar;
-            _data = value;
+            _data = value.CanonicalForm;
         }
     }
     
@@ -107,7 +107,7 @@ public class Duration
         set
         {
             _type = Type.Bar;
-            _data = value;
+            _data = value.CanonicalForm;
         }
     }
 
@@ -125,7 +125,7 @@ public class Duration
         if (srcBpm != null && dstBpm != null)
         {
             // 静态的src和dst，直接算一下即可，无需遍历bpm表
-            return value * (dstBpm.Value / srcBpm.Value);
+            return (value * (dstBpm.Value / srcBpm.Value)).CanonicalForm;
         }
         else
         {
@@ -160,7 +160,7 @@ public class Duration
                 rangeStart = bpmRangeEnd;
             }
 
-            return result;
+            return result.CanonicalForm;
         }
     }
     
@@ -170,13 +170,13 @@ public class Duration
         switch (result._type)
         {
             case Type.Bar:
-                result._data += b.Bar;
+                result._data = (result._data + b.Bar).CanonicalForm;
                 break;
             case Type.InvariantBar:
-                result._data += b.InvariantBar;
+                result._data = (result._data + b.InvariantBar).CanonicalForm;
                 break;
             case Type.Seconds:
-                result._data += b.Seconds;
+                result._data = (result._data + b.Seconds).CanonicalForm;
                 break;
         }
 
@@ -185,7 +185,7 @@ public class Duration
 
     public static Duration operator /(Duration a, int b)
     {
-        return new Duration(a._note){_type = a._type, _data = a._data / b};
+        return new Duration(a._note){_type = a._type, _data = (a._data / b).CanonicalForm};
     }
     
     public string DebuggerDisplay() => _type == Type.Seconds ? $"[#{(float)_data}]" : $"[{_data.Denominator}:{_data.Numerator}]";
