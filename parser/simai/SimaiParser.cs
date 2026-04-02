@@ -10,17 +10,20 @@ namespace MuConvert.parser.simai;
 
 public class SimaiParser : SimaiBaseVisitor<object>, IParser
 {
-#pragma warning disable CS8618
-    private Chart chart;
-#pragma warning restore CS8618
-    private List<Message> messages = [];
+    private readonly Chart chart;
+    private readonly List<Message> messages = [];
 
-    private Rational now;
-    private Rational step;
+    private Rational now = 0;
+    private Rational step = new(1, 4);
 
     private ParserRuleContext? currContext;
     private Note? currNote;
     private readonly List<string> extraModifiers = [];
+
+    public SimaiParser(bool bigTouch = false)
+    {
+        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1"};
+    }
     
     private void AddMsg(Message.LEVEL level, string content, ParserRuleContext? context = null)
     {
@@ -36,13 +39,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     
     public (Chart, List<Message>) Parse(string text)
     {
-        return Parse(text, false);
-    }
-
-    public (Chart, List<Message>) Parse(string text, bool bigTouch)
-    {
-        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1"};
-        now = 0;
+        Utils.Assert(now == 0, "SimaiParser实例只能使用一次，不能重复调用Parse方法");
         P.ChartContext root;
 
         try
@@ -264,7 +261,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitDuration(P.DurationContext context)
     {
-        var result = new Duration(currNote);
+        var result = new Duration(currNote!);
         if (context.beats() != null) result.InvariantBar = (Rational)VisitBeats(context.beats());
         else result.Seconds = (Rational)VisitNumber(context.number());        
         return result;
@@ -304,5 +301,36 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         ApplyModifiers(context.modifiers(), result);
         if (extraModifiers.Remove("f")) result.IsFirework = true;
         return result;
+    }
+    
+    public sealed override object VisitSlideDuration(P.SlideDurationContext context)
+    {
+        var result = new Duration(currNote!);
+        Duration? waitTime = null;
+
+        if (context.waitTime() != null)
+        {
+            waitTime = new Duration(currNote!)
+            {
+                Seconds = (Rational)VisitNumber(context.waitTime().number())
+            };
+        }
+        if (context.number() != null) result.Seconds = (Rational)VisitNumber(context.number());
+        else
+        {
+            var value = (Rational)VisitBeats(context.beats());
+            if (context.asBpm() == null) result.InvariantBar = value;
+            else
+            {
+                // 根据强行指定的bpm换算为秒数
+                var bpm = (Rational)VisitNumber(context.asBpm().number());
+                result.Seconds = value * (240 / bpm);
+                waitTime ??= new Duration(currNote!)
+                {
+                    Seconds = 60 / bpm
+                };
+            }
+        }
+        return (waitTime, result);
     }
 }

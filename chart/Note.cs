@@ -17,7 +17,7 @@ public abstract class Note
 
     public virtual Duration Duration
     {
-        get => new Duration(this);
+        get => new(this);
         set => throw new InvalidOperationException(Locale.NoDuration);
     }
     
@@ -49,16 +49,9 @@ public class Tap(Chart chart, Rational time) : Note(chart, time)
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Hold : Tap
 {
-    public override Duration Duration
-    {
-        get => field;
-        set => field = value;
-    }
-    
-    public Hold(Chart chart, Rational time, Duration duration) : base(chart, time)
-    {
-        Duration = duration;
-    }
+    public override Duration Duration { get; set; }
+
+    public Hold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
     
     private string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
@@ -101,16 +94,9 @@ public class Touch(Chart chart, Rational time) : Note(chart, time)
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class TouchHold : Touch
 {
-    public override Duration Duration
-    {
-        get => field;
-        set => field = value;
-    }
-    
-    public  TouchHold(Chart chart, Rational time, Duration duration): base(chart, time)
-    {
-        Duration = duration;
-    }
-    
+    public override Duration Duration { get; set; }
+
+    public TouchHold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
+
     private string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
