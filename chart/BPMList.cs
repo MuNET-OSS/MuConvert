@@ -14,7 +14,7 @@ public class BPMList : List<BPM>
         Rational accumulation = 0;
         for (int i = 1; i < Count; i++)
         {
-            accumulation += 240 / (Rational)(decimal)this[i-1].Bpm * (this[i].Time - this[i-1].Time);
+            accumulation += 240 / (Rational)this[i-1].Bpm * (this[i].Time - this[i-1].Time);
             result.Add(new BPM(accumulation, this[i].Bpm));
         }
         return result;
@@ -24,7 +24,7 @@ public class BPMList : List<BPM>
     {
         var bpmIdx = FindIndex(barTime);
         var seconds = ToSeconds()[bpmIdx].Time;
-        seconds += (barTime - this[bpmIdx].Time) * (240 / (Rational)(decimal)this[bpmIdx].Bpm);
+        seconds += (barTime - this[bpmIdx].Time) * (240 / (Rational)this[bpmIdx].Bpm);
         return seconds;
     }
     
@@ -50,4 +50,4 @@ public class BPMList : List<BPM>
     }
 }
 
-public record BPM(Rational Time, float Bpm);
+public record BPM(Rational Time, decimal Bpm);

@@ -9,9 +9,6 @@ record MA2Line(string Name, int Bar, int Tick, int Key, string Extra = "");
 
 public class MA2Generator : IGenerator
 {
-#pragma warning disable CS8618
-    private Chart chart;
-#pragma warning restore CS8618
     private List<MA2Line> lines = [];
     private readonly List<Alert> alerts = [];
 
@@ -36,7 +33,7 @@ GENERATED_BY	MuConvert
 
 ";
     
-    private (float, float, float, float) bpmStats()
+    private (decimal, decimal, decimal, decimal) bpmStats(Chart chart)
     {
         var bpms = chart.BpmList.Select(x => x.Bpm).ToList();
         var max = bpms.Max();
@@ -79,12 +76,11 @@ GENERATED_BY	MuConvert
     public (string, List<Alert>) Generate(Chart chart)
     {
         if (lines.Count != 0) throw new Exception(Locale.InstanceMultipleUsage);
-        this.chart = chart;
         chart.Sort();
         StringBuilder result = new StringBuilder();
         
         // 文件头
-        var bpmStatistics = this.bpmStats();
+        var bpmStatistics = this.bpmStats(chart);
         string head = string.Format(headTemplate, 
             $"{MA2Version / 100}.{MA2Version % 100:D2}.00", chart.IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,
@@ -208,13 +204,15 @@ GENERATED_BY	MuConvert
         };
         var stats_rec = new Dictionary<string, int>();
         var stNamesCvt = statsNameConversion();
-        foreach (var key in stNamesCvt.Values.Select(x=>x.Item1).Distinct())
+        foreach (var key in stNamesCvt.Values.Select(x=>x?.Item1).Where(x=>x!=null).Distinct())
         {
             stats_rec[key] = 0;
         }
         foreach (var l in lines)
         {
-            var (rec, num) = stNamesCvt[l.Name];
+            var r = stNamesCvt[l.Name];
+            if (r == null) continue;
+            var (rec, num) = r.Value;
             stats_rec[rec]++;
             stats_num[num]++;
         }
@@ -239,7 +237,7 @@ GENERATED_BY	MuConvert
             ["SLD"] = stats_rec["SLD"] + stats_rec["BSL"],
         };
         var judge_all = 0;
-        foreach (var (k, v) in stats_num)
+        foreach (var (k, v) in stats_judge)
         {
             result.AppendLine($"T_JUDGE_{k}\t{v}");
             judge_all += v;
@@ -271,9 +269,9 @@ GENERATED_BY	MuConvert
     }
     
     /* 从音符名字到速查表项目名的转换表 */
-    private Dictionary<string, (string, string)> statsNameConversion()
+    private Dictionary<string, (string, string)?> statsNameConversion()
     {
-        var result = new Dictionary<string, (string, string)>
+        var result = new Dictionary<string, (string, string)?>
         {
             ["NMTAP"] = ("TAP", "TAP"), ["BRTAP"] = ("BRK", "BRK"), ["EXTAP"] = ("XTP", "TAP"), ["BXTAP"] = ("BXX", "BRK"),
             ["NMHLD"] = ("HLD", "HLD"), ["EXHLD"] = ("XHO", "HLD"), ["BRHLD"] = ("BHO", "BRK"), ["BXHLD"] = ("BXH", "BRK"),
@@ -284,6 +282,7 @@ GENERATED_BY	MuConvert
         {
             result["NM" + name] = ("SLD", "SLD");
             result["BR" + name] = ("BSL", "BRK");
+            result["CN" + name] = null;
         }
         return result;
     }

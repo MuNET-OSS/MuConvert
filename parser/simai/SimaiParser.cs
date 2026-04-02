@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using MuConvert.Antlr;
 using MuConvert.chart;
@@ -16,7 +17,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     private Rational now = 0;
     private Rational step = new(1, 4);
 
-    private ParserRuleContext? currContext; // 供调试报错AddMsg函数使用
+    private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private readonly List<string> extraModifiers = [];
 
@@ -37,43 +38,66 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         alerts.Add(alert);
     }
     
+    public class AntlrErrorListener(SimaiParser parser) : IAntlrErrorListener<IToken>, IAntlrErrorListener<int>
+    {
+        // 这个是给 Parser 用的 (IToken)
+        public void SyntaxError(TextWriter output, IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
+        {
+            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e.Context?.GetText()));
+            throw new ConversionException(parser.alerts, e);
+        }
+
+        // 这个是给 Lexer 用的 (int)
+        public void SyntaxError(TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
+        {
+            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e.Context?.GetText()));
+            throw new ConversionException(parser.alerts, e);
+        }
+    }
+
+    public string Preprocess(string text)
+    {
+        // 移除注释
+        var commentRegex = new Regex(@"((?<!\[[^\]]*|\{[^\}]*)#|\|\|).*$", RegexOptions.Multiline);
+        text = commentRegex.Replace(text, "");
+        
+        // TODO 应用更多的纠错修改（从MCM现有代码里面抄）
+        
+        return text;
+    }
+
     public (Chart, List<Alert>) Parse(string text)
     {
         if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
         P.ChartContext root;
-
-        try
-        {
-            var inputStream = new AntlrInputStream(text);
-            var lexer = new SimaiLexer(inputStream);
-            var tokens = new CommonTokenStream(lexer);
-            var parser = new P(tokens); // MuConvert.Antlr.SimaiParser
-            root = parser.chart();
-        }
-        catch (RecognitionException e)
-        {
-            alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + e.Message, line: e.OffendingToken.Line, relevantNote: e.Context.GetText()));
-            throw new ConversionException(alerts);
-        }
-        catch (Exception e)
-        {
-            alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + e.Message));
-            throw new ConversionException(alerts);
-        }
         
         try
         {
+            text = Preprocess(text);
+            var inputStream = new AntlrInputStream(text);
+            
+            var errorListener = new AntlrErrorListener(this);
+            var lexer = new SimaiLexer(inputStream);
+            lexer.RemoveErrorListeners();
+            lexer.AddErrorListener(errorListener);
+            var tokens = new CommonTokenStream(lexer);
+            
+            var parser = new P(tokens); // MuConvert.Antlr.SimaiParser
+            parser.RemoveErrorListeners();
+            parser.AddErrorListener(errorListener);
+            root = parser.chart();
+            
             VisitChart(root);
         }
         catch (ConversionException)
         {
-            throw; // 看到主动丢出的ParsingException，就说明错误信息已经被加到message中过了。直接丢回去即可。
+            throw; // 看到主动丢出的ConversionException，就说明错误信息已经被加到message中过了。直接丢回去即可。
         }
         catch (Exception e)
         {
             // 否则，说明是意外的Exception，把它附加上详细信息、转换为一般的Exception。
             AddAlert(Error, e.Message);
-            throw new ConversionException(alerts);
+            throw new ConversionException(alerts, e);
         }
         
         return (chart, alerts);
@@ -91,7 +115,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitNotations(P.NotationsContext context)
     { // 形如 (120){4}1/1 算作一组notations
-        foreach (var child in context.children)
+        foreach (var child in context.children ?? [])
         {
             if (child is P.BpmTagContext bpmTag)
             {
@@ -122,7 +146,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     public sealed override object VisitBpmTag(P.BpmTagContext context)
     {
         currContext = context;
-        var bpm = (float)VisitNumber(context.number());
+        var bpm = (decimal)VisitNumber(context.number());
         chart.BpmList.Add(new BPM(now, bpm));
         return true;
     }
@@ -130,7 +154,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     public sealed override object VisitMetTag(P.MetTagContext context)
     { // metTag指的是标记分音的tag，如{4}
         currContext = context;
-        var quaver = int.Parse(context.INT().GetText());
+        var quaver = int.Parse(context.@int().GetText());
         step = new Rational(1, quaver);
         return true;
     }
@@ -173,33 +197,33 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         // 2. 同头星星如"1-2[2:1]*-3[2:1]"，它在我们定义的ANTLR语法中是作为一个note节点的！
         currContext = context;
         List<Note> result = [];
-        for (int i = 0; i < context.children.Count; i++)
+        foreach (var child in context.children)
         {
-            var child = context.children[i];
-            if (child is P.TapContext tapC)
+            Note note;
+            switch (child)
             {
-                result.Add((Tap)VisitTap(tapC));
-            }            
-            else if (child is P.HoldContext holdC)
-            {
-                result.Add((Hold)VisitHold(holdC));
+                case P.TapContext tapC:
+                    note = (Tap)VisitTap(tapC);
+                    break;
+                case P.HoldContext holdC:
+                    note = (Hold)VisitHold(holdC);
+                    break;
+                case P.TouchContext touchC:
+                    note = (Touch)VisitTouch(touchC);
+                    break;
+                case P.TouchHoldContext touchHoldC:
+                    note = (TouchHold)VisitTouchHold(touchHoldC);
+                    break;
+                case P.SlideContext slideC:
+                    note = (Slide)VisitSlide(slideC);
+                    break;
+                case P.SharedHeadSlideContext shSlideC:
+                    note = (Slide)VisitSharedHeadSlide(shSlideC);
+                    break;
+                default:
+                    throw Utils.Fail();
             }
-            else if (child is P.TouchContext touchC)
-            {
-                result.Add((Touch)VisitTouch(touchC));
-            }
-            else if (child is P.TouchHoldContext touchHoldC)
-            {
-                result.Add((TouchHold)VisitTouchHold(touchHoldC));
-            }
-            else if (child is P.SlideContext slideC)
-            {
-                result.Add((Slide)VisitSlide(slideC));
-            }
-            else if (child is P.SharedHeadSlideContext shSlideC)
-            {
-                result.Add((Slide)VisitSharedHeadSlide(shSlideC));
-            }
+            result.Add(note);
 
             if (extraModifiers.Count > 0)
             {
@@ -215,7 +239,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         HashSet<string> set = new();
         foreach (var modifiers in modifiersList)
         {
-            foreach (var modifier in modifiers.children)
+            foreach (var modifier in modifiers.children ?? [])
             {
                 set.Add(modifier.GetText());
             }
@@ -261,13 +285,13 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     {
         var result = new Duration(currNote!);
         if (context.beats() != null) result.InvariantBar = (Rational)VisitBeats(context.beats());
-        else result.Seconds = (Rational)VisitNumber(context.number());        
+        else result.Seconds = (Rational)(decimal)VisitNumber(context.number());        
         return result;
     }
 
     public sealed override object VisitBeats(P.BeatsContext context)
     {
-        return new Rational(int.Parse(context.children[1].GetText()), int.Parse(context.children[0].GetText()));
+        return new Rational(int.Parse(context.children[2].GetText()), int.Parse(context.children[0].GetText()));
     }
 
     public sealed override object VisitHold(P.HoldContext context)
@@ -310,10 +334,10 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         {
             waitTime = new Duration(currNote!)
             {
-                Seconds = (Rational)VisitNumber(context.waitTime().number())
+                Seconds = (Rational)(decimal)VisitNumber(context.waitTime().number())
             };
         }
-        if (context.number() != null) result.Seconds = (Rational)VisitNumber(context.number());
+        if (context.number() != null) result.Seconds = (Rational)(decimal)VisitNumber(context.number());
         else
         {
             var value = (Rational)VisitBeats(context.beats());
@@ -321,7 +345,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             else
             {
                 // 根据强行指定的bpm换算为秒数
-                var bpm = (Rational)VisitNumber(context.asBpm().number());
+                var bpm = (Rational)(decimal)VisitNumber(context.asBpm().number());
                 result.Seconds = value * (240 / bpm);
                 waitTime ??= new Duration(currNote!)
                 {

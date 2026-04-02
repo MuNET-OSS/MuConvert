@@ -45,7 +45,7 @@ public class Duration
                 case Type.InvariantBar:
                     var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, (Rational)(decimal)invariantBpm, null);
+                    return ConvertTime(_data, (Rational)invariantBpm, null);
                 case Type.Seconds:
                     return ConvertTime(_data, 240, null); // seconds秒数可以等效为240bpm下的小节数
                 default:
@@ -70,11 +70,11 @@ public class Duration
                 case Type.Bar:
                     var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, null, (Rational)(decimal)invariantBpm);
+                    return ConvertTime(_data, null, (Rational)invariantBpm);
                 case Type.Seconds:
                     bpmIndex = BpmList.FindIndex(_note.Time);
                     invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, 240, (Rational)(decimal)invariantBpm); // seconds秒数可以等效为240bpm下的小节数
+                    return ConvertTime(_data, 240, (Rational)invariantBpm); // seconds秒数可以等效为240bpm下的小节数
                 default:
                     throw new InvalidOperationException();
             }
@@ -99,7 +99,7 @@ public class Duration
                 case Type.InvariantBar:
                     var bpmIndex = BpmList.FindIndex(_note.Time);
                     var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, (Rational)(decimal)invariantBpm, 240);
+                    return ConvertTime(_data, (Rational)invariantBpm, 240);
                 default:
                     throw new InvalidOperationException();
             }
@@ -142,12 +142,12 @@ public class Duration
                 
                 if (srcBpm == null)
                 { // 如果srcBpm传入的是None，说明应该使用当前的实时bpm作为srcBpm
-                    srcBpm = (Rational)(decimal)BpmList[bpmIndex].Bpm;
+                    srcBpm = (Rational)BpmList[bpmIndex].Bpm;
                     // 此时capacity已经是以srcBpm为单位了，无需再转换
                 }
                 else if (dstBpm == null)
                 {
-                    dstBpm = (Rational)(decimal)BpmList[bpmIndex].Bpm;
+                    dstBpm = (Rational)BpmList[bpmIndex].Bpm;
                     // 此时capacity是基于可变bpm即dstBpm的，需要换算到srcBpm上
                     curRangeCapacity *= (srcBpm.Value / dstBpm.Value);
                 }

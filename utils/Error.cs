@@ -30,10 +30,11 @@ public class Alert
         if (BarTime != null)
         {
             var (chart, time) = BarTime.Value;
-            tags.Add(string.Format(Locale.MessageTime, time, (float)chart.ToSecond(time)));
+            var sec = chart.BpmList.Count > 0 ? (float)chart.ToSecond(time) : float.NaN;
+            tags.Add(string.Format(Locale.MessageTime, time, sec));
         }
         if (RelevantNote != null) tags.Add(string.Format(Locale.MessageParsing, RelevantNote));
-        var tagString = tags.Count > 0 ? $"(${Locale.MessageAt} {string.Join(", ", tags)}) " : "";
+        var tagString = tags.Count > 0 ? $"({Locale.MessageAt} {string.Join(", ", tags)}) " : "";
         
         string head = "";
         switch (Level)
@@ -56,9 +57,19 @@ public class Alert
     }
 }
 
-public class ConversionException(List<Alert> alerts) : Exception
+public class ConversionException : Exception
 {
-    public List<Alert> Alerts = alerts;
+    public ConversionException(List<Alert> alerts)
+    {
+        Alerts = alerts;
+    }
+
+    public ConversionException(List<Alert> alerts, Exception? innerException) : base("", innerException)
+    {
+        Alerts = alerts;
+    }
+
+    public List<Alert> Alerts;
 
     public override string Message => string.Join("\n", Alerts.Select(a => a.ToString()));
 }
