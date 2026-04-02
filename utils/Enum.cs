@@ -1,4 +1,4 @@
-﻿namespace MuConvert.utils;
+namespace MuConvert.utils;
 
 public enum TouchSeries
 {
@@ -74,10 +74,10 @@ public static class SlideTypeTool
                 if (distance is 0 or 4) throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}(^的endKey不能是整半圈)"));
                 return distance < 4 ? SlideType.SCR : SlideType.SCL; // <4说明顺时针走更近；反之如果顺时针走的距离>4，则说明逆时针更近。
             case 'p':
-                if (s[1] == 'p') return SlideType.SXL; // pp
+                if (s.Length > 1 && s[1] == 'p') return SlideType.SXL; // pp
                 return SlideType.SUL;
             case 'q': 
-                if (s[1] == 'q') return SlideType.SXR; // qq
+                if (s.Length > 1 && s[1] == 'q') return SlideType.SXR; // qq
                 return SlideType.SUR;
             case 'V':
                 Utils.Assert(startKey != null, "startKey没传进来");

@@ -1,4 +1,4 @@
-﻿using Antlr4.Runtime;
+using Antlr4.Runtime;
 using MuConvert.Antlr;
 using MuConvert.chart;
 using MuConvert.utils;
@@ -20,9 +20,9 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private readonly List<string> extraModifiers = [];
 
-    public SimaiParser(bool bigTouch = false)
+    public SimaiParser(bool bigTouch = false, bool isUtage = false)
     {
-        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1"};
+        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", IsUtage = isUtage };
     }
     
     private void AddMsg(Message.LEVEL level, string content, ParserRuleContext? context = null)
@@ -39,7 +39,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     
     public (Chart, List<Message>) Parse(string text)
     {
-        Utils.Assert(now == 0, "SimaiParser实例只能使用一次，不能重复调用Parse方法");
+        if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
         P.ChartContext root;
 
         try

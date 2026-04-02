@@ -109,4 +109,10 @@
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>对分别指定每段时长的多段星星，类似{0.5##...}的等待时间标记，应仅在第一段星星上出现。不合法的等待时间标记已被忽略。</value>
   </data>
+  <data name="InstanceMultipleUsage" xml:space="preserve">
+    <value>Parser/Generator实例都只能使用一次，不能重复调用Parse和Generate方法！如果您需要转换多个谱面，请在每次转换前new一个新的Parser/Generator实例。</value>
+  </data>
+  <data name="InvalidMaidataFile" xml:space="preserve">
+    <value>不合法的maidata文件！输入的文件中不含&amp;标记，似乎不是一个maidata文件。</value>
+  </data>
 </root>

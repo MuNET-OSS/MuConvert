@@ -109,4 +109,10 @@
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>TODO</value>
   </data>
+  <data name="InstanceMultipleUsage" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="InvalidMaidataFile" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>

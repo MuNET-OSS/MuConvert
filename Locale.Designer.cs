@@ -116,9 +116,27 @@ namespace MuConvert {
         /// <summary>
         ///   Looks up a localized string similar to TODO.
         /// </summary>
+        public static string InstanceMultipleUsage {
+            get {
+                return ResourceManager.GetString("InstanceMultipleUsage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
         public static string InvalidKey {
             get {
                 return ResourceManager.GetString("InvalidKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string InvalidMaidataFile {
+            get {
+                return ResourceManager.GetString("InvalidMaidataFile", resourceCulture);
             }
         }
         
