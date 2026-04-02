@@ -106,4 +106,7 @@
   <data name="ExtraModifiersIgnored" xml:space="preserve">
     <value>不应出现的修饰符: {0}. 已忽略。</value>
   </data>
+  <data name="InvalidWaitTime" xml:space="preserve">
+    <value>对分别指定每段时长的多段星星，类似{0.5##...}的等待时间标记，应仅在第一段星星上出现。不合法的等待时间标记已被忽略。</value>
+  </data>
 </root>

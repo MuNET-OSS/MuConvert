@@ -16,8 +16,8 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     private Rational now = 0;
     private Rational step = new(1, 4);
 
-    private ParserRuleContext? currContext;
-    private Note? currNote;
+    private ParserRuleContext? currContext; // 供调试报错AddMsg函数使用
+    private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private readonly List<string> extraModifiers = [];
 
     public SimaiParser(bool bigTouch = false)
@@ -194,18 +194,11 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             }
             else if (child is P.SlideContext slideC)
             {
-                if (i > 0 && slideC.SHARED_HEAD() == null)
-                {
-                    // 大于一根slide，但后面的不是同头星星
-                    AddMsg(Error, Locale.InvalidSlide, context);
-                    throw new ParsingException(messages);
-                }
-                var slide = (Slide)VisitSlide(slideC);
-                if (i > 0)
-                {
-                    slide.SharedHeadWith = (Slide)result[0];
-                }
-                result.Add(slide);
+                result.Add((Slide)VisitSlide(slideC));
+            }
+            else if (child is P.SharedHeadSlideContext shSlideC)
+            {
+                result.Add((Slide)VisitSharedHeadSlide(shSlideC));
             }
 
             if (extraModifiers.Count > 0)
@@ -217,7 +210,8 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     }
 
     private void ApplyModifiers(P.ModifiersContext[] modifiersList, Note note)
-    { // 将通用的modifier(b,x)应用到note上，其余的modifier则通过extraModifiers数组返回。
+    { // 提取可能在不同位置出现的所有modifiers
+      // 将通用的modifier(即b和x)应用到note上，其余的modifier则通过extraModifiers数组返回。
         HashSet<string> set = new();
         foreach (var modifiers in modifiersList)
         {
@@ -244,6 +238,10 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             Key = int.Parse(context.KEY().GetText())
         };
         ApplyModifiers([context.modifiers()], result);
+        if (extraModifiers.Remove("$$") || extraModifiers.Remove("$"))
+        { // 发现了”TAP_TO_STAR“的标记，把Tap转换为星星
+            result = new Star(result);
+        }
         return result;
     }
 
@@ -332,5 +330,92 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             }
         }
         return (waitTime, result);
+    }
+
+    public sealed override object VisitSlideBody(P.SlideBodyContext context)
+    {
+        var slide = (Slide)currNote!;
+        
+        Utils.Assert(context.slideType().Length == context.KEY().Length);
+        for (int i = 0; i < context.slideType().Length; i++)
+        {
+            var key = int.Parse(context.KEY()[i].GetText());
+            var segment = new SlideSegment((Slide)currNote!)
+            {
+                Type = SlideTypeTool.FromSimai(context.slideType()[i].GetText(), slide.EndKey), // 在新的segment被添加之前，此前的slide部分的EndKey就是新segment的StartKey
+                EndKey = key
+            };
+            slide.segments.Add(segment);
+        }
+        
+        // 接下来开始添加时间
+        var durationCount = context.slideDuration().Length;
+        if (durationCount == 1)
+        { // 第一种情况，只有一个时间标记。则是全局时间标记
+            var C = context.slideDuration()[0];
+            var (waitTime, duration) = ((Duration?, Duration))VisitSlideDuration(C);
+            if (waitTime != null) slide.WaitTime = waitTime;
+            slide.Duration = duration;
+        }
+        else if (durationCount == context.slideType().Length)
+        { // 第二种情况，每个上都有时间标记
+            var waitTimeSet = false;
+            for (int i = 0; i < durationCount; i++)
+            {
+                var C = context.slideDuration()[i];
+                var (waitTime, duration) = ((Duration?, Duration))VisitSlideDuration(C);
+                if (waitTime != null)
+                {
+                    if (waitTimeSet || (i > 0 && i < durationCount - 1))
+                    {
+                        AddMsg(Warning, Locale.InvalidWaitTime);
+                    }
+                    else
+                    {
+                        slide.WaitTime = waitTime;
+                        waitTimeSet = true;
+                    }
+                }
+                slide.segments[i].Duration = duration;
+            }
+        }
+        else throw Utils.Fail("duration的个数不对"); // 已经在语法层做过检查了，所以这个分支按说是永远不会命中的。
+
+        return true;
+    }
+
+    public sealed override object VisitSlide(P.SlideContext context)
+    {
+        currContext = context;
+        var result = new Slide(chart, now);
+        
+        // 处理星星头
+        Tap? head = (Tap)VisitTap(context.tap());
+        if (context.NO_STAR() != null)
+        { // 标记了NO_STAR的星星，则不要放head、但是需要手动设置Key
+            result.Key = head.Key;
+            head = null;
+        }
+        else if (context.STAR_TO_TAP() == null) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
+        result.Head = head;
+        
+        currNote = result;
+        VisitSlideBody(context.slideBody());
+        return result;
+    }
+
+    public sealed override object VisitSharedHeadSlide(P.SharedHeadSlideContext context)
+    {
+        currContext = context;
+        var result = new Slide(chart, now);
+        if (currNote is Slide prevSlide)
+        {
+            result.SharedHeadWith = prevSlide.SharedHeadWith??prevSlide;
+        }
+        else throw Utils.Fail("同头星星，找不到上一条");
+        
+        currNote = result;
+        VisitSlideBody(context.slideBody());
+        return result;
     }
 }

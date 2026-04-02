@@ -141,6 +141,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string InvalidWaitTime {
+            get {
+                return ResourceManager.GetString("InvalidWaitTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to At.
         /// </summary>
         public static string MessageAt {

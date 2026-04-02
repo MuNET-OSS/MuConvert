@@ -106,4 +106,7 @@
   <data name="ExtraModifiersIgnored" xml:space="preserve">
     <value>TODO</value>
   </data>
+  <data name="InvalidWaitTime" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>

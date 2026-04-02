@@ -21,7 +21,7 @@ public abstract class Note
         set => throw new InvalidOperationException(Locale.NoDuration);
     }
     
-    public int Key
+    public virtual int Key
     {
         get => _key;
         set

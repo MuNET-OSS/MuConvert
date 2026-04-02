@@ -14,8 +14,8 @@ options { language=CSharp; }
 WS: [ \t\r\n]+ -> channel(HIDDEN);
 
 TAP_TO_STAR: '$$' | '$';
-STAR_TO_TAP: '?' | '!';
-SHARED_HEAD: '*';
+STAR_TO_TAP: '@';
+NO_STAR: '?' | '!';
 
 SIMPLE_SLIDE: '-' | 'v' | '<' | '>' | '^' | 'p' | 'q' | 'pp' | 'qq' | 's' | 'z' | 'w';
 
@@ -31,7 +31,7 @@ CHART_END: 'E';// 谱面结束那个E
 
 MODIFIER: [bxf]; // 语法层不去检查modifier和tap/hold的搭配和合理性，都丢给语义层去搞
 
-modifiers: (MODIFIER | TAP_TO_STAR | STAR_TO_TAP)*;
+modifiers: (MODIFIER | TAP_TO_STAR)*;
 
 // ---------------------------------------------------------------------------
 // 语法
@@ -55,7 +55,7 @@ bpmTag: '(' number ')';
 absulouteStepTag: '{' '#' number '}';
 metTag: '{' INT '}';
 
-note: slide+ | tap+ | hold | touch | touchHold; // tap+是因为，simai允许123这种语法、和1/2/3是等价的，但仅限tap之间。
+note: slide (sharedHeadSlide)* | tap+ | hold | touch | touchHold; // tap+是因为，simai允许123这种语法、和1/2/3是等价的，但仅限tap之间。
 
 tap: KEY modifiers;
 
@@ -79,8 +79,12 @@ slideDuration: '[' (
 waitTime: number;
 asBpm: number;
 
-slide: (tap | SHARED_HEAD) slideSegment* finalSlideSegment;
-slideSegment: slideType KEY slideDuration?;
-finalSlideSegment: slideType KEY modifiers slideDuration? modifiers;
+slide: tap (NO_STAR | STAR_TO_TAP)? slideBody;
+sharedHeadSlide: '@' slideBody;
+    
+slideBody // 根据Simai文档规定，分为两种情况
+    : (slideType KEY)* slideType KEY modifiers slideDuration modifiers // 只有最后一段星星有时间指定
+    | (slideType KEY slideDuration)* slideType KEY modifiers slideDuration modifiers // 每一段星星都有独立的时间指定
+    ;
 
 slideType: SIMPLE_SLIDE | 'V' KEY; // 只有V后面需要多跟一个键位号

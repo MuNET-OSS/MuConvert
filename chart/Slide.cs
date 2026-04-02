@@ -4,7 +4,16 @@ using Rationals;
 
 namespace MuConvert.chart;
 
-public class Star(Chart chart, Rational time) : Tap(chart, time);
+public class Star(Chart chart, Rational time) : Tap(chart, time)
+{
+    public Star(Tap inTake): this(inTake.Chart, inTake.Time) // 拷贝构造函数
+    {
+        IsBreak = inTake.IsBreak;
+        IsEx = inTake.IsEx;
+        FalseEachIdx = inTake.FalseEachIdx;
+        Key = inTake.Key;
+    }
+}
 
 /**
  * 一个Slide表示一整根星星，包括1-3-5-7这种分段fes星星。但不包括1-3*-5这种同头星星，同头星星会被表示成两个slide。
@@ -23,15 +32,18 @@ public class Slide : Note
        WaitTime = new Duration(this) { InvariantBar = new Rational(1, 4) };
     }
 
-    public int StartKey
+    public override int Key
     {
-        get => Head?.Key ?? SharedHeadWith?.StartKey ?? field;
+        get => Head?.Key ?? SharedHeadWith?.Key ?? _key;
         set
         {
-            Utils.Assert(Head == null && SharedHeadWith?.StartKey == null, "尝试为有头星星手动设置星星头");
-            field = value;
+            Utils.Assert(Head == null && SharedHeadWith?.Key == null, "尝试为有头星星手动设置星星头");
+            if (value < 1 || value > 8) throw new ArgumentException(string.Format(Locale.InvalidKey, value));
+            _key = value;
         }
     }
+
+    public int EndKey => segments.Count > 0 ? segments.Last().EndKey : Key;
     
     public override Duration Duration
     {
@@ -63,11 +75,11 @@ public class Slide : Note
     {
         string result;
         if (SharedHeadWith != null) result = "*";
-        else result = StartKey.ToString();
+        else result = Key.ToString();
         if (Head != null && !(Head is Star)) result += "@"; // Tap形状的头
         else if (Head == null) result += "?"; // 无头
 
-        var segStart = StartKey;
+        var segStart = Key;
         foreach (var s in segments)
         {
             result += s.Type.ToSimai(segStart) + s.EndKey;
@@ -91,7 +103,7 @@ public class SlideSegment(Slide slide)
         get
         {
             var idx = slide.segments.IndexOf(this);
-            return idx > 0 ? slide.segments[idx-1].EndKey : slide.StartKey;
+            return idx > 0 ? slide.segments[idx-1].EndKey : slide.Key;
         }
     }
 }
