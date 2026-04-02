@@ -13,7 +13,7 @@ public class MA2Generator : IGenerator
     private Chart chart;
 #pragma warning restore CS8618
     private List<MA2Line> lines = [];
-    private readonly List<Message> messages = [];
+    private readonly List<Alert> alerts = [];
 
     public int ClockCount = 4;
     // 除非你知道你在做什么，不然以下两个变量请勿修改！
@@ -76,7 +76,7 @@ GENERATED_BY	MuConvert
         lines.Add(new MA2Line(prefix + name, bar, tick, tap.Key - 1, extra));
     }
     
-    public (string, List<Message>) Generate(Chart chart)
+    public (string, List<Alert>) Generate(Chart chart)
     {
         if (lines.Count != 0) throw new Exception(Locale.InstanceMultipleUsage);
         this.chart = chart;
@@ -267,7 +267,7 @@ GENERATED_BY	MuConvert
         result.AppendLine($"TTM_SCR_SS\t{score_sss}");
         result.AppendLine($"TTM_RAT_ACV\t{(long)score_all * 10000 / score_sss }"); // 用long避免溢出
         
-        return (result.ToString(), messages);
+        return (result.ToString(), alerts);
     }
     
     /* 从音符名字到速查表项目名的转换表 */

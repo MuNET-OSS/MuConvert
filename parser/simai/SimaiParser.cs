@@ -3,7 +3,7 @@ using MuConvert.Antlr;
 using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
-using static MuConvert.utils.Message.LEVEL;
+using static MuConvert.utils.Alert.LEVEL;
 using P = MuConvert.Antlr.SimaiParser;
 
 namespace MuConvert.parser.simai;
@@ -11,7 +11,7 @@ namespace MuConvert.parser.simai;
 public class SimaiParser : SimaiBaseVisitor<object>, IParser
 {
     private readonly Chart chart;
-    private readonly List<Message> messages = [];
+    private readonly List<Alert> alerts = [];
 
     private Rational now = 0;
     private Rational step = new(1, 4);
@@ -25,19 +25,19 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", IsUtage = isUtage };
     }
     
-    private void AddMsg(Message.LEVEL level, string content, ParserRuleContext? context = null)
+    private void AddAlert(Alert.LEVEL level, string content, ParserRuleContext? context = null)
     {
-        var message = new Message(level, content, barTime: (chart, now));
+        var alert = new Alert(level, content, barTime: (chart, now));
         context ??= currContext;
         if (context != null)
         {
-            message.Line = context.Start.Line;
-            message.RelevantNote = context.GetText();
+            alert.Line = context.Start.Line;
+            alert.RelevantNote = context.GetText();
         }
-        messages.Add(message);
+        alerts.Add(alert);
     }
     
-    public (Chart, List<Message>) Parse(string text)
+    public (Chart, List<Alert>) Parse(string text)
     {
         if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
         P.ChartContext root;
@@ -52,13 +52,13 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         catch (RecognitionException e)
         {
-            messages.Add(new Message(Error, Locale.SimaiGrammarFailed + e.Message, line: e.OffendingToken.Line, relevantNote: e.Context.GetText()));
-            throw new ConversionException(messages);
+            alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + e.Message, line: e.OffendingToken.Line, relevantNote: e.Context.GetText()));
+            throw new ConversionException(alerts);
         }
         catch (Exception e)
         {
-            messages.Add(new Message(Error, Locale.SimaiGrammarFailed + e.Message));
-            throw new ConversionException(messages);
+            alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + e.Message));
+            throw new ConversionException(alerts);
         }
         
         try
@@ -72,11 +72,11 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         catch (Exception e)
         {
             // 否则，说明是意外的Exception，把它附加上详细信息、转换为一般的Exception。
-            AddMsg(Error, e.Message);
-            throw new ConversionException(messages);
+            AddAlert(Error, e.Message);
+            throw new ConversionException(alerts);
         }
         
-        return (chart, messages);
+        return (chart, alerts);
     }
 
     public sealed override object VisitChart(P.ChartContext context)
@@ -115,8 +115,8 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
     {
-        AddMsg(Error, Locale.AbsoluteStepNotImplemented, context);
-        throw new ConversionException(messages);
+        AddAlert(Error, Locale.AbsoluteStepNotImplemented, context);
+        throw new ConversionException(alerts);
     }
 
     public sealed override object VisitBpmTag(P.BpmTagContext context)
@@ -203,7 +203,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
             if (extraModifiers.Count > 0)
             {
-                AddMsg(Warning, string.Format(Locale.ExtraModifiersIgnored, string.Join("", extraModifiers)), (ParserRuleContext)child);
+                AddAlert(Warning, string.Format(Locale.ExtraModifiersIgnored, string.Join("", extraModifiers)), (ParserRuleContext)child);
             }
         }
         return result;
@@ -368,7 +368,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
                 {
                     if (waitTimeSet || (i > 0 && i < durationCount - 1))
                     {
-                        AddMsg(Warning, Locale.InvalidWaitTime);
+                        AddAlert(Warning, Locale.InvalidWaitTime);
                     }
                     else
                     {

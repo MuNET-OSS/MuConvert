@@ -3,7 +3,7 @@ using Rationals;
 
 namespace MuConvert.utils;
 
-public class Message
+public class Alert
 {
     public enum LEVEL { Error, Warning, Info, Debug }
 
@@ -14,7 +14,7 @@ public class Message
     public string? RelevantNote;
     public string Description;
     
-    public Message(LEVEL level, string description, (Chart, Rational)? barTime = null, int? line = null, string? relevantNote = null)
+    public Alert(LEVEL level, string description, (Chart, Rational)? barTime = null, int? line = null, string? relevantNote = null)
     {
         Level = level;
         Description = description;
@@ -56,7 +56,9 @@ public class Message
     }
 }
 
-public class ConversionException(List<Message> messages) : Exception
+public class ConversionException(List<Alert> alerts) : Exception
 {
-    public List<Message> Messages = messages;
+    public List<Alert> Alerts = alerts;
+
+    public override string Message => string.Join("\n", Alerts.Select(a => a.ToString()));
 }

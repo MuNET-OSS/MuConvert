@@ -5,5 +5,5 @@ namespace MuConvert.parser;
 
 public interface IParser
 {
-    public (Chart, List<Message>) Parse(string text);
+    public (Chart, List<Alert>) Parse(string text);
 }
