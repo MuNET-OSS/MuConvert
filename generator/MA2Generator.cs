@@ -45,15 +45,18 @@ GENERATED_BY	MuConvert
     /**
      * 把Rational的时间近似到RESOLUTION允许的最接近tick上
      */
-    private (int, int) BT(Rational r)
+    private (int, int) BT(Rational r, int offset = 0)
     {
+        if (offset != 0) r += new Rational(offset, RSL);
         return ((int)r.WholePart, (int)Math.Round((double)(r.FractionPart * RSL)));
     }
 
     // 持续时间/等待时间，使用"总tick数"（可超过1小节），不是小节内tick
-    private int T(Rational r)
+    private int T(Rational r, int offset = 0)
     {
-        return (int)Math.Round((double)(r* RSL));
+        var result = (int)Math.Round((double)(r* RSL));
+        if (offset != 0) result = Math.Max(result + offset, result > 0 ? 1 : 0);
+        return result;
     }
 
     private void AddTap(Tap tap, int bar, int tick)
@@ -68,7 +71,7 @@ GENERATED_BY	MuConvert
         if (tap is Hold hold)
         {
             name = "HLD";
-            extra = T(hold.Duration.Bar).ToString();
+            extra = T(hold.Duration.Bar, -hold.FalseEachIdx).ToString();
         } 
         lines.Add(new MA2Line(prefix + name, bar, tick, tap.Key - 1, extra));
     }
@@ -100,7 +103,7 @@ GENERATED_BY	MuConvert
         // 由于fes星星涉及一个重排序的问题，同时也为了后面统计方便，先把note放进lines数组中最后一块写入，而不是直接写入文件
         foreach (var note in chart.Notes)
         {
-            var (bar, tick) = BT(note.Time);
+            var (bar, tick) = BT(note.Time, note.FalseEachIdx);
             if (note is Tap tap)
             {
                 AddTap(tap, bar, tick);
@@ -113,7 +116,7 @@ GENERATED_BY	MuConvert
                 if (note is TouchHold th)
                 {
                     name = "THO";
-                    extras.Add(T(th.Duration.Bar).ToString());
+                    extras.Add(T(th.Duration.Bar, -th.FalseEachIdx).ToString());
                 }
 
                 var area = touch.TouchArea[0];
@@ -169,7 +172,7 @@ GENERATED_BY	MuConvert
                     if (segIdx == 0)
                     {
                         if (slide.IsBreak) prefix = "BR";
-                        waitTime = T(slide.WaitTime.Bar);
+                        waitTime = T(slide.WaitTime.Bar, -slide.FalseEachIdx);
                     }
                     else prefix = "CN";
 
@@ -178,11 +181,7 @@ GENERATED_BY	MuConvert
                     lines.Add(new MA2Line(prefix + name, bar, tick, seg.StartKey - 1,
                         string.Join("\t", [waitTime, len, seg.EndKey - 1])));
                     tick += waitTime + len;
-                    while (tick >= RSL)
-                    {
-                        tick -= RSL;
-                        bar++;
-                    }
+                    while (tick >= RSL) { tick -= RSL; bar++; }
                 }
             }
         }
