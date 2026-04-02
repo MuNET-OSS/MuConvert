@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MuConvert.csproj" />
+    <ProjectReference Include="..\MuConvert.csproj" />
   </ItemGroup>
 
 </Project>

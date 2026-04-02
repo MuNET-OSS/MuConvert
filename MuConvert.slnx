@@ -1,4 +1,4 @@
 <Solution>
   <Project Path="MuConvert.csproj" />
-  <Project Path="tests/MuConvert.Tests/MuConvert.Tests.csproj" />
+  <Project Path="tests/MuConvert.Tests.csproj" />
 </Solution>

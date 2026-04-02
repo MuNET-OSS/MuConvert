@@ -55,3 +55,8 @@ public class Message
         return $"{tagString}{head} {Description}";
     }
 }
+
+public class ConversionException(List<Message> messages) : Exception
+{
+    public List<Message> Messages = messages;
+}

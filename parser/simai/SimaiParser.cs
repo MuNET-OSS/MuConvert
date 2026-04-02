@@ -53,19 +53,19 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         catch (RecognitionException e)
         {
             messages.Add(new Message(Error, Locale.SimaiGrammarFailed + e.Message, line: e.OffendingToken.Line, relevantNote: e.Context.GetText()));
-            throw new ParsingException(messages);
+            throw new ConversionException(messages);
         }
         catch (Exception e)
         {
             messages.Add(new Message(Error, Locale.SimaiGrammarFailed + e.Message));
-            throw new ParsingException(messages);
+            throw new ConversionException(messages);
         }
         
         try
         {
             VisitChart(root);
         }
-        catch (ParsingException)
+        catch (ConversionException)
         {
             throw; // 看到主动丢出的ParsingException，就说明错误信息已经被加到message中过了。直接丢回去即可。
         }
@@ -73,7 +73,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         {
             // 否则，说明是意外的Exception，把它附加上详细信息、转换为一般的Exception。
             AddMsg(Error, e.Message);
-            throw new ParsingException(messages);
+            throw new ConversionException(messages);
         }
         
         return (chart, messages);
@@ -116,7 +116,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
     {
         AddMsg(Error, Locale.AbsoluteStepNotImplemented, context);
-        throw new ParsingException(messages);
+        throw new ConversionException(messages);
     }
 
     public sealed override object VisitBpmTag(P.BpmTagContext context)
