@@ -56,8 +56,8 @@ public class 自制谱测试
         Assert.True(expected.Count == 1,
             $"Expected exactly one golden file matching '*{expectedSuffix}' in '{dir.FullName}', got {expected.Count}.");
 
-        var (chart, _) = new SimaiParser(bigTouch: false, isUtage: false).Parse(chartInfo.Inote);
-        var (ma2, _) = new MA2Generator(clockCount: maidata.ClockCount).Generate(chart);
+        var (chart, _) = new SimaiParser(bigTouch: false, isUtage: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
+        var (ma2, _) = new MA2Generator().Generate(chart);
 
         var expectedMa2 = File.ReadAllText(expected[0].FullName, Encoding.UTF8);
 

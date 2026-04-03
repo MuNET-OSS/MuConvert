@@ -175,8 +175,8 @@ internal static class Program
 
     private static string SimaiToMa2(string inote, int clockCount=4, bool bigTouch=false, bool isUtage=false)
     {
-        var (chart, parseAlerts) = new SimaiParser(bigTouch, isUtage).Parse(inote);
-        var (ma2, genAlerts) = new MA2Generator(clockCount).Generate(chart);
+        var (chart, parseAlerts) = new SimaiParser(bigTouch, isUtage, clockCount).Parse(inote);
+        var (ma2, genAlerts) = new MA2Generator().Generate(chart);
         var combined = new List<Alert>(parseAlerts.Count + genAlerts.Count);
         combined.AddRange(parseAlerts);
         combined.AddRange(genAlerts);

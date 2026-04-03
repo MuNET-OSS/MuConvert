@@ -9,6 +9,7 @@ public class Chart
     
     public string DefaultTouchSize = "M1";
     public bool IsUtage = false;
+    public int ClockCount = 4;
     
     public Rational ToSecond(Rational barTime) => BpmList.ToSecond(barTime);
 
