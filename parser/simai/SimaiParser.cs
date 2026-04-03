@@ -405,6 +405,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         else throw Utils.Fail("duration的个数不对"); // 已经在语法层做过检查了，所以这个分支按说是永远不会命中的。
 
+        ApplyModifiers(context.modifiers(), slide);
         return true;
     }
 

@@ -166,6 +166,7 @@ GENERATED_BY	MuConvert
                     var len = segIdx == slide.segments.Count - 1 ? 
                         totalLen : // 对于最后一段，剩的时间全给它。以保证总长是正确的。
                         segmentValue[segIdx] ?? toAssignValue; // 除此之外，则是优先使用显式分配的时间、没有则使用平均时间
+                    totalLen -= len;
                     int waitTime = 0;
                     
                     var prefix = "NM";

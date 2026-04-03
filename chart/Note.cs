@@ -37,7 +37,7 @@ public abstract class Note
         Time = time;
     }
     
-    public virtual string Modifiers => (IsBreak ? "b" : "") + (IsEx ? "b" : "");
+    public virtual string Modifiers => (IsBreak ? "b" : "") + (IsEx ? "x" : "");
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

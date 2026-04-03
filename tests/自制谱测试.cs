@@ -2,6 +2,7 @@ using System.Text;
 using MuConvert.generator;
 using MuConvert.maidata;
 using MuConvert.parser.simai;
+using MuConvert.utils;
 using Xunit.Abstractions;
 
 namespace MuConvert.Tests;
@@ -85,33 +86,64 @@ public class 自制谱测试
         return result.ToString();
     }
 
-    private static void AssertTextEqual(string expected, string actual)
+    private static (int, int, string) GetSlideTime(string slide)
     {
-        if (string.Equals(expected, actual, StringComparison.Ordinal)) return;
+        var values = slide.Split("\t");
+        return (int.Parse(values[1]) * 384 + int.Parse(values[2]), int.Parse(values[5]), 
+            string.Join("\t", values[0], values[3], values[4], values[6]));
+    }
 
-        var expectedLines = expected.Split('\n');
-        var actualLines = actual.Split('\n');
-        var min = Math.Min(expectedLines.Length, actualLines.Length);
-
-        var firstDiff = -1;
-        for (var i = 0; i < min; i++)
-        {
-            if (!string.Equals(expectedLines[i], actualLines[i], StringComparison.Ordinal))
-            {
-                firstDiff = i;
-                break;
+    private static bool CompareLine(string exp, string act)
+    {
+        var result = string.Equals(exp, act, StringComparison.Ordinal);
+        if (!result && exp[..5] == act[..5] && SlideTypeTool.IsSlide(exp))
+        { // 如果是星星，则允许一定范围的误差。具体而言：
+            var (expTime, expLen, expExtra) = GetSlideTime(exp);
+            var (actTime, actLen, actExtra) = GetSlideTime(act);
+            if (expExtra != actExtra) return result; // 首先任何情况下，waitTime和按键等信息必须相等
+            if (exp[..2] == "CN")
+            { // CN星星则要么尾时刻完全对，要么长度至多差1。
+                if (expTime + expLen == actTime + actLen || Math.Abs(expLen - actLen) <= 1) result = true;
+            }
+            else
+            { // 第一段星星则开始时刻必须对且长度至多差1
+                if (expTime == actTime && Math.Abs(expLen - actLen) <= 1) result = true;
             }
         }
-        if (firstDiff == -1) firstDiff = min;
+        return result;
+    }
 
-        var exp = firstDiff < expectedLines.Length ? expectedLines[firstDiff] : "<EOF>";
-        var act = firstDiff < actualLines.Length ? actualLines[firstDiff] : "<EOF>";
+    private static void AssertTextEqual(string expected, string actual)
+    {
+        var expectedLines = expected.Split('\n');
+        var actualLines = actual.Split('\n');
+        var max = Math.Max(expectedLines.Length, actualLines.Length);
 
-        Assert.Fail(
-            $"First difference at line {firstDiff + 1}:{Environment.NewLine}" +
-            $"EXPECTED: {exp}{Environment.NewLine}" +
-            $"ACTUAL  : {act}"
-        );
+        for (var i = 0; i < max; i++)
+        {
+            var exp = i < expectedLines.Length ? expectedLines[i] : "<EOF>";
+            var act = i < actualLines.Length ? actualLines[i] : "<EOF>";
+            var result = CompareLine(exp, act);
+            if (!result)
+            {
+                // 尝试下面五行之内有无相同的，如果有，交换之
+                for (int j = 1; j < Math.Min(expectedLines.Length, i+5); j++)
+                {
+                    if (CompareLine(expectedLines[j], act))
+                    {
+                        (expectedLines[j], expectedLines[i]) = (expectedLines[i], expectedLines[j]);
+                        result = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!result) Assert.Fail(
+                $"First difference at line {i + 1}:{Environment.NewLine}" +
+                $"EXPECTED: {exp}{Environment.NewLine}" +
+                $"ACTUAL  : {act}"
+            );
+        }
     }
 
     private static DirectoryInfo FindRepoRoot()

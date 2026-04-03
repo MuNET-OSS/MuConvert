@@ -106,7 +106,7 @@ public class Duration
         }
         set
         {
-            _type = Type.Bar;
+            _type = Type.Seconds;
             _data = value.CanonicalForm;
         }
     }

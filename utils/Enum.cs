@@ -84,12 +84,19 @@ public static class SlideTypeTool
                 if (!int.TryParse(s[1..2], out var midKey)) throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}"));
                 distance = (midKey - startKey!.Value + 8) % 8; // 先假设按顺时针的方向走，看看距离
                 if (distance == 2) return SlideType.SLR;
-                else if (distance == 6) return SlideType.SSL;
+                else if (distance == 6) return SlideType.SLL;
                 else throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}"));
             case 's': return SlideType.SSL;
             case 'z': return SlideType.SSR;
             case 'w': return SlideType.SF_;
         }
         throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}"));
+    }
+
+    public static HashSet<string> SlideNames = Enum.GetNames<SlideType>().ToHashSet();
+    
+    public static bool IsSlide(string MA2Name)
+    {
+        return SlideNames.Contains(MA2Name[2..5]);
     }
 }
