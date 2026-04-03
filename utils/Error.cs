@@ -59,12 +59,12 @@ public class Alert
 
 public class ConversionException : Exception
 {
-    public ConversionException(List<Alert> alerts)
+    public ConversionException(List<Alert> alerts): base(alerts.LastOrDefault()?.ToString())
     {
         Alerts = alerts;
     }
 
-    public ConversionException(List<Alert> alerts, Exception? innerException) : base("", innerException)
+    public ConversionException(List<Alert> alerts, Exception? innerException) : base(alerts.LastOrDefault()?.ToString(), innerException)
     {
         Alerts = alerts;
     }

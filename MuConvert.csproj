@@ -36,6 +36,7 @@
         <PrivateAssets>all</PrivateAssets>
       </PackageReference>
       <PackageReference Include="Rationals" Version="2.3.0" />
+      <PackageReference Include="System.CommandLine" Version="2.0.5" />
     </ItemGroup>
 
     <ItemGroup>
