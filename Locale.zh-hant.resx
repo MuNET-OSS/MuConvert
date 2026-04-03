@@ -59,60 +59,60 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AssertionFailed" xml:space="preserve">
-    <value>MuConvert hit an internal error (AssertionFailed). Please report it at https://github.com/MuNet-OSS/MuConvert/issues . ({0})</value>
-  </data>
-  <data name="InvalidTouchArea" xml:space="preserve">
-    <value>Invalid touch area specifier: {0}</value>
+    <value>很抱歉，MuConvert 發生內部錯誤（AssertionFailed）。請至 https://github.com/MuNet-OSS/MuConvert/issues 回報此問題。（{0}）</value>
   </data>
   <data name="InvalidKey" xml:space="preserve">
-    <value>Invalid key index (must be 1–8): {0}</value>
+    <value>鍵位編號不合法（須為 1–8）：{0}</value>
+  </data>
+  <data name="InvalidTouchArea" xml:space="preserve">
+    <value>觸控區標記不合法：{0}</value>
   </data>
   <data name="NoDuration" xml:space="preserve">
-    <value>Duration cannot be set on Tap or Touch notes.</value>
+    <value>無法為 Tap 或 Touch 設定持續時間</value>
   </data>
   <data name="InvalidSlide" xml:space="preserve">
-    <value>Invalid slide definition: {0}</value>
+    <value>星星（Slide）定義不合法：{0}</value>
   </data>
   <data name="MessageAt" xml:space="preserve">
-    <value>At</value>
+    <value>於</value>
   </data>
   <data name="MessageLine" xml:space="preserve">
-    <value>line {0}</value>
+    <value>第 {0} 行</value>
   </data>
   <data name="MessageTime" xml:space="preserve">
-    <value>bar time {0:W}({1:F2}s)</value>
+    <value>第 {0:W} 小節（{1:F2} 秒）</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
-    <value>parsing {0}</value>
+    <value>解析 {0} 時</value>
   </data>
   <data name="Error" xml:space="preserve">
-    <value>ERROR:</value>
+    <value>發生錯誤：</value>
   </data>
   <data name="Warning" xml:space="preserve">
-    <value>WARNING:</value>
+    <value>警告：</value>
   </data>
   <data name="Info" xml:space="preserve">
-    <value>INFO:</value>
+    <value>資訊：</value>
   </data>
   <data name="Debug" xml:space="preserve">
-    <value>DEBUG:</value>
+    <value>偵錯：</value>
   </data>
   <data name="SimaiGrammarFailed" xml:space="preserve">
-    <value>Failed to parse simai syntax: </value>
+    <value>解析 Simai 語法時失敗！</value>
   </data>
   <data name="AbsoluteStepNotImplemented" xml:space="preserve">
-    <value>Absolute step tags are not supported. Use BPM + division notation such as "(120){4}".</value>
+    <value>本程式暫不支援直接指定絕對時間步長的寫法。請改用「(120){4}」這類 BPM 加幾分音符的表示方式。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>Unexpected modifier(s): {0}. They have been ignored.</value>
+    <value>不應出現的修飾符：{0}。已忽略。</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
-    <value>For multi-segment slides with per-segment durations, a wait-time fragment (e.g. {0.5##...}) may only appear on the first segment. Invalid wait-time markers were ignored.</value>
+    <value>對分別指定每段時長的多段星星，類似 {0.5##...} 的等待時間標記應僅可在第一段星星上出現。不合法的等待時間標記已忽略。</value>
   </data>
   <data name="InstanceMultipleUsage" xml:space="preserve">
-    <value>Parser and generator instances are single-use; do not call Parse or Generate more than once. Create a new instance for each chart.</value>
+    <value>Parser／Generator 實例僅能使用一次，不可重複呼叫 Parse 與 Generate。若需轉換多份譜面，請在每次轉換前 new 一個新實例。</value>
   </data>
   <data name="InvalidMaidataFile" xml:space="preserve">
-    <value>Not a valid maidata file: no '&amp;' field markers were found.</value>
+    <value>不合法的 maidata 檔案！輸入的檔案中不含&amp;標記，似乎不是 maidata 檔案。</value>
   </data>
 </root>

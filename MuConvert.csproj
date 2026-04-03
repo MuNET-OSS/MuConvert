@@ -21,6 +21,10 @@
             <DependentUpon>Locale.resx</DependentUpon>
             <WithCulture>true</WithCulture>
         </EmbeddedResource>
+        <EmbeddedResource Update="Locale.zh-hant.resx">
+            <DependentUpon>Locale.resx</DependentUpon>
+            <WithCulture>true</WithCulture>
+        </EmbeddedResource>
         <Compile Update="Locale.Designer.cs">
             <DesignTime>true</DesignTime>
             <AutoGen>true</AutoGen>

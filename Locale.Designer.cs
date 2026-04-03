@@ -60,7 +60,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Absolute step tags are not supported. Use BPM + division notation such as &quot;(120){4}&quot;..
         /// </summary>
         public static string AbsoluteStepNotImplemented {
             get {
@@ -69,7 +69,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to MuConvert hit an internal error (AssertionFailed). Please report it at https://github.com/MuNet-OSS/MuConvert/issues . ({0}).
         /// </summary>
         public static string AssertionFailed {
             get {
@@ -96,7 +96,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Unexpected modifier(s): {0}. They have been ignored..
         /// </summary>
         public static string ExtraModifiersIgnored {
             get {
@@ -114,7 +114,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Parser and generator instances are single-use; do not call Parse or Generate more than once. Create a new instance for each chart..
         /// </summary>
         public static string InstanceMultipleUsage {
             get {
@@ -123,7 +123,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Invalid key index (must be 1–8): {0}.
         /// </summary>
         public static string InvalidKey {
             get {
@@ -132,7 +132,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Not a valid maidata file: no &apos;&amp;&apos; field markers were found..
         /// </summary>
         public static string InvalidMaidataFile {
             get {
@@ -141,7 +141,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Invalid slide definition: {0}.
         /// </summary>
         public static string InvalidSlide {
             get {
@@ -150,7 +150,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Invalid touch area specifier: {0}.
         /// </summary>
         public static string InvalidTouchArea {
             get {
@@ -159,7 +159,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to For multi-segment slides with per-segment durations, a wait-time fragment (e.g. {0.5##...}) may only appear on the first segment. Invalid wait-time markers were ignored..
         /// </summary>
         public static string InvalidWaitTime {
             get {
@@ -204,7 +204,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Duration cannot be set on Tap or Touch notes..
         /// </summary>
         public static string NoDuration {
             get {
@@ -213,7 +213,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Failed to parse simai syntax: .
         /// </summary>
         public static string SimaiGrammarFailed {
             get {
