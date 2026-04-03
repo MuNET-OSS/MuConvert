@@ -5,6 +5,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <Authors>Starrah; MuNet Team</Authors>
+        <Copyright>Copyright © 2026 Starrah &amp; MuNet Team</Copyright>
+        <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
         <!-- Nested test project lives under repo root; SDK default globs would compile tests/**/*.cs into this app. -->
         <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
     </PropertyGroup>
