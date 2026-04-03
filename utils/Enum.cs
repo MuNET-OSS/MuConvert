@@ -97,6 +97,6 @@ public static class SlideTypeTool
     
     public static bool IsSlide(string MA2Name)
     {
-        return SlideNames.Contains(MA2Name[2..5]);
+        return SlideNames.Contains(MA2Name);
     }
 }

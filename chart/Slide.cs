@@ -78,7 +78,7 @@ public class Slide : Note
         else if (Head != null) result = Head.DebuggerDisplay();
         else result = Key.ToString();
         if (Head != null && !(Head is Star)) result += "@"; // Tap形状的头
-        else if (Head == null) result += "?"; // 无头
+        else if (Head == null && SharedHeadWith == null) result += "?"; // 无头
 
         var segStart = Key;
         foreach (var s in segments)

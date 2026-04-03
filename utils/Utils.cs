@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 
@@ -20,7 +21,7 @@ public static class Utils
 
     public static void SetLocale(CultureInfo culture) => Locale.Culture = culture;
 
-    public static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value)
+    public static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
     {
         if (!dict.ContainsKey(key)) dict[key] = new();
         dict[key].Add(value);

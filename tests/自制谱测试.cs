@@ -96,7 +96,7 @@ public class 自制谱测试
     private static bool CompareLine(string exp, string act)
     {
         var result = string.Equals(exp, act, StringComparison.Ordinal);
-        if (!result && exp[..5] == act[..5] && SlideTypeTool.IsSlide(exp))
+        if (!result && exp[..5] == act[..5] && SlideTypeTool.IsSlide(exp[2..5]))
         { // 如果是星星，则允许一定范围的误差。具体而言：
             var (expTime, expLen, expExtra) = GetSlideTime(exp);
             var (actTime, actLen, actExtra) = GetSlideTime(act);

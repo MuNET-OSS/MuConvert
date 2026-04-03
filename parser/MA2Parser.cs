@@ -63,7 +63,7 @@ public class MA2Parser : IParser
             else if (cmd is "FES_MODE" or "BPM_DEF" or "GENERATED_BY" && AssertInHeader(lineNo, line)) {} // 这些不用解析，无事可做
             else if (cmd == "RESOLUTION" && AssertInHeader(lineNo, line)) 
                 RSL = int.Parse(values[1]);
-            else if (cmd == "CLOCK_DEF" && AssertInHeader(lineNo, line))
+            else if (cmd == "CLK_DEF" && AssertInHeader(lineNo, line))
                 chart.ClockCount = int.Parse(values[1]) / (RSL / 4);
             // BPM和MET
             else if (cmd == "BPM" && values.Length == 4 && int.TryParse(values[1], out var bbar) && 
@@ -109,7 +109,7 @@ public class MA2Parser : IParser
                 }
                 else if (cc == "THO" && values.Length >= 8 && int.TryParse(values[4], out len))
                 {
-                    note = new TouchHold(chart, time) { TouchArea = values[4]+key, IsFirework = values[5] == "1", TouchSize = values[6]};
+                    note = new TouchHold(chart, time) { TouchArea = values[5]+key, IsFirework = values[6] == "1", TouchSize = values[7]};
                     var duration = new Duration(note) { Bar = new Rational(len, RSL) };
                     note.Duration = duration;
                     if (values.Length != 8) WarnParamsCount(lineNo, line, time);
@@ -125,7 +125,7 @@ public class MA2Parser : IParser
                         // 查找到前面的星星
                         var a = _slides.GetValueOrDefault((time, key));
                         if (a == null || a.Count == 0) Fail(Locale.MA2CNSlideNoPrevious, lineNo, line);
-                        slide = a[0];
+                        slide = a![0];
                         a.RemoveAt(0); // 移除出来，因为一会会按照新的结束时间加回去
                     }
                     else
@@ -212,8 +212,8 @@ public class MA2Parser : IParser
         {
             for (int i = 0; i < 8; i++)
             {
-                var pairedTap = taps[i];
-                if (pairedTap == null) continue;
+                if (taps[i] == null || slideLists[i].Count == 0) continue; // 当前时刻、当前键位不是星星和tap都有，所以不配对
+                var pairedTap = taps[i]!;
                 toRemove.Add(pairedTap);
                 for (int j = 0; j < slideLists[i].Count; j++)
                 {
@@ -236,7 +236,7 @@ public class MA2Parser : IParser
             } 
             else if (note.Time < now) throw Utils.Fail("时间倒流，说明Chart.Sort写错了");
 
-            if (note is Tap tap) taps[tap.Key - 1] ??= tap; // 只有在数组中原本为空的情况下才set。不然不set。这是因为万一有人写宴谱，在同一时刻同一键位上塞了大于一个tap（这显然是无理）怎么办（x）
+            if (note is Tap tap and not Hold) taps[tap.Key - 1] ??= tap; // 只有在数组中原本为空的情况下才set。不然不set。这是因为万一有人写宴谱，在同一时刻同一键位上塞了大于一个tap（这显然是无理）怎么办（x）
             else if (note is Slide slide) slideLists[slide.Key - 1].Add(slide);
         }
         pair(); // 最后一个时刻
