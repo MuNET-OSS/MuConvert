@@ -25,4 +25,4 @@ jobs:
         run: dotnet build MuConvert.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test tests/MuConvert.Tests/MuConvert.Tests.csproj --configuration Release --no-build --verbosity normal
+        run: dotnet test tests/MuConvert.Tests.csproj --configuration Release --no-build --verbosity normal
