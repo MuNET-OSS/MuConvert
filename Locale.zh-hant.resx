@@ -59,7 +59,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AssertionFailed" xml:space="preserve">
-    <value>很抱歉，MuConvert 發生內部錯誤（AssertionFailed）。請至 https://github.com/MuNet-OSS/MuConvert/issues 回報此問題。（{0}）</value>
+    <value>很抱歉，MuConvert 發生內部錯誤（AssertionFailed）。您可將問題報告至 https://github.com/MuNet-OSS/MuConvert/issues 。（{0}）</value>
   </data>
   <data name="InvalidKey" xml:space="preserve">
     <value>鍵位編號不合法（須為 1–8）：{0}</value>
@@ -77,10 +77,10 @@
     <value>於</value>
   </data>
   <data name="MessageLine" xml:space="preserve">
-    <value>第 {0} 行</value>
+    <value>第{0}行</value>
   </data>
   <data name="MessageTime" xml:space="preserve">
-    <value>第 {0:W} 小節（{1:F2} 秒）</value>
+    <value>第{0:W}小節({1:F2}秒)</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
     <value>解析 {0} 時</value>
@@ -98,21 +98,51 @@
     <value>偵錯：</value>
   </data>
   <data name="SimaiGrammarFailed" xml:space="preserve">
-    <value>解析 Simai 語法時失敗！</value>
+    <value>解析Simai語法時失敗！ </value>
   </data>
   <data name="AbsoluteStepNotImplemented" xml:space="preserve">
-    <value>本程式暫不支援直接指定絕對時間步長的寫法。請改用「(120){4}」這類 BPM 加幾分音符的表示方式。</value>
+    <value>本程式暫不支援直接指定絕對時間步長的寫法。請使用類似「(120){4}」這種 BPM 加幾分音符的表示形式。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>不應出現的修飾符：{0}。已忽略。</value>
+    <value>不應出現的修飾符：{0}. 已忽略。</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>對分別指定每段時長的多段星星，類似 {0.5##...} 的等待時間標記應僅可在第一段星星上出現。不合法的等待時間標記已忽略。</value>
   </data>
   <data name="InstanceMultipleUsage" xml:space="preserve">
-    <value>Parser／Generator 實例僅能使用一次，不可重複呼叫 Parse 與 Generate。若需轉換多份譜面，請在每次轉換前 new 一個新實例。</value>
+    <value>Parser/Generator 實例都僅能使用一次，不能重複呼叫 Parse 與 Generate 方法！若您需要轉換多個譜面，請在每次轉換前 new 一個新的 Parser/Generator 實例。</value>
   </data>
   <data name="InvalidMaidataFile" xml:space="preserve">
     <value>不合法的 maidata 檔案！輸入的檔案中不含&amp;標記，似乎不是 maidata 檔案。</value>
+  </data>
+  <data name="InvalidMA2Sentence" xml:space="preserve">
+    <value>無法辨識或不合法的 MA2 語句！</value>
+  </data>
+  <data name="InvalidMA2SentenceWarning" xml:space="preserve">
+    <value>無法辨識的 MA2 語句，已忽略此語句。</value>
+  </data>
+  <data name="InvalidMA2HeaderSentenceAfterHeader" xml:space="preserve">
+    <value>不合法的 MA2 語句：在頭段落結束後，再次出現了只能在頭段落中出現的語句！</value>
+  </data>
+  <data name="NoBPMInMA2" xml:space="preserve">
+    <value>譜面中沒有 BPM 語句，無法完成解析！</value>
+  </data>
+  <data name="UnsuppoertedMA2Version" xml:space="preserve">
+    <value>此 MA2 的版本尚不支援！目前僅支援 MA2 1.03～1.05。</value>
+  </data>
+  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
+    <value>暫不支援 MET_DEF 不為 "4 4" 的譜面！</value>
+  </data>
+  <data name="NoNotesInMA2" xml:space="preserve">
+    <value>譜面中沒有音符！</value>
+  </data>
+  <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">
+    <value>MA2 語句中的參數超過所需數量！多餘的參數已忽略。</value>
+  </data>
+  <data name="MA2CNSlideHasWait" xml:space="preserve">
+    <value>解析錯誤：MA2 CN___ 連接星星語句出現了非 0 的等待時間。</value>
+  </data>
+  <data name="MA2CNSlideNoPrevious" xml:space="preserve">
+    <value>解析錯誤：MA2 CN___ 連接星星，未能找到前一段的星星！</value>
   </data>
 </root>

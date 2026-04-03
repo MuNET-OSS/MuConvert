@@ -115,4 +115,34 @@
   <data name="InvalidMaidataFile" xml:space="preserve">
     <value>不合法的maidata文件！输入的文件中不含&amp;标记，似乎不是一个maidata文件。</value>
   </data>
+  <data name="InvalidMA2Sentence" xml:space="preserve">
+    <value>无法识别或不合法的MA2语句！</value>
+  </data>
+  <data name="InvalidMA2SentenceWarning" xml:space="preserve">
+    <value>无法识别的MA2语句，已忽略此语句。</value>
+  </data>
+  <data name="InvalidMA2HeaderSentenceAfterHeader" xml:space="preserve">
+    <value>不合法的MA2语句：在头段落结束后，再次出现了只能在头段落中出现的语句！</value>
+  </data>
+  <data name="NoBPMInMA2" xml:space="preserve">
+    <value>谱面中没有BPM语句，无法完成解析！</value>
+  </data>
+  <data name="UnsuppoertedMA2Version" xml:space="preserve">
+    <value>此MA2的版本尚不支持！目前仅支持MA2 1.03~1.05。</value>
+  </data>
+  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
+    <value>暂不支持MET_DEF不为"4 4"的谱面！</value>
+  </data>
+  <data name="NoNotesInMA2" xml:space="preserve">
+    <value>谱面中没有音符！</value>
+  </data>
+  <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">
+    <value>MA2语句中的参数超过所需数量！多余的参数已忽略。</value>
+  </data>
+  <data name="MA2CNSlideHasWait" xml:space="preserve">
+    <value>解析错误：MA2 CN___ 连接星星语句出现了非0的等待时间。</value>
+  </data>
+  <data name="MA2CNSlideNoPrevious" xml:space="preserve">
+    <value>解析错误：MA2 CN___ 连接星星，未能找到前一段的星星！</value>
+  </data>
 </root>

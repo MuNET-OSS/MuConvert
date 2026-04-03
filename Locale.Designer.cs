@@ -96,7 +96,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Unexpected modifier(s): {0}. They have been ignored..
+        ///   Looks up a localized string similar to Unexpected modifier(s): {0}. Ignored..
         /// </summary>
         public static string ExtraModifiersIgnored {
             get {
@@ -114,7 +114,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Parser and generator instances are single-use; do not call Parse or Generate more than once. Create a new instance for each chart..
+        ///   Looks up a localized string similar to Parser/Generator instances are single-use; do not call Parse or Generate repeatedly! Create a new Parser/Generator for each chart you convert..
         /// </summary>
         public static string InstanceMultipleUsage {
             get {
@@ -128,6 +128,33 @@ namespace MuConvert {
         public static string InvalidKey {
             get {
                 return ResourceManager.GetString("InvalidKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid MA2 statement: after the header section ended, a header-only line appeared again!.
+        /// </summary>
+        public static string InvalidMA2HeaderSentenceAfterHeader {
+            get {
+                return ResourceManager.GetString("InvalidMA2HeaderSentenceAfterHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unrecognized or invalid MA2 statement!.
+        /// </summary>
+        public static string InvalidMA2Sentence {
+            get {
+                return ResourceManager.GetString("InvalidMA2Sentence", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unrecognized MA2 statement; this line was ignored..
+        /// </summary>
+        public static string InvalidMA2SentenceWarning {
+            get {
+                return ResourceManager.GetString("InvalidMA2SentenceWarning", resourceCulture);
             }
         }
         
@@ -168,6 +195,33 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Parse error: MA2 CN___ (connecting slide) has a non-zero wait time..
+        /// </summary>
+        public static string MA2CNSlideHasWait {
+            get {
+                return ResourceManager.GetString("MA2CNSlideHasWait", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Parse error: MA2 CN___ (connecting slide) has no preceding slide segment!.
+        /// </summary>
+        public static string MA2CNSlideNoPrevious {
+            get {
+                return ResourceManager.GetString("MA2CNSlideNoPrevious", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This MA2 line has more parameters than required; the extras were ignored..
+        /// </summary>
+        public static string MA2NoteSentenceTooManyParam {
+            get {
+                return ResourceManager.GetString("MA2NoteSentenceTooManyParam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to At.
         /// </summary>
         public static string MessageAt {
@@ -204,6 +258,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The chart has no BPM line; parsing cannot continue!.
+        /// </summary>
+        public static string NoBPMInMA2 {
+            get {
+                return ResourceManager.GetString("NoBPMInMA2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Duration cannot be set on Tap or Touch notes..
         /// </summary>
         public static string NoDuration {
@@ -213,11 +276,38 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Failed to parse simai syntax: .
+        ///   Looks up a localized string similar to The chart has no notes!.
+        /// </summary>
+        public static string NoNotesInMA2 {
+            get {
+                return ResourceManager.GetString("NoNotesInMA2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to parse simai syntax! .
         /// </summary>
         public static string SimaiGrammarFailed {
             get {
                 return ResourceManager.GetString("SimaiGrammarFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Charts whose MET_DEF is not &quot;4 4&quot; are not supported yet!.
+        /// </summary>
+        public static string UnsuppoertedMA2MET_DEF {
+            get {
+                return ResourceManager.GetString("UnsuppoertedMA2MET_DEF", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This MA2 version is not supported yet. Currently only MA2 1.03–1.05 are supported..
+        /// </summary>
+        public static string UnsuppoertedMA2Version {
+            get {
+                return ResourceManager.GetString("UnsuppoertedMA2Version", resourceCulture);
             }
         }
         

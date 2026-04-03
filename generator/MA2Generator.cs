@@ -81,7 +81,7 @@ GENERATED_BY	MuConvert v{8}
         string head = string.Format(headTemplate, 
             $"{MA2Version / 100}.{MA2Version % 100:D2}.00", chart.IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,
-            RSL, 96*chart.ClockCount, Utils.AppVersion);
+            RSL, RSL/4 * chart.ClockCount, Utils.AppVersion);
         result.Append(head);
         
         // bpm段

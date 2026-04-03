@@ -98,21 +98,51 @@
     <value>DEBUG:</value>
   </data>
   <data name="SimaiGrammarFailed" xml:space="preserve">
-    <value>Failed to parse simai syntax: </value>
+    <value>Failed to parse simai syntax! </value>
   </data>
   <data name="AbsoluteStepNotImplemented" xml:space="preserve">
     <value>Absolute step tags are not supported. Use BPM + division notation such as "(120){4}".</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>Unexpected modifier(s): {0}. They have been ignored.</value>
+    <value>Unexpected modifier(s): {0}. Ignored.</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>For multi-segment slides with per-segment durations, a wait-time fragment (e.g. {0.5##...}) may only appear on the first segment. Invalid wait-time markers were ignored.</value>
   </data>
   <data name="InstanceMultipleUsage" xml:space="preserve">
-    <value>Parser and generator instances are single-use; do not call Parse or Generate more than once. Create a new instance for each chart.</value>
+    <value>Parser/Generator instances are single-use; do not call Parse or Generate repeatedly! Create a new Parser/Generator for each chart you convert.</value>
   </data>
   <data name="InvalidMaidataFile" xml:space="preserve">
     <value>Not a valid maidata file: no '&amp;' field markers were found.</value>
+  </data>
+  <data name="InvalidMA2Sentence" xml:space="preserve">
+    <value>Unrecognized or invalid MA2 statement!</value>
+  </data>
+  <data name="InvalidMA2SentenceWarning" xml:space="preserve">
+    <value>Unrecognized MA2 statement; this line was ignored.</value>
+  </data>
+  <data name="InvalidMA2HeaderSentenceAfterHeader" xml:space="preserve">
+    <value>Invalid MA2 statement: after the header section ended, a header-only line appeared again!</value>
+  </data>
+  <data name="NoBPMInMA2" xml:space="preserve">
+    <value>The chart has no BPM line; parsing cannot continue!</value>
+  </data>
+  <data name="UnsuppoertedMA2Version" xml:space="preserve">
+    <value>This MA2 version is not supported yet. Currently only MA2 1.03–1.05 are supported.</value>
+  </data>
+  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
+    <value>Charts whose MET_DEF is not "4 4" are not supported yet!</value>
+  </data>
+  <data name="NoNotesInMA2" xml:space="preserve">
+    <value>The chart has no notes!</value>
+  </data>
+  <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">
+    <value>This MA2 line has more parameters than required; the extras were ignored.</value>
+  </data>
+  <data name="MA2CNSlideHasWait" xml:space="preserve">
+    <value>Parse error: MA2 CN___ (connecting slide) has a non-zero wait time.</value>
+  </data>
+  <data name="MA2CNSlideNoPrevious" xml:space="preserve">
+    <value>Parse error: MA2 CN___ (connecting slide) has no preceding slide segment!</value>
   </data>
 </root>
