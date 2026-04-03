@@ -98,7 +98,7 @@ public class Maidata : Dictionary<string, string>
         string[] fixedKeys = ["title", "artist", "first", "des", "wholebpm"]; // 对这些键，优先、按这里指定的顺序输出。
         foreach (var k in fixedKeys)
         {
-            if (TryGetValue(k, out var v)) result.AppendLine($"&{k}=v");
+            if (TryGetValue(k, out var v)) result.AppendLine($"&{k}={v}");
         }
 
         var (levels, infos) = _splitLevels();

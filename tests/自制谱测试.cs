@@ -4,6 +4,7 @@ using MuConvert.maidata;
 using MuConvert.parser.simai;
 using MuConvert.utils;
 using Xunit.Abstractions;
+using static MuConvert.Tests.TestUtils;
 
 namespace MuConvert.Tests;
 
@@ -144,13 +145,5 @@ public class 自制谱测试
                 $"ACTUAL  : {act}"
             );
         }
-    }
-
-    private static DirectoryInfo FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "MuConvert.csproj")))
-            dir = dir.Parent;
-        return dir ?? throw new DirectoryNotFoundException("Could not locate repo root (MuConvert.csproj).");
     }
 }
