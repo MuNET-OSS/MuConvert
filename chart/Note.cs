@@ -53,7 +53,7 @@ public class Hold : Tap
 
     public Hold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
     
-    private string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
+    private new string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

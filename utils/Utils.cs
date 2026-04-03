@@ -1,4 +1,7 @@
-﻿namespace MuConvert.utils;
+﻿using System.Diagnostics;
+using System.Reflection;
+
+namespace MuConvert.utils;
 
 public class Utils
 {
@@ -11,4 +14,6 @@ public class Utils
     {
         return new Exception(string.Format(Locale.AssertionFailed, msg));
     }
+    
+    public static string AppVersion => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion?[..^33] ?? "unknown";
 }

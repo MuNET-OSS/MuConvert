@@ -29,7 +29,7 @@ MET_DEF	4	4
 RESOLUTION	{6}
 CLK_DEF	{7}
 COMPATIBLE_CODE	MA2
-GENERATED_BY	MuConvert
+GENERATED_BY	MuConvert v{8}
 
 ";
     
@@ -87,7 +87,7 @@ GENERATED_BY	MuConvert
         string head = string.Format(headTemplate, 
             $"{MA2Version / 100}.{MA2Version % 100:D2}.00", chart.IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,
-            RSL, 96*ClockCount);
+            RSL, 96*ClockCount, Utils.AppVersion);
         result.Append(head);
         
         // bpm段
@@ -206,7 +206,7 @@ GENERATED_BY	MuConvert
         var stNamesCvt = statsNameConversion();
         foreach (var key in stNamesCvt.Values.Select(x=>x?.Item1).Where(x=>x!=null).Distinct())
         {
-            stats_rec[key] = 0;
+            stats_rec[key!] = 0;
         }
         foreach (var l in lines)
         {

@@ -1,33 +1,24 @@
 using System.Text;
+using MuConvert.utils;
 
 namespace MuConvert.maidata;
 
-public record MaidataChart(string Level, string NoteDesigner, string Inote);
+public record MaidataChart(string? Level, string? NoteDesigner, string Inote);
 
 public class Maidata : Dictionary<string, string>
 {
     /**
      * 便捷的获得一个maidata中的所有谱面的方法。
-     * 除了铺面之外的信息，如title、artist、first等，仍可通过一般的dict方法加以获得。
+     * 除了谱面之外的信息，如title、artist、first等，可通过Infos获取；
+     * 而由于，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
      */
-    public Dictionary<int, MaidataChart> Levels
-    {
-        get
-        {
-            var result = new Dictionary<int, MaidataChart>();
-            foreach (var (k ,v) in this)
-            {
-                if (k.StartsWith("inote_"))
-                {
-                    if (!int.TryParse(k.Replace("inote_", ""), out var id)) continue;
-                    var level = this.GetValueOrDefault($"lv_{id}", "");
-                    var noteDesigner = this.GetValueOrDefault($"des_{id}", "");
-                    result.Add(id, new MaidataChart(level, noteDesigner, v));
-                }
-            }
-            return result;
-        }
-    }
+    public Dictionary<int, MaidataChart> Levels => _splitLevels().Item1;
+    
+    /**
+     * 便捷的获得一个maidata中，除了谱面相关的所有信息字段的方法。
+     * 而由于Maidata类继承自Dictionary，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
+     */
+    public Dictionary<string, string> Infos => _splitLevels().Item2;
     
     /**
      * 将maidata.txt的文本传给此函数，即可构造Maidata对象。
@@ -65,6 +56,25 @@ public class Maidata : Dictionary<string, string>
             value = value.Trim(); // 对部分字段，要trim一下；但不能对所有的字段都trim，比如如果对title进行trim，如月车站就寄了。
         this[key] = value;
     }
+
+    private (Dictionary<int, MaidataChart>, Dictionary<string, string>) _splitLevels()
+    {
+        var levels = new Dictionary<int, MaidataChart>();
+        var infos = new Dictionary<string, string>(this); // 复制一份，稍后删key
+        foreach (var k in this.Keys)
+        {
+            if (k.StartsWith("inote_"))
+            {
+                if (!int.TryParse(k.Replace("inote_", ""), out var id)) continue;
+                // 一边从info中移除内容，一边加到levels里去
+                infos.Remove(k, out var v);
+                infos.Remove($"lv_{id}", out var level);
+                infos.Remove($"des_{id}", out var noteDesigner);
+                levels.Add(id, new MaidataChart(level, noteDesigner, v!));
+            }
+        }
+        return (levels, infos);
+    }
     
     public string Title => this.GetValueOrDefault("title", "");
     public string Artist => this.GetValueOrDefault("artist", "");
@@ -80,5 +90,38 @@ public class Maidata : Dictionary<string, string>
             return (demoStart, demoLen);
         }
     }
-    
+
+    public override string ToString()
+    {
+        var result = new StringBuilder();
+        
+        string[] fixedKeys = ["title", "artist", "first", "des", "wholebpm"]; // 对这些键，优先、按这里指定的顺序输出。
+        foreach (var k in fixedKeys)
+        {
+            if (TryGetValue(k, out var v)) result.AppendLine($"&{k}=v");
+        }
+
+        var (levels, infos) = _splitLevels();
+        foreach (var (k, v) in Infos)
+        {
+            if (fixedKeys.Contains(k)) continue; // 刚刚已经输出过了
+            result.AppendLine($"&{k}={v}");
+        }
+        result.AppendLine("&ChartConvertTool=MuConvert");
+        result.AppendLine($"&ChartConvertToolVersion={Utils.AppVersion}");
+        result.AppendLine();
+
+        var levelIds = levels.Keys.ToList();
+        levelIds.Sort();
+        foreach (var id in levelIds)
+        {
+            var data = levels[id];
+            if (data.Level != null) result.AppendLine($"&lv_{id}={data.Level}");
+            if (data.NoteDesigner != null) result.AppendLine($"&des_{id}={data.NoteDesigner}");
+            result.AppendLine($"&inote_{id}={data.Inote}");
+            result.AppendLine();
+        }
+
+        return result.ToString();
+    }
 }

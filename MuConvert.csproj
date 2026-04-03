@@ -28,6 +28,10 @@
     <ItemGroup>
       <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
       <PackageReference Include="Antlr4BuildTasks" Version="12.14.0" />
+      <PackageReference Include="MinVer" Version="7.0.0">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PrivateAssets>all</PrivateAssets>
+      </PackageReference>
       <PackageReference Include="Rationals" Version="2.3.0" />
     </ItemGroup>
 
