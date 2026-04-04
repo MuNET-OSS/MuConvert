@@ -36,9 +36,10 @@ internal static class Program
 
     private static Command BuildRootCommand()
     {
-        var root = new RootCommand($"MuConvert {Utils.AppVersion} — simai / maidata → MA2")
+        var root = new RootCommand
         {
-            Description = "将 .txt 格式的 simai 单谱或 maidata 转为 MA2，输出与输入同目录的 lv_N.ma2。"
+            Description = $"MuConvert {Utils.AppVersion} — simai / maidata → MA2\n" + 
+                          "将 .txt 格式的 simai 单谱或 maidata 转为 MA2，输出与输入同目录的 lv_N.ma2。"
         };
 
         var levelsOption = new Option<string?>("--levels", "-l")

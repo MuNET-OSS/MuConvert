@@ -17,7 +17,7 @@ public static class Utils
         return new Exception(string.Format(Locale.AssertionFailed, msg));
     }
     
-    public static string AppVersion => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion?[..^33] ?? "unknown";
+    public static string AppVersion => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion[..^33] ?? "unknown";
 
     public static void SetLocale(CultureInfo culture) => Locale.Culture = culture;
 
