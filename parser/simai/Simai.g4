@@ -40,7 +40,7 @@ chart: (notations ',')* CHART_END? EOF;
 
 notations // 同一时刻的所有标记，包括note标记、bpm标记等等
     : (bpmTag 
-    | absulouteStepTag // 暂不支持，但这毕竟是合法的语法
+    | absulouteStepTag
     | metTag
     | noteGroup
     )*;

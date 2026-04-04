@@ -16,10 +16,12 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     private Rational now = 0;
     private Rational step = new(1, 4);
+    private decimal? absoluteTimeStep = null; // 此项必须和step本体一起更改
 
     private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private readonly List<string> extraModifiers = [];
+    private bool absoluteTimeStepWarned = false; // 用于确保Warning只打印一次
 
     public SimaiParser(bool bigTouch = false, bool isUtage = false, int clockCount = 4)
     {
@@ -108,9 +110,20 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         foreach (var notations in context.notations())
         {
             VisitNotations(notations);
+            if (chart.BpmList.Count == 0) AddDefaultBpm();
             now = (now + step).CanonicalForm;
         }
         return true;
+    }
+
+    private void AddDefaultBpm()
+    {
+        // 谱面开头还没看到BPM，就看到音符（或绝对时间标记）了。这在MA2中是不允许的，MA2的BPM必须是从一开头就开始指定。
+        // 因此，我们打印一个警告，然后帮用户补一个60。
+        const int defaultStartBpm = 60;
+        AddAlert(Warning, string.Format(Locale.StartNoBpm, defaultStartBpm));
+        Utils.Assert(now == 0, "现在已经不是开头了？？");
+        chart.BpmList.Add(new BPM(now, defaultStartBpm));
     }
 
     public sealed override object VisitNotations(P.NotationsContext context)
@@ -121,17 +134,21 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             {
                 VisitBpmTag(bpmTag);
             }
-            else if (child is P.AbsulouteStepTagContext absoluteStepTag)
-            {
-                VisitAbsulouteStepTag(absoluteStepTag);
-            }
             else if (child is P.MetTagContext metTag)
             {
                 VisitMetTag(metTag);
             }
-            else if (child is P.NoteGroupContext noteGroup)
+            else
             {
-                VisitNoteGroup(noteGroup);
+                if (chart.BpmList.Count == 0) AddDefaultBpm();
+                if (child is P.AbsulouteStepTagContext absoluteStepTag)
+                {
+                    VisitAbsulouteStepTag(absoluteStepTag);
+                }
+                else if (child is P.NoteGroupContext noteGroup)
+                {
+                    VisitNoteGroup(noteGroup);
+                }
             }
         }
         return true;
@@ -139,8 +156,15 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
     {
-        AddAlert(Error, Locale.AbsoluteStepNotImplemented, context);
-        throw new ConversionException(alerts);
+        if (!absoluteTimeStepWarned)
+        {
+            AddAlert(Warning, string.Format(Locale.AbsoluteStepUsed, context.GetText()), context);
+            absoluteTimeStepWarned = true;
+        }
+        absoluteTimeStep = (decimal)VisitNumber(context.number());
+        var currentBpm = chart.BpmList.Last().Bpm;
+        step = (Rational)absoluteTimeStep / (240 / (Rational)currentBpm);
+        return true;
     }
 
     public sealed override object VisitBpmTag(P.BpmTagContext context)
@@ -148,6 +172,10 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         currContext = context;
         var bpm = (decimal)VisitNumber(context.number());
         chart.BpmList.Add(new BPM(now, bpm));
+        if (absoluteTimeStep != null)
+        { // 如果当前处于绝对时间step模式下，则bpm变化也会引起小节制step的变化，更新之。
+            step = (Rational)absoluteTimeStep / (240 / (Rational)bpm);
+        }
         return true;
     }
 
@@ -156,6 +184,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         currContext = context;
         var quaver = int.Parse(context.@int().GetText());
         step = new Rational(1, quaver);
+        absoluteTimeStep = null;
         return true;
     }
 

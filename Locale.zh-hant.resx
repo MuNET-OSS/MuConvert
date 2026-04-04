@@ -100,8 +100,8 @@
   <data name="SimaiGrammarFailed" xml:space="preserve">
     <value>解析Simai語法時失敗！ </value>
   </data>
-  <data name="AbsoluteStepNotImplemented" xml:space="preserve">
-    <value>本程式暫不支援直接指定絕對時間步長的寫法。請使用類似「(120){4}」這種 BPM 加幾分音符的表示形式。</value>
+  <data name="AbsoluteStepUsed" xml:space="preserve">
+    <value>譜面中使用了類似 {0} 的「絕對時間步長」寫法。對此特性的支援為實驗性質；若遇到問題，請至 https://github.com/MuNet-OSS/MuConvert/issues 向我們回報。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
     <value>不應出現的修飾符：{0}. 已忽略。</value>
@@ -144,5 +144,8 @@
   </data>
   <data name="MA2CNSlideNoPrevious" xml:space="preserve">
     <value>解析錯誤：MA2 CN___ 連接星星，未能找到前一段的星星！</value>
+  </data>
+  <data name="StartNoBpm" xml:space="preserve">
+    <value>譜面開頭沒有指定 BPM！已自動在譜面開頭加入 `({0})`。</value>
   </data>
 </root>

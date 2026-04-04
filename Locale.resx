@@ -100,8 +100,8 @@
   <data name="SimaiGrammarFailed" xml:space="preserve">
     <value>Failed to parse simai syntax! </value>
   </data>
-  <data name="AbsoluteStepNotImplemented" xml:space="preserve">
-    <value>Absolute step tags are not supported. Use BPM + division notation such as "(120){4}".</value>
+  <data name="AbsoluteStepUsed" xml:space="preserve">
+    <value>The chart uses absolute time step notation like {0}. Support for this feature is experimental; if you run into issues, please report them at https://github.com/MuNet-OSS/MuConvert/issues.</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
     <value>Unexpected modifier(s): {0}. Ignored.</value>
@@ -144,5 +144,8 @@
   </data>
   <data name="MA2CNSlideNoPrevious" xml:space="preserve">
     <value>Parse error: MA2 CN___ (connecting slide) has no preceding slide segment!</value>
+  </data>
+  <data name="StartNoBpm" xml:space="preserve">
+    <value>No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning.</value>
   </data>
 </root>

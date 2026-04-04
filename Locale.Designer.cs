@@ -60,11 +60,11 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Absolute step tags are not supported. Use BPM + division notation such as &quot;(120){4}&quot;..
+        ///   Looks up a localized string similar to The chart uses absolute time step notation like {0}. Support for this feature is experimental; if you run into issues, please report them at https://github.com/MuNet-OSS/MuConvert/issues..
         /// </summary>
-        public static string AbsoluteStepNotImplemented {
+        public static string AbsoluteStepUsed {
             get {
-                return ResourceManager.GetString("AbsoluteStepNotImplemented", resourceCulture);
+                return ResourceManager.GetString("AbsoluteStepUsed", resourceCulture);
             }
         }
         
@@ -290,6 +290,15 @@ namespace MuConvert {
         public static string SimaiGrammarFailed {
             get {
                 return ResourceManager.GetString("SimaiGrammarFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning..
+        /// </summary>
+        public static string StartNoBpm {
+            get {
+                return ResourceManager.GetString("StartNoBpm", resourceCulture);
             }
         }
         
