@@ -148,4 +148,7 @@
   <data name="StartNoBpm" xml:space="preserve">
     <value>No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning.</value>
   </data>
+  <data name="NoteTooNear" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>

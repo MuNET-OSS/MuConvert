@@ -2,6 +2,7 @@ using System.Text;
 using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
+using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.generator;
 
@@ -26,6 +27,8 @@ COMPATIBLE_CODE	MA2
 GENERATED_BY	MuConvert v{8}
 
 ";
+
+    private Rational __1_384 = new(1, 384);
     
     private (decimal, decimal, decimal, decimal) bpmStats(Chart chart)
     {
@@ -95,8 +98,18 @@ GENERATED_BY	MuConvert v{8}
         
         // 主体：音符段
         // 由于fes星星涉及一个重排序的问题，同时也为了后面统计方便，先把note放进lines数组中最后一块写入，而不是直接写入文件
-        foreach (var note in chart.Notes)
+        for (int noteIdx = 0; noteIdx < chart.Notes.Count; noteIdx++)
         {
+            var note = chart.Notes[noteIdx];
+            if (noteIdx > 0)
+            {
+                var distToPrev = note.Time - chart.Notes[noteIdx - 1].Time;
+                if (distToPrev > 0 && distToPrev < __1_384)
+                {
+                    alerts.Add(new Alert(Warning, Locale.NoteTooNear, (chart, note.Time)));
+                }
+            }
+            
             var (bar, tick) = BT(note.Time, note.FalseEachIdx);
             if (note is Tap tap)
             {
@@ -184,10 +197,8 @@ GENERATED_BY	MuConvert v{8}
         lines = lines.OrderBy(x => x.Bar * RSL + x.Tick).ToList();
         foreach (var l in lines)
         {
-            if (string.IsNullOrEmpty(l.Extra))
-                result.AppendLine($"{l.Name}\t{l.Bar}\t{l.Tick}\t{l.Key}");
-            else
-                result.AppendLine($"{l.Name}\t{l.Bar}\t{l.Tick}\t{l.Key}\t{l.Extra}");
+            var extra = string.IsNullOrEmpty(l.Extra) ? "\t" + l.Extra : "";
+            result.AppendLine($"{l.Name}\t{l.Bar}\t{l.Tick}\t{l.Key}{extra}");
         }
         result.AppendLine();
         
@@ -262,7 +273,7 @@ GENERATED_BY	MuConvert v{8}
         return (result.ToString(), alerts);
     }
     
-    /* 从音符名字到速查表项目名的转换表 */
+    /* 从音符名字到statistics部分的项目名的转换表 */
     private Dictionary<string, (string, string)?> statsNameConversion()
     {
         var result = new Dictionary<string, (string, string)?>
