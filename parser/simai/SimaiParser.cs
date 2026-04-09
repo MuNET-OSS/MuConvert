@@ -451,7 +451,7 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
             head = null;
         }
         else if (context.STAR_TO_TAP() == null) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
-        result.Head = head;
+        result.OwnHead = head;
         
         currNote = result;
         VisitSlideBody(context.slideBody());

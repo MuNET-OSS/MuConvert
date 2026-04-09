@@ -136,7 +136,7 @@ GENERATED_BY	MuConvert v{8}
             }
             else if (note is Slide slide)
             {
-                if (slide.Head != null) AddTap(slide.Head, bar, tick);
+                if (slide.OwnHead != null) AddTap(slide.OwnHead, bar, tick);
                 
                 // 首先很重要的一点是，详见 https://github.com/Neskol/MaiLib/issues/46#issuecomment-3301893924 ，
                 // 官机现在对于多段星星，是会无视掉每一段分别指定的时长，把总时长加和然后全程匀速处理的。

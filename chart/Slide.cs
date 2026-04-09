@@ -22,7 +22,8 @@ public class Star(Chart chart, Rational time) : Tap(chart, time)
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Slide : Note
 {
-    public Tap? Head; // 根据simai语法，星星头既可以是普通的星星形状(1-5)，也可以是Tap形状的(1@-5)，也可以没有(1?-5或1!-5)
+    public Tap? OwnHead; // 属于自己的星星头。只有在SharedHeadWith=null的那根星星上应该设置此项，否则直接通过SharedHeadWith链过去即可
+    // PS: 根据simai语法，星星头既可以是普通的星星形状(1-5)，也可以是Tap形状的(1@-5)，也可以没有(1?-5或1!-5)
     public Slide? SharedHeadWith;
     public List<SlideSegment> segments = new();
     public Duration WaitTime;
@@ -34,14 +35,17 @@ public class Slide : Note
 
     public override int Key
     {
-        get => Head?.Key ?? SharedHeadWith?.Key ?? _key;
+        get => OwnHead?.Key ?? SharedHeadWith?.Key ?? _key;
         set
         {
-            Utils.Assert(Head == null && SharedHeadWith?.Key == null, "尝试为有头星星手动设置星星头");
+            Utils.Assert(OwnHead == null && SharedHeadWith?.Key == null, "尝试为有头星星手动设置星星头");
             if (value < 1 || value > 8) throw new ArgumentException(string.Format(Locale.InvalidKey, value));
             _key = value;
         }
     }
+    
+    // 所有的SharedHeadWith的连接关系，会构成一棵树，其中只有树根节点有OwnHead且SharedHeadWith为null。
+    public Slide SharedHeadWithRoot => SharedHeadWith != null ? SharedHeadWith.SharedHeadWithRoot : this;
 
     public int EndKey => segments.Count > 0 ? segments.Last().EndKey : Key;
     
@@ -75,10 +79,12 @@ public class Slide : Note
     {
         string result;
         if (SharedHeadWith != null) result = "*";
-        else if (Head != null) result = Head.DebuggerDisplay();
-        else result = Key.ToString();
-        if (Head != null && !(Head is Star)) result += "@"; // Tap形状的头
-        else if (Head == null && SharedHeadWith == null) result += "?"; // 无头
+        else if (OwnHead != null)
+        {
+            result = OwnHead.DebuggerDisplay();
+            if (!(OwnHead is Star)) result += "@"; // Tap形状的头
+        }
+        else result = Key + "?"; // 无头
 
         var segStart = Key;
         foreach (var s in segments)

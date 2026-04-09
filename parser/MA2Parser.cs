@@ -217,7 +217,7 @@ public class MA2Parser : IParser
                 toRemove.Add(pairedTap);
                 for (int j = 0; j < slideLists[i].Count; j++)
                 {
-                    if (j == 0) slideLists[i][j].Head = pairedTap;
+                    if (j == 0) slideLists[i][j].OwnHead = pairedTap;
                     else slideLists[i][j].SharedHeadWith = slideLists[i][0];
                 }
             }
