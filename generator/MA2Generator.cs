@@ -197,7 +197,7 @@ GENERATED_BY	MuConvert v{8}
         lines = lines.OrderBy(x => x.Bar * RSL + x.Tick).ToList();
         foreach (var l in lines)
         {
-            var extra = string.IsNullOrEmpty(l.Extra) ? "\t" + l.Extra : "";
+            var extra = !string.IsNullOrEmpty(l.Extra) ? "\t" + l.Extra : "";
             result.AppendLine($"{l.Name}\t{l.Bar}\t{l.Tick}\t{l.Key}{extra}");
         }
         result.AppendLine();

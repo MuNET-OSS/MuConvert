@@ -237,7 +237,11 @@ public class MA2Parser : IParser
             else if (note.Time < now) throw Utils.Fail("时间倒流，说明Chart.Sort写错了");
 
             if (note is Tap tap and not Hold) taps[tap.Key - 1] ??= tap; // 只有在数组中原本为空的情况下才set。不然不set。这是因为万一有人写宴谱，在同一时刻同一键位上塞了大于一个tap（这显然是无理）怎么办（x）
-            else if (note is Slide slide) slideLists[slide.Key - 1].Add(slide);
+            else if (note is Slide slide)
+            {
+                slide.Duration = slide.Duration; // 确保只有最后一段有时间
+                slideLists[slide.Key - 1].Add(slide);
+            }
         }
         pair(); // 最后一个时刻
         chart.Notes.RemoveAll(x => toRemove.Contains(x)); // 移除所有的toRemove

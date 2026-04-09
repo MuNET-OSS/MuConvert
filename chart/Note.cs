@@ -66,8 +66,8 @@ public class Touch(Chart chart, Rational time) : Note(chart, time)
 
     public string TouchArea
     {
-        get => _touchSeries.ToString() + Key;
-        set 
+        get => _touchSeries.ToString() + (Key == 0 ? "" : Key);
+        set
         {
             if (value == "C") // 只有一个C字母的情况
             {
