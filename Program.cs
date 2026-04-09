@@ -16,11 +16,6 @@ internal static class Program
         {
             return root.Parse(args).Invoke();
         }
-        catch (NotImplementedException ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return 1;
-        }
         catch (ConversionException ex)
         {
             PrintAlerts(ex.Alerts, "转换失败：");

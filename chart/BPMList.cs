@@ -38,6 +38,12 @@ public class BPMList : List<BPM>
         return i-1;
     }
 
+    public bool IsBpmChanged(Rational start, Rational end)
+    {
+        var bpmIdx = FindIndex(start);
+        return bpmIdx < Count - 1 && this[bpmIdx + 1].Time < end;
+    }
+
     private string DebuggerDisplay()
     {
         var result = "";
