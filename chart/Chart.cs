@@ -20,6 +20,6 @@ public class Chart
         BpmList.Clear();
         BpmList.AddRange(sortedBpms);
 
-        Notes = Notes.OrderBy(n => n.Time).ToList(); // LINQ OrderBy 是稳定排序
+        Notes = Notes.OrderBy(n => n.Time).ThenBy(n=>n.FalseEachIdx).ToList(); // LINQ OrderBy 是稳定排序
     }
 }

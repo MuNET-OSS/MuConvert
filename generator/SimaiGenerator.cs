@@ -28,14 +28,14 @@ public class SimaiGenerator : IGenerator
     private Chart chart;
 #pragma warning restore CS8618
     
-    private List<SimaiNote> buf = [];
-    private BigInteger curDiv = 0; // 当前的分音值状态
-    private bool lastWritenEmpty = false; // 上一小节是否整小节是空小节（美化用）
     private int bpmIdx = 0; // 当前遍历到了哪个bpm
+    private List<SimaiNote> buf = [];
     
-    private BigInteger bufBarWholepart = 0; // 以下两个用于控制分小节写入
+    private BigInteger curDiv = 0; // 当前的分音值状态
+    private Rational writePtr = 0; // 当前所写到的位置
+    private bool lastWritenEmpty = false; // 上一小节是否整小节是空小节（美化用）
+    
     private Dictionary<Slide, SimaiNote> sharedHeadBuf = new(); // 以下两个用于控制星星头的缓存，确保同头星星可以直接被连接到正确的simai语句上
-    private Rational sharedHeadBufTime = 0;
 
     // 切换分音
     private void ChangeDiv(BigInteger div)
@@ -57,31 +57,38 @@ public class SimaiGenerator : IGenerator
         result = result[..(i + 1)] + $"{{{div}}}" + result[(e + 1)..];
     }
     
-    // 按照一定的分音和数量，写入逗号进入谱面。一定会按照所传入的分音和数量进行写入。
-    private void WriteComma(int count, BigInteger div)
+    /**
+     * 写入一定长度的逗号进入谱面。内部会自动切换分音等。
+     * <param name="len">要写入的逗号（间隔）的长度</param>
+     * <param name="forceAsIs">如果为true，则不会对输入的len进行约分、强制按len.Numerator和len.Denominator进行写入。</param>
+     * <param name="autoNewLine">当进入新的一小节时，自动添加换行符</param>
+     */
+    private void WriteComma(Rational len, bool forceAsIs = false, bool autoNewLine = true)
     {
-        if (div != curDiv) ChangeDiv(div);
-        result += "".PadRight(count, ',');
-    }
-    
-    // 写入一定长度的逗号进入谱面。内部会自动切换分音等。
-    private void WriteComma(Rational len)
-    {
-        len = len.CanonicalForm;
         if (len == 0) return;
-        
-        var directCount = len * curDiv; // 本质是len / (1 / lastWritenBase)
-        // 看看能不能用现有curDiv进行整除，如果能的话就别折腾别切换了
-        if (curDiv > 0 && directCount.FractionPart == 0 && (directCount <= 4 || curDiv <= 16))
-        {
-            WriteComma((int)directCount.WholePart, curDiv);
-        }
-        else WriteComma((int)len.Numerator, len.Denominator);
-    }
+        if (!forceAsIs) len = len.CanonicalForm;
+        var div = len.Denominator;
+        var numer = len.Numerator;
 
-    private void Flush()
-    {
-        throw new NotImplementedException();
+        if (!forceAsIs)
+        {
+            var directCount = len * curDiv; // 本质是len / (1 / lastWritenBase)
+            // 看看能不能用现有curDiv进行整除，如果能的话就别折腾别切换了
+            if (curDiv > 0 && directCount.FractionPart == 0 && (directCount <= 4 || curDiv <= 16))
+            {
+                div = curDiv;
+                numer = directCount.WholePart;
+            }
+        }
+
+        if (div != curDiv) ChangeDiv(div);
+        for (int i = 0; i < numer; i++)
+        {
+            var before = writePtr;
+            result += ',';
+            writePtr += new Rational(1, div);
+            if (autoNewLine && writePtr.WholePart != before.WholePart) result += "\r\n";
+        }
     }
 
     private string DurationStr(Note note)
@@ -104,6 +111,7 @@ public class SimaiGenerator : IGenerator
     {
         if (chart != null) throw new Exception(Locale.InstanceMultipleUsage);
         chart = _chart;
+        chart.Sort();
 
         int noteIdx = 0;
         while (noteIdx < chart.Notes.Count)
@@ -112,27 +120,9 @@ public class SimaiGenerator : IGenerator
             var time = note.Time;
             
             // 先看是否引发bpm change，如果是的话，则本次循环只结算这个bpm change
-            BPM? bpmChange = null;
             if (bpmIdx < chart.BpmList.Count && time >= chart.BpmList[bpmIdx].Time)
             {
-                bpmChange = chart.BpmList[bpmIdx];
-                time = chart.BpmList[bpmIdx].Time;
-            }
-            
-            // 基于时间的缓存清理
-            while (time.WholePart > bufBarWholepart)
-            { // 如果进入了新的小节，则写入上一小节缓存下来的数据
-                Flush();
-                bufBarWholepart++;
-            }
-            if (time != sharedHeadBufTime)
-            { // 清空sharedHeadBuf
-                sharedHeadBuf.Clear();
-                sharedHeadBufTime = time;
-            }
-            
-            if (bpmChange != null)
-            { // 本次循环只结算这个bpm change
+                var bpmChange = chart.BpmList[bpmIdx];
                 buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm})", true));
                 continue;
             }
