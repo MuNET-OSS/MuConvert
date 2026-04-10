@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text;
 using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
@@ -24,20 +23,63 @@ class SimaiNote
 public class SimaiGenerator : IGenerator
 {
     private readonly List<Alert> alerts = [];
-    private StringBuilder result = new StringBuilder();
+    private string result = ""; // 不用StringBuilder是因为生成过程不可避免地需要对字符串做一些回溯的操作，需要倒着从字符串中查找字符。这样的场景下，StringBuilder并无性能优势，用string就够了。
 #pragma warning disable CS8618
     private Chart chart;
 #pragma warning restore CS8618
     
     private List<SimaiNote> buf = [];
+    private BigInteger curDiv = 0; // 当前的分音值状态
+    private bool lastWritenEmpty = false; // 上一小节是否整小节是空小节（美化用）
     private int bpmIdx = 0; // 当前遍历到了哪个bpm
     
     private BigInteger bufBarWholepart = 0; // 以下两个用于控制分小节写入
-    private bool lastWriteEmpty = false;
     private Dictionary<Slide, SimaiNote> sharedHeadBuf = new(); // 以下两个用于控制星星头的缓存，确保同头星星可以直接被连接到正确的simai语句上
     private Rational sharedHeadBufTime = 0;
 
-    private void flush()
+    // 切换分音
+    private void ChangeDiv(BigInteger div)
+    {
+        // 向前找到前一个逗号或右括号，加在这里
+        int i;
+        int e = -1;
+        for (i = result.Length - 1; i >= 0; i++)
+        {
+            var c = result[i];
+            if (c is ',' or ')' or '{')
+            {
+                if (c == '{') i--;
+                break;
+            }
+            else if (c == '}') e = i;
+        }
+        if (e == -1) e = i;
+        result = result[..(i + 1)] + $"{{{div}}}" + result[(e + 1)..];
+    }
+    
+    // 按照一定的分音和数量，写入逗号进入谱面。一定会按照所传入的分音和数量进行写入。
+    private void WriteComma(int count, BigInteger div)
+    {
+        if (div != curDiv) ChangeDiv(div);
+        result += "".PadRight(count, ',');
+    }
+    
+    // 写入一定长度的逗号进入谱面。内部会自动切换分音等。
+    private void WriteComma(Rational len)
+    {
+        len = len.CanonicalForm;
+        if (len == 0) return;
+        
+        var directCount = len * curDiv; // 本质是len / (1 / lastWritenBase)
+        // 看看能不能用现有curDiv进行整除，如果能的话就别折腾别切换了
+        if (curDiv > 0 && directCount.FractionPart == 0 && (directCount <= 4 || curDiv <= 16))
+        {
+            WriteComma((int)directCount.WholePart, curDiv);
+        }
+        else WriteComma((int)len.Numerator, len.Denominator);
+    }
+
+    private void Flush()
     {
         throw new NotImplementedException();
     }
@@ -80,7 +122,7 @@ public class SimaiGenerator : IGenerator
             // 基于时间的缓存清理
             while (time.WholePart > bufBarWholepart)
             { // 如果进入了新的小节，则写入上一小节缓存下来的数据
-                flush();
+                Flush();
                 bufBarWholepart++;
             }
             if (time != sharedHeadBufTime)

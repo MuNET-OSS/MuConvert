@@ -1,6 +1,5 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
+﻿using System.Globalization;
+using System.Numerics;
 using System.Reflection;
 
 namespace MuConvert.utils;
@@ -26,4 +25,8 @@ public static class Utils
         if (!dict.ContainsKey(key)) dict[key] = new();
         dict[key].Add(value);
     }
+    
+    public static BigInteger LCM(BigInteger a, BigInteger b) => a / BigInteger.GreatestCommonDivisor(a, b) * b;
+
+    public static BigInteger LCM(IEnumerable<BigInteger> values) => values.Aggregate(LCM);
 }
