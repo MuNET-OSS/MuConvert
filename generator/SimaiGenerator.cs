@@ -10,12 +10,14 @@ class SimaiNote
 {
     public Rational Time;
     public string Note;
+    public int FalseEachIndex;
     public bool IsBpm;
 
-    public SimaiNote(Rational time, string note, bool isBpm = false)
+    public SimaiNote(Rational time, string note, int falseEachIndex, bool isBpm = false)
     {
         Time = time;
         Note = note;
+        FalseEachIndex = falseEachIndex;
         IsBpm = isBpm;
     }
 };
@@ -33,7 +35,7 @@ public class SimaiGenerator : IGenerator
     
     private BigInteger curDiv = 0; // 当前的分音值状态
     private Rational writePtr = 0; // 当前所写到的位置
-    private bool lastWritenEmpty = false; // 上一小节是否整小节是空小节（美化用）
+    // private bool isInAbsTimeDiv = false; // 为未来的需求预留，暂时用不上
     
     private Dictionary<Slide, SimaiNote> sharedHeadBuf = new(); // 以下两个用于控制星星头的缓存，确保同头星星可以直接被连接到正确的simai语句上
 
@@ -62,8 +64,9 @@ public class SimaiGenerator : IGenerator
      * <param name="len">要写入的逗号（间隔）的长度</param>
      * <param name="forceAsIs">如果为true，则不会对输入的len进行约分、强制按len.Numerator和len.Denominator进行写入。</param>
      * <param name="autoNewLine">当进入新的一小节时，自动添加换行符</param>
+     * <param name="breakOnNewLine">当添加换行符后，break，未完成的添加不再执行。仅当autoNewLine=true时才生效。</param>
      */
-    private void WriteComma(Rational len, bool forceAsIs = false, bool autoNewLine = true)
+    private void WriteComma(Rational len, bool forceAsIs = false, bool autoNewLine = true, bool breakOnNewLine = false)
     {
         if (len == 0) return;
         if (!forceAsIs) len = len.CanonicalForm;
@@ -87,7 +90,11 @@ public class SimaiGenerator : IGenerator
             var before = writePtr;
             result += ',';
             writePtr += new Rational(1, div);
-            if (autoNewLine && writePtr.WholePart != before.WholePart) result += "\r\n";
+            if (autoNewLine && writePtr.WholePart != before.WholePart)
+            {
+                result += "\r\n";
+                if (breakOnNewLine) break;
+            }
         }
     }
 
@@ -113,6 +120,7 @@ public class SimaiGenerator : IGenerator
         chart = _chart;
         chart.Sort();
 
+        // 遍历音符，生成SimaiNote中间表示（时间还是Rational、但音符内容已转为字符串），存入buf中
         int noteIdx = 0;
         while (noteIdx < chart.Notes.Count)
         {
@@ -123,7 +131,7 @@ public class SimaiGenerator : IGenerator
             if (bpmIdx < chart.BpmList.Count && time >= chart.BpmList[bpmIdx].Time)
             {
                 var bpmChange = chart.BpmList[bpmIdx];
-                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm})", true));
+                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm})", 0, true));
                 continue;
             }
 
@@ -186,7 +194,7 @@ public class SimaiGenerator : IGenerator
                 }
                 else
                 {
-                    var simaiNote = new SimaiNote(time, res);
+                    var simaiNote = new SimaiNote(time, res, slide.FalseEachIdx);
                     buf.Add(simaiNote);
                     res = ""; // 我自己加进simaiNote里去，循环外面的公共逻辑就不要加了
                     sharedHeadBuf[slide] = simaiNote;
@@ -194,10 +202,130 @@ public class SimaiGenerator : IGenerator
             }
             else throw Utils.Fail("SimaiGenerator遇到了未知的Note对象");
 
-            if (!string.IsNullOrEmpty(res)) buf.Add(new SimaiNote(time, res));
+            if (!string.IsNullOrEmpty(res)) buf.Add(new SimaiNote(time, res, note.FalseEachIdx));
             noteIdx++;
         }
+        
+        // 基于buf中的内容，写入result生成字符串
+        BigInteger baseDiv = 1; // 目标的div数。生成逗号时，会尽量使结果接近这个目标div数。
+        BigInteger baseDivBar = -1; // 上述baseDiv对应的小节编号。我们的策略是对每个小节重算baseDiv，因此需要记录这个信息。
+        for (int i = 0; i < buf.Count;i++)
+        {
+            var note = buf[i];
+            
+            # region 处理多押
+            // 非常简单，发现是多押，直接append即可，下面的逻辑全不需要管
+            if (i > 0 && note.Time == buf[i-1].Time)
+            {
+                // 看FalseEachIndex是否有增大，决定用"/"还是"`"连接
+                var isFalseEach = note.FalseEachIndex > buf[i - 1].FalseEachIndex;
+                result += (isFalseEach ? '`' : '/') + note.Note;
+                continue; // 退出循环，下面的逻辑不走了
+            }
+            # endregion
+            
+            # region 仅在每小节的第一个音符时才调用到的逻辑
+            bool? shouldFillLastBarFirst = null;
+            if (note.Time.WholePart > baseDivBar)
+            {
+                baseDivBar = note.Time.WholePart;
+                (baseDiv, shouldFillLastBarFirst) = CalculateBaseDiv(i);
+            }
+            if (shouldFillLastBarFirst != null)
+            { 
+                // 说明是刚刚发生CalculateBaseDiv(i)后的小节首音符。此时：
+                // 1. 需要按照shouldFillLastBarFirst中的说明进行处理
+                // 2. 可能需要添加完整的空白小节进去。
+                if (shouldFillLastBarFirst.Value)
+                {
+                    var toFill = (baseDivBar - writePtr).FractionPart;
+                    WriteComma(toFill);
+                }
+                else if (writePtr.FractionPart != 0)
+                {
+                    WriteComma(note.Time - writePtr, breakOnNewLine: true);
+                }
+                // 把多余的整小节添加进去
+                var wholeBarToFill = (note.Time - writePtr).WholePart;
+                for (var j = 0; j < wholeBarToFill; j++)
+                {
+                    WriteComma(1, true, j == wholeBarToFill - 1); // 当出现连续多个空小节时，只有最后一个需要在结尾加换行符
+                }
+            }
+            #endregion
+            
+            // 添加音符之前的空白
+            var blank = note.Time - writePtr;
+            WriteBlank(blank, baseDiv);
+            result += note.Note;
+            // if (note.IsBpm) { ChangeDiv(...) } // 为未来isInAbsTimeDiv的需求预留
+        }
+        
+        return (result, alerts);
+    }
 
-        return ("", alerts);
+    private void WriteBlank(Rational blank, BigInteger baseDiv)
+    { // 抽成一个单独的函数，方便递归调用
+        blank = blank.CanonicalForm;
+        var t = new Rational(baseDiv, blank.Denominator);
+        if (t >= 1 && t.FractionPart == 0)
+        { // 当前要添加的时间的分音小于baseDiv的情况，强制按照baseDiv进行添加。
+            Rational value = new(blank.Numerator * t.WholePart, baseDiv);
+            WriteComma(value, true);
+            return;
+        }
+
+        var curAim = Utils.Max(blank.Denominator / 4, baseDiv);
+        var wholeAims = new Rational((blank * curAim).WholePart, curAim);
+        var remain = blank - wholeAims;
+        WriteComma(remain);
+        WriteBlank(wholeAims, baseDiv);
+    }
+
+    private (BigInteger, bool) CalculateBaseDiv(int noteIdx)
+    {
+        BigInteger bar = buf[noteIdx].Time.WholePart;
+        List<Rational> gaps = [buf[noteIdx].Time - bar]; // 每个音符前面的间隔时间
+        for (int i = noteIdx+1; i < buf.Count; i++)
+        {
+            if (buf[i].Time.WholePart > bar) break;
+            gaps.Add(buf[i].Time - buf[i-1].Time);
+        }
+        
+        // 计算两种最小公倍数LCM：
+        // 第一种，对所有的间隔计算分母的LCM，作为“此种方式是否更优的标准”
+        // 第二种，仅对TH_DIRECT以下的分音才纳入考虑的计算LCM，作为base的基础
+        var (lcm_1, lcm_2) = LCM(gaps);
+        var resultDiv = lcm_2;
+        var shouldFillLastBarFirst = true;
+        
+        // 上述假设的是在正式开始应该先把上一小节补完的情况。
+        // 下面，假设不需要把上一小节补完，重算一次。
+        var remainTime = bar - writePtr;
+        if (remainTime > 0)
+        {
+            gaps[0] += remainTime;
+            var (lcm_n_1, lcm_n_2) = LCM(gaps);
+            if (lcm_n_1 < lcm_1)
+            { // 说明刚刚的这种计算方式更优
+                resultDiv = lcm_n_2;
+                shouldFillLastBarFirst = false;
+            }
+        }
+        
+        return (resultDiv, shouldFillLastBarFirst);
+    }
+
+    private const int TH_DIRECT = 16; // base分音的最大值，也是第二种LCM计算时过滤的阈值。超过这个值，不能成为base分音
+    private const int DIRECT_MINVAL = 4; // 当第一种LCM大于第二种时，第二种不可以小于这个值。
+    
+    private (BigInteger, BigInteger) LCM(List<Rational> gaps)
+    {
+        var data = gaps.Where(x => x > 0).Select(x => x.CanonicalForm.Denominator).ToList();
+        var lcm_1 = data.Count > 0 ? Utils.LCM(data) : 1;
+        data = data.Where(x => x <= TH_DIRECT).ToList();
+        var lcm_2 = data.Count > 0 ? Utils.LCM(data) : 1;
+        if (lcm_1 > TH_DIRECT && lcm_2 < DIRECT_MINVAL) lcm_2 = DIRECT_MINVAL; // 当lcm_1 > TH_DIRECT（也就是大于lcm_2）时，lcm_2不得小于DIRECT_MINVAL；反之，如果lcm_1 <= TH_DIRECT，则说明第二次过滤得到的data和第一次必定是一样的，则lcm_1必定==lcm_2。
+        return (lcm_1, lcm_2);
     }
 }
