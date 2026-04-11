@@ -180,6 +180,7 @@ public class SimaiGenerator : IGenerator
                         throw new ConversionException(alerts);
                     }
                 }
+                res += slide.Modifiers; // 根据simai文档，slide的全局修饰符（绝赞星星）加在最后一段星星的时间标记的后面
 
                 if (slide.SharedHeadWith != null)
                 {
