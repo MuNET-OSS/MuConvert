@@ -59,96 +59,96 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AssertionFailed" xml:space="preserve">
-    <value>MuConvert hit an internal error (AssertionFailed). Please report it at https://github.com/MuNet-OSS/MuConvert/issues . ({0})</value>
-  </data>
-  <data name="InvalidTouchArea" xml:space="preserve">
-    <value>Invalid touch area specifier: {0}</value>
+    <value>很抱歉，MuConvert发生内部错误(AssertionFailed)。您可将问题报告至 https://github.com/MuNet-OSS/MuConvert/issues 。（{0}）</value>
   </data>
   <data name="InvalidKey" xml:space="preserve">
-    <value>Invalid key index (must be 1–8): {0}</value>
+    <value>使用了不合法的键位标记: {0}</value>
+  </data>
+  <data name="InvalidTouchArea" xml:space="preserve">
+    <value>使用了不合法的判定区标记: {0}</value>
   </data>
   <data name="NoDuration" xml:space="preserve">
-    <value>Duration cannot be set on Tap or Touch notes.</value>
+    <value>不能为Tap或Touch设置持续时间</value>
   </data>
   <data name="InvalidSlide" xml:space="preserve">
-    <value>Invalid slide definition: {0}</value>
+    <value>星星定义不合法: {0}</value>
   </data>
   <data name="MessageAt" xml:space="preserve">
-    <value>At</value>
+    <value>在</value>
   </data>
   <data name="MessageLine" xml:space="preserve">
-    <value>line {0}</value>
+    <value>第{0}行</value>
   </data>
   <data name="MessageTime" xml:space="preserve">
-    <value>bar time {0:W}({1:F2}s)</value>
+    <value>第{0:W}小节({1:F2}秒)</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
-    <value>parsing {0}</value>
+    <value>解析 {0} 时</value>
   </data>
   <data name="Error" xml:space="preserve">
-    <value>ERROR:</value>
+    <value>发生错误:</value>
   </data>
   <data name="Warning" xml:space="preserve">
-    <value>WARNING:</value>
+    <value>警告:</value>
   </data>
   <data name="Info" xml:space="preserve">
-    <value>INFO:</value>
+    <value>信息:</value>
   </data>
   <data name="Debug" xml:space="preserve">
-    <value>DEBUG:</value>
+    <value>调试:</value>
   </data>
   <data name="SimaiGrammarFailed" xml:space="preserve">
-    <value>Failed to parse simai syntax! </value>
+    <value>解析Simai语法时失败！</value>
   </data>
   <data name="AbsoluteStepUsed" xml:space="preserve">
-    <value>The chart uses absolute time step notation like {0}. Support for this feature is experimental; if you run into issues, please report them at https://github.com/MuNet-OSS/MuConvert/issues.</value>
+    <value>谱面中使用了类似 {0} 这种“绝对时间步长”写法。对该特性的支持是实验性的，如遇问题，请考虑通过 https://github.com/MuNet-OSS/MuConvert/issues 报告给我们。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>Unexpected modifier(s): {0}. Ignored.</value>
+    <value>不应出现的修饰符: {0}. 已忽略。</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
-    <value>For multi-segment slides with per-segment durations, a wait-time fragment (e.g. {0.5##...}) may only appear on the first segment. Invalid wait-time markers were ignored.</value>
+    <value>对分别指定每段时长的多段星星，类似{0.5##...}的等待时间标记，应仅在第一段星星上出现。不合法的等待时间标记已被忽略。</value>
   </data>
   <data name="InstanceMultipleUsage" xml:space="preserve">
-    <value>Parser/Generator instances are single-use; do not call Parse or Generate repeatedly! Create a new Parser/Generator for each chart you convert.</value>
+    <value>Parser/Generator实例都只能使用一次，不能重复调用Parse和Generate方法！如果您需要转换多个谱面，请在每次转换前new一个新的Parser/Generator实例。</value>
   </data>
   <data name="InvalidMaidataFile" xml:space="preserve">
-    <value>Not a valid maidata file: no '&amp;' field markers were found.</value>
+    <value>不合法的maidata文件！输入的文件中不含&amp;标记，似乎不是一个maidata文件。</value>
   </data>
   <data name="InvalidMA2Sentence" xml:space="preserve">
-    <value>Unrecognized or invalid MA2 statement!</value>
+    <value>无法识别或不合法的MA2语句！</value>
   </data>
   <data name="InvalidMA2SentenceWarning" xml:space="preserve">
-    <value>Unrecognized MA2 statement; this line was ignored.</value>
+    <value>无法识别的MA2语句，已忽略此语句。</value>
   </data>
   <data name="InvalidMA2HeaderSentenceAfterHeader" xml:space="preserve">
-    <value>Invalid MA2 statement: after the header section ended, a header-only line appeared again!</value>
+    <value>不合法的MA2语句：在头段落结束后，再次出现了只能在头段落中出现的语句！</value>
   </data>
   <data name="NoBPMInMA2" xml:space="preserve">
-    <value>The chart has no BPM line; parsing cannot continue!</value>
+    <value>谱面中没有BPM语句，无法完成解析！</value>
   </data>
   <data name="UnsuppoertedMA2Version" xml:space="preserve">
-    <value>This MA2 version is not supported yet. Currently only MA2 1.03–1.05 are supported.</value>
+    <value>此MA2的版本尚不支持！目前仅支持MA2 1.03~1.05。</value>
   </data>
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
-    <value>Charts whose MET_DEF is not "4 4" are not supported yet!</value>
+    <value>暂不支持MET_DEF不为"4 4"的谱面！</value>
   </data>
   <data name="NoNotesInMA2" xml:space="preserve">
-    <value>The chart has no notes!</value>
+    <value>谱面中没有音符！</value>
   </data>
   <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">
-    <value>This MA2 line has more parameters than required; the extras were ignored.</value>
+    <value>MA2语句中的参数超过所需数量！多余的参数已忽略。</value>
   </data>
   <data name="MA2CNSlideHasWait" xml:space="preserve">
-    <value>Parse error: MA2 CN___ (connecting slide) has a non-zero wait time.</value>
+    <value>解析错误：MA2 CN___ 连接星星语句出现了非0的等待时间。</value>
   </data>
   <data name="MA2CNSlideNoPrevious" xml:space="preserve">
-    <value>Parse error: MA2 CN___ (connecting slide) has no preceding slide segment!</value>
+    <value>解析错误：MA2 CN___ 连接星星，未能找到前一段的星星！</value>
   </data>
   <data name="StartNoBpm" xml:space="preserve">
-    <value>No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning.</value>
+    <value>谱面开头没有指定BPM！已自动为您添加一个`({0})`在谱面开头。</value>
   </data>
   <data name="NoteTooNear" xml:space="preserve">
-    <value>TODO</value>
+    <value>此音符与前一个音符的相距时间小于384分音！受MA2语法限制，MA2所能表示的时间精度仅能达到1/384，因此您的这两个音符无法被精确表示、并且可能被生成为黄色双押。如果您需要的是“伪双押”，请使用"1`2"这种语法来表示伪双押，或确保错开一个384分音的时间。</value>
   </data>
 </root>

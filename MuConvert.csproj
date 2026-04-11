@@ -13,19 +13,19 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Update="Locale.resx">
+        <EmbeddedResource Update="i18n\Locale.resx">
             <Generator>PublicResXFileCodeGenerator</Generator>
             <LastGenOutput>Locale.Designer.cs</LastGenOutput>
         </EmbeddedResource>
-        <EmbeddedResource Update="Locale.zh-hans.resx">
+        <EmbeddedResource Update="i18n\Locale.zh-hans.resx">
             <DependentUpon>Locale.resx</DependentUpon>
             <WithCulture>true</WithCulture>
         </EmbeddedResource>
-        <EmbeddedResource Update="Locale.zh-hant.resx">
+        <EmbeddedResource Update="i18n\Locale.zh-hant.resx">
             <DependentUpon>Locale.resx</DependentUpon>
             <WithCulture>true</WithCulture>
         </EmbeddedResource>
-        <Compile Update="Locale.Designer.cs">
+        <Compile Update="i18n\Locale.Designer.cs">
             <DesignTime>true</DesignTime>
             <AutoGen>true</AutoGen>
             <DependentUpon>Locale.resx</DependentUpon>

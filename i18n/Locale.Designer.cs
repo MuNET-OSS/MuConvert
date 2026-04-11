@@ -38,7 +38,7 @@ namespace MuConvert {
         public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("MuConvert.Locale", typeof(Locale).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("MuConvert.i18n.Locale", typeof(Locale).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -285,7 +285,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to This note is closer than a 384th note to the previous note. MA2 can only represent timing down to 1/384 of a whole note, so these two notes cannot be represented exactly and may be emitted as a yellow EACH pair. If you want a &quot;fake EACH&quot;, use syntax such as &quot;1`2&quot;, or offset the notes by at least one 384th note..
         /// </summary>
         public static string NoteTooNear {
             get {
