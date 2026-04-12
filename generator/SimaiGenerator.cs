@@ -111,7 +111,7 @@ public class SimaiGenerator : IGenerator
         }
         else
         { // 返回绝对时间
-            return $"[#{(decimal)duration.Seconds:0.###}]";
+            return $"[#{(decimal)duration.Seconds:0.####}]";
         }
     }
 
@@ -137,7 +137,7 @@ public class SimaiGenerator : IGenerator
             {
                 var bpmChange = chart.BpmList[bpmIdx];
                 bpmIdx++;
-                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm:0.#####})", 0, true));
+                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm:0.#######})", 0, true));
                 continue;
             }
 
@@ -182,7 +182,7 @@ public class SimaiGenerator : IGenerator
                         if (rollingTime == slide.Time && // 是带有时间标记的第一段
                             slide.WaitTime.InvariantBar != new Rational(1, 4))
                         { // 非标准等待时间的星星，应该加上等待时间标记。simai仅支持绝对时间的等待时间标记。
-                            durationStr = $"[{(decimal)slide.WaitTime.Seconds:0.###}##{durationStr[1..].TrimStart('#')}";
+                            durationStr = $"[{(decimal)slide.WaitTime.Seconds:0.####}##{durationStr[1..].TrimStart('#')}";
                         }
                         res += durationStr;
                         rollingTime += seg.Duration.Bar;
