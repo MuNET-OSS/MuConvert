@@ -49,7 +49,7 @@ public class 官谱转Simai测试
 
         var expectedTimeline = SimaiCommaTimeline.Flatten(inote);
         var actualTimeline = SimaiCommaTimeline.Flatten(simai);
-        SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline);
+        SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline, _output);
     }
 }
 
@@ -85,62 +85,45 @@ internal static class SimaiCommaTimeline
         return list;
     }
 
-    public static void AssertTimelineEqual(IReadOnlyList<Entry> expected, IReadOnlyList<Entry> actual)
+    public static void AssertTimelineEqual(
+        IReadOnlyList<Entry> expected,
+        IReadOnlyList<Entry> actual,
+        ITestOutputHelper? output = null)
     {
-        static IEnumerable<(Rational t, string canon)> Canon(IReadOnlyList<Entry> e) =>
-            e.Select(x => (t: x.Time, canon: NormalizeForCompare(x.Text)))
-                .OrderBy(p => p.t)
-                .ThenBy(p => p.canon, StringComparer.Ordinal);
+        static IEnumerable<Entry> Canon(IReadOnlyList<Entry> e) =>
+            e.Select(x => new Entry(x.Time, NormalizeForCompare(x.Text)))
+                .OrderBy(p => p.Time)
+                .ThenBy(p => p.Text, StringComparer.Ordinal);
 
-        var a = Canon(expected).ToList();
-        var b = Canon(actual).ToList();
-        if (a.Count != b.Count)
-            throw new Xunit.Sdk.XunitException(
-                $"Timeline count differs: expected {a.Count}, actual {b.Count}.{FormatTailDiff(a, b)}");
+        expected = Canon(expected).ToList();
+        actual = Canon(actual).ToList();
+        Assert.Equal(expected.Count, actual.Count);
 
-        for (var i = 0; i < a.Count; i++)
+        for (var i = 0; i < expected.Count; i++)
         {
-            if (a[i].t != b[i].t || !string.Equals(a[i].canon, b[i].canon, StringComparison.Ordinal))
+            try
             {
-                var sb = new StringBuilder();
-                sb.AppendLine($"First mismatch at index {i}:");
-                var exRaw = expected.FirstOrDefault(e =>
-                    NormalizeForCompare(e.Text) == a[i].canon && e.Time == a[i].t).Text;
-                var acRaw = actual.FirstOrDefault(e =>
-                    NormalizeForCompare(e.Text) == b[i].canon && e.Time == b[i].t).Text;
-                sb.AppendLine($"  expected: ({a[i].t}) {exRaw ?? "<none>"}");
-                sb.AppendLine($"  actual  : ({b[i].t}) {acRaw ?? "<none>"}");
-                sb.AppendLine("  (normalized strings follow)");
-                sb.AppendLine($"  expected≈: {a[i].t} | {a[i].canon}");
-                sb.AppendLine($"  actual≈  : {b[i].t} | {b[i].canon}");
-                sb.AppendLine(FormatNeighborhood(a, b, i));
-                throw new Xunit.Sdk.XunitException(sb.ToString());
+                Assert.Equal(expected[i].Time, actual[i].Time);
+                Assert.Equal(expected[i].Text, actual[i].Text, StringComparer.Ordinal);
+            }
+            catch (Xunit.Sdk.XunitException e)
+            {
+                output?.WriteLine($"Assert failure occured at Note {i} (context below):");
+                output?.WriteLine(FormatNeighborhood(expected, actual, i).TrimEnd());
+                throw;
             }
         }
     }
 
-    private static string FormatNeighborhood(List<(Rational t, string canon)> a, List<(Rational t, string canon)> b, int i)
+    private static string FormatNeighborhood(IReadOnlyList<Entry> a, IReadOnlyList<Entry> b, int i)
     {
         var sb = new StringBuilder();
         sb.AppendLine("--- context (expected) ---");
         for (var j = Math.Max(0, i - 3); j < Math.Min(a.Count, i + 5); j++)
-            sb.AppendLine($"  [{j}] {a[j].t} | {a[j].canon}");
+            sb.AppendLine($"  [{j}] {a[j].Time} | {a[j].Text}");
         sb.AppendLine("--- context (actual) ---");
         for (var j = Math.Max(0, i - 3); j < Math.Min(b.Count, i + 5); j++)
-            sb.AppendLine($"  [{j}] {b[j].t} | {b[j].canon}");
-        return sb.ToString();
-    }
-
-    private static string FormatTailDiff(List<(Rational t, string canon)> a, List<(Rational t, string canon)> b)
-    {
-        var sb = new StringBuilder();
-        var n = Math.Min(8, Math.Max(a.Count, b.Count));
-        sb.AppendLine("--- tail expected ---");
-        foreach (var x in a.TakeLast(Math.Min(n, a.Count)))
-            sb.AppendLine($"  {x.t} | {x.canon}");
-        sb.AppendLine("--- tail actual ---");
-        foreach (var x in b.TakeLast(Math.Min(n, b.Count)))
-            sb.AppendLine($"  {x.t} | {x.canon}");
+            sb.AppendLine($"  [{j}] {b[j].Time} | {b[j].Text}");
         return sb.ToString();
     }
 
