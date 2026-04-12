@@ -129,8 +129,12 @@ public class Duration
         }
         else
         {
-            var bpmIndex = BpmList.FindIndex(_note.Time);
             var rangeStart = _note.Time;
+            if (_note is Slide slide && slide.WaitTime != this)
+            { // 如果我不是WaitTime，则我是Duration，则应加上等待时间
+                rangeStart += slide.WaitTime.Bar;
+            }
+            var bpmIndex = BpmList.FindIndex(rangeStart);
             Rational result = 0;
             Rational remain = value;
             while (remain > 0)

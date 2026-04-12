@@ -116,8 +116,10 @@ internal static partial class SimaiCommaTimeline
         }
     }
 
-    [GeneratedRegex(@"\[(?:(\d+):(\d+)|#([\d\.]+))\]")]
+    [GeneratedRegex(@"\[(?:(\d+):(\d+)|(?:([\d\.]+)#)?#([\d\.]+))\]")]
     private static partial Regex DurationStrRegex();
+    
+    private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-3;
     
     private static void AssertNoteEqual(string expected, string actual, int noteIdx, Rational time, Chart chart)
     {
@@ -137,11 +139,27 @@ internal static partial class SimaiCommaTimeline
                 var expTime = DurationStrRegex().Match(exp);
                 var actTime = DurationStrRegex().Match(act);
                 var bpm = chart.BpmList.Find(time).Bpm;
-                if (expTime.Groups[1].Success && actTime.Groups[3].Success)
+                if (expTime.Groups[1].Success && actTime.Groups[4].Success)
                 { // exp中是分数时间、act中是小数时间的情况
                     // 小数时间化为分数时间，看看是否对的上
-                    var v = decimal.Parse(actTime.Groups[3].Value) / (240 / bpm) * int.Parse(expTime.Groups[1].Value);
-                    if (Math.Round(v) == int.Parse(expTime.Groups[2].Value)) result = true; // 如果对的上，则不判定为比较失败
+                    var numer = decimal.Parse(actTime.Groups[4].Value) / (240 / bpm) * int.Parse(expTime.Groups[1].Value);
+                    if (Math.Round(numer) == int.Parse(expTime.Groups[2].Value)) result = true; // 如果对的上，则不判定为比较失败
+                    if (actTime.Groups[3].Success)
+                    { // 如果写了等待时间的话，等待时间必须为1拍
+                        var oneBeatSec = 60 / (Rational)bpm;
+                        if (!Near(double.Parse(actTime.Groups[3].Value), (double)oneBeatSec)) result = false; // 如果等待时间对不上，则仍判定为比较失败
+                    }
+                }
+                else if (actTime.Groups[1].Success && expTime.Groups[4].Success)
+                { // exp中是小数时间、act中是分数时间的情况
+                    // 分数时间化为小数时间，看是否对的上（差距<1ms）
+                    var sec = new Rational(int.Parse(actTime.Groups[2].Value), int.Parse(actTime.Groups[1].Value)) * (240 / (Rational)bpm);
+                    if (Near((double)sec, double.Parse(expTime.Groups[4].Value))) result = true; // 如果对的上，则不判定为比较失败
+                    if (expTime.Groups[3].Success)
+                    { // 如果写了等待时间的话，等待时间必须为1拍
+                        var oneBeatSec = 60 / (Rational)bpm;
+                        if (!Near(double.Parse(expTime.Groups[3].Value), (double)oneBeatSec)) result = false; // 如果等待时间对不上，则仍判定为比较失败
+                    }
                 }
             }
 
