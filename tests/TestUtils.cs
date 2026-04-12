@@ -13,3 +13,23 @@ internal static class TestUtils
         return dir ?? throw new DirectoryNotFoundException("Could not locate repo root (MuConvert.csproj).");
     }
 }
+
+public record TestInput(string Maidata, int LevelId)
+{
+    public string Dir = Path.GetDirectoryName(Maidata)!;
+
+    public string MA2
+    {
+        get
+        {
+            var expectedSuffix = $"{LevelId - 2:D2}.ma2";
+            var dirInfo = new DirectoryInfo(Dir);
+            var expected = dirInfo.EnumerateFiles("*" + expectedSuffix, SearchOption.TopDirectoryOnly).ToList();
+            Assert.True(expected.Count == 1,
+                $"Expected exactly one golden file matching '*{expectedSuffix}' in '{dirInfo.FullName}', got {expected.Count}.");
+            return expected[0].FullName;
+        }
+    }
+    
+    public override string ToString() => $"{Path.GetFileName(Path.GetDirectoryName(Maidata))}-lv{LevelId}";
+}

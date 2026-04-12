@@ -45,10 +45,10 @@ public class SimaiGenerator : IGenerator
         // 向前找到前一个逗号或右括号，加在这里
         int i;
         int e = -1;
-        for (i = result.Length - 1; i >= 0; i++)
+        for (i = result.Length - 1; i >= 0; i--)
         {
             var c = result[i];
-            if (c is ',' or ')' or '{')
+            if (c is ',' or ')' or '{' or '\n')
             {
                 if (c == '{') i--;
                 break;
@@ -57,6 +57,7 @@ public class SimaiGenerator : IGenerator
         }
         if (e == -1) e = i;
         result = result[..(i + 1)] + $"{{{div}}}" + result[(e + 1)..];
+        curDiv = div;
     }
     
     /**
@@ -131,7 +132,8 @@ public class SimaiGenerator : IGenerator
             if (bpmIdx < chart.BpmList.Count && time >= chart.BpmList[bpmIdx].Time)
             {
                 var bpmChange = chart.BpmList[bpmIdx];
-                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm})", 0, true));
+                bpmIdx++;
+                buf.Add(new SimaiNote(bpmChange.Time, $"({bpmChange.Bpm:0.#####})", 0, true));
                 continue;
             }
 
@@ -261,6 +263,7 @@ public class SimaiGenerator : IGenerator
             result += note.Note;
             // if (note.IsBpm) { ChangeDiv(...) } // 为未来isInAbsTimeDiv的需求预留
         }
+        result += ",\r\nE"; // 结束标记
         
         return (result, alerts);
     }

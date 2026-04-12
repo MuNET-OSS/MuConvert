@@ -11,17 +11,9 @@ namespace MuConvert.Tests;
 /* 都是让AI写的 */
 public class 自制谱测试
 {
-    private readonly ITestOutputHelper _testOutputHelper;
+    private readonly ITestOutputHelper _output;
 
-    public 自制谱测试(ITestOutputHelper testOutputHelper)
-    {
-        _testOutputHelper = testOutputHelper;
-    }
-
-    public record TestInput(string path, int levelId)
-    {
-        public override string ToString() => $"{Path.GetFileName(Path.GetDirectoryName(path))}-lv{levelId}";
-    }
+    public 自制谱测试(ITestOutputHelper output) => _output = output;
 
     /// <summary>
     /// 每个元素对应一张谱面：一条 Theory 用例只跑一个 chart。
@@ -46,21 +38,13 @@ public class 自制谱测试
     [MemberData(nameof(AllCharts))]
     public void TestChart(TestInput input)
     {
-        var dir = new DirectoryInfo(Path.GetDirectoryName(input.path)!);
-
-        var maidataTxt = File.ReadAllText(input.path, Encoding.UTF8);
-        var maidata = new Maidata(maidataTxt);
-        var chartInfo = maidata.Levels[input.levelId];
-
-        var expectedSuffix = $"_{input.levelId - 2:D2}.ma2";
-        var expected = dir.EnumerateFiles("*" + expectedSuffix, SearchOption.TopDirectoryOnly).ToList();
-        Assert.True(expected.Count == 1,
-            $"Expected exactly one golden file matching '*{expectedSuffix}' in '{dir.FullName}', got {expected.Count}.");
+        var maidata = new Maidata(File.ReadAllText(input.Maidata, Encoding.UTF8));
+        var chartInfo = maidata.Levels[input.LevelId];
+        var expectedMa2 = File.ReadAllText(input.MA2, Encoding.UTF8);
 
         var (chart, _) = new SimaiParser(bigTouch: false, isUtage: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
         var (ma2, _) = new MA2Generator().Generate(chart);
 
-        var expectedMa2 = File.ReadAllText(expected[0].FullName, Encoding.UTF8);
 
         ma2 = keepNotesOnly(ma2);
         expectedMa2 = keepNotesOnly(expectedMa2);

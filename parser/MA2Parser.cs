@@ -1,4 +1,4 @@
-﻿using MuConvert.chart;
+using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -89,10 +89,11 @@ public class MA2Parser : IParser
                 string cc = cmd.Length == 5 ? cmd[2..5] : cmd;
                 int len;
                 
-                if (cc is "TAP" or "STR")
+                if (cc is "TAP" or "STR" || cmd == "BRK")
                 {
                     note = cc == "STR" ? new Star(chart, time) : new Tap(chart, time);
                     note.Key = key;
+                    if (cmd == "BRK") note.IsBreak = true;
                     if (values.Length != 4) WarnParamsCount(lineNo, line, time);
                 }
                 else if (cc == "HLD" && values.Length >= 5 && int.TryParse(values[4], out len))
