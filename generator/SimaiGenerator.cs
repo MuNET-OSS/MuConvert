@@ -125,9 +125,11 @@ public class SimaiGenerator : IGenerator
 
         // 遍历音符，生成SimaiNote中间表示（时间还是Rational、但音符内容已转为字符串），存入buf中
         int noteIdx = 0;
-        while (noteIdx < chart.Notes.Count)
-        {
-            var note = chart.Notes[noteIdx];
+        while (noteIdx < chart.Notes.Count || bpmIdx < chart.BpmList.Count)
+        { // 只要有音符没写入或bpm标记没写入，就继续
+            // 如果noteIdx 不< chart.Notes.Count，还能走到这里的话一定是因为bpm还没写入完(bpmIdx < chart.BpmList.Count)。
+            // 此时只要让time是一个特别大的数，确保下面的time >= chart.BpmList[bpmIdx].Time的逻辑能触发，就可以了。
+            var note = noteIdx < chart.Notes.Count ? chart.Notes[noteIdx] : new Tap(null!, 999999999);
             var time = note.Time;
             
             // 先看是否引发bpm change，如果是的话，则本次循环只结算这个bpm change

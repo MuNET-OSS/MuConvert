@@ -33,6 +33,7 @@ public class 官谱转Simai测试
             var maidataTxt = File.ReadAllText(maidataPath, Encoding.UTF8);
             var maidata = new Maidata(maidataTxt);
             foreach (var id in maidata.Levels.Keys.OrderBy(k => k))
+                // if (maidataPath.Contains("系ぎて") && id == 3)
                 yield return [new TestInput(maidataPath, id)];
         }
     }
@@ -108,7 +109,7 @@ internal static partial class SimaiCommaTimeline
                 Assert.Equal(expected[i].Time, actual[i].Time);
                 AssertNoteEqual(expected[i].Text, actual[i].Text, i, actual[i].Time, chart);
             }
-            catch (Xunit.Sdk.XunitException e)
+            catch (Xunit.Sdk.XunitException)
             {
                 output?.WriteLine(FormatNeighborhood(expected, actual, i).TrimEnd());
                 throw;
@@ -116,7 +117,7 @@ internal static partial class SimaiCommaTimeline
         }
     }
 
-    [GeneratedRegex(@"\[(?:(\d+):(\d+)|(?:([\d\.]+)#)?#([\d\.]+))\]")]
+    [GeneratedRegex(@"\[(?:([\d\.]+)##)?(?:(\d+):(\d+)|#?([\d\.]+))\]")]
     private static partial Regex DurationStrRegex();
     
     private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-3;
@@ -139,28 +140,29 @@ internal static partial class SimaiCommaTimeline
                 var expTime = DurationStrRegex().Match(exp);
                 var actTime = DurationStrRegex().Match(act);
                 var bpm = chart.BpmList.Find(time).Bpm;
-                if (expTime.Groups[1].Success && actTime.Groups[4].Success)
+                if (expTime.Groups[2].Success && actTime.Groups[4].Success)
                 { // exp中是分数时间、act中是小数时间的情况
                     // 小数时间化为分数时间，看看是否对的上
-                    var numer = decimal.Parse(actTime.Groups[4].Value) / (240 / bpm) * int.Parse(expTime.Groups[1].Value);
-                    if (Math.Round(numer) == int.Parse(expTime.Groups[2].Value)) result = true; // 如果对的上，则不判定为比较失败
-                    if (actTime.Groups[3].Success)
-                    { // 如果写了等待时间的话，等待时间必须为1拍
-                        var oneBeatSec = 60 / (Rational)bpm;
-                        if (!Near(double.Parse(actTime.Groups[3].Value), (double)oneBeatSec)) result = false; // 如果等待时间对不上，则仍判定为比较失败
-                    }
+                    var numer = decimal.Parse(actTime.Groups[4].Value) / (240 / bpm) * int.Parse(expTime.Groups[2].Value);
+                    if (Math.Round(numer) == int.Parse(expTime.Groups[3].Value)) result = true; // 如果对的上，则不判定为比较失败
                 }
-                else if (actTime.Groups[1].Success && expTime.Groups[4].Success)
+                else if (actTime.Groups[2].Success && expTime.Groups[4].Success)
                 { // exp中是小数时间、act中是分数时间的情况
                     // 分数时间化为小数时间，看是否对的上（差距<1ms）
-                    var sec = new Rational(int.Parse(actTime.Groups[2].Value), int.Parse(actTime.Groups[1].Value)) * (240 / (Rational)bpm);
+                    var sec = new Rational(int.Parse(actTime.Groups[3].Value), int.Parse(actTime.Groups[2].Value)) * (240 / (Rational)bpm);
                     if (Near((double)sec, double.Parse(expTime.Groups[4].Value))) result = true; // 如果对的上，则不判定为比较失败
-                    if (expTime.Groups[3].Success)
-                    { // 如果写了等待时间的话，等待时间必须为1拍
-                        var oneBeatSec = 60 / (Rational)bpm;
-                        if (!Near(double.Parse(expTime.Groups[3].Value), (double)oneBeatSec)) result = false; // 如果等待时间对不上，则仍判定为比较失败
-                    }
                 }
+                else if (actTime.Groups[4].Success && expTime.Groups[4].Success)
+                { // exp中是小数时间、act中是小数时间的情况
+                    var expSec = double.Parse(expTime.Groups[4].Value);
+                    var actSec = double.Parse(actTime.Groups[4].Value);
+                    if (Near(expSec, actSec)) result = true; // 如果对的上，则不判定为比较失败
+                }
+                
+                // 比较等待时间是否相等（没显式写出的就是1拍）
+                var expWait = expTime.Groups[1].Success ? double.Parse(expTime.Groups[1].Value) : 60 / (double)bpm;
+                var actWait = actTime.Groups[1].Success ? double.Parse(actTime.Groups[1].Value) : 60 / (double)bpm;
+                if (!Near(expWait, actWait)) result = false; // 如果等待时间对不上，则仍判定为比较失败
             }
 
             if (!result) Assert.Fail(

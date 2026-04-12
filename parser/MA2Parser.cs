@@ -80,6 +80,7 @@ public class MA2Parser : IParser
             }
             else if (cmd == "MET" && values.Length == 5 && int.TryParse(values[1], out var _) && int.TryParse(values[2], out var _) 
                      && int.TryParse(values[3], out var _) && int.TryParse(values[4], out var _)) {} // MET不需要解析，忽略之
+            else if (cmd == "SEF") {} // SEF不需要解析，忽略之
             // 读到了统计段，后面就不用读了，谱面解析结束
             else if (cmd.StartsWith("T_REC") || cmd.StartsWith("T_NUM") || cmd.StartsWith("T_JUDGE") || cmd.StartsWith("TTM_"))
             {
