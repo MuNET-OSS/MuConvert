@@ -140,21 +140,23 @@ public class Duration
                 // 本区间可以消耗掉remain的最大数量，以src的bpm为单位。
                 Rational curRangeCapacity = bpmRangeEnd - rangeStart;
                 
-                if (srcBpm == null)
+                var srcBpmNow = srcBpm; // 每次循环要复制一份srcBpm，不然直接改了srcBpm的话，再次循环时逻辑就不对了
+                var dstBpmNow = dstBpm;
+                if (srcBpmNow == null)
                 { // 如果srcBpm传入的是None，说明应该使用当前的实时bpm作为srcBpm
-                    srcBpm = (Rational)BpmList[bpmIndex].Bpm;
+                    srcBpmNow = (Rational)BpmList[bpmIndex].Bpm;
                     // 此时capacity已经是以srcBpm为单位了，无需再转换
                 }
-                else if (dstBpm == null)
+                else if (dstBpmNow == null)
                 {
-                    dstBpm = (Rational)BpmList[bpmIndex].Bpm;
+                    dstBpmNow = (Rational)BpmList[bpmIndex].Bpm;
                     // 此时capacity是基于可变bpm即dstBpm的，需要换算到srcBpm上
-                    curRangeCapacity *= (srcBpm.Value / dstBpm.Value);
+                    curRangeCapacity *= (srcBpmNow.Value / dstBpmNow.Value);
                 }
 
                 Rational toSubtract = curRangeCapacity < remain ? curRangeCapacity : remain; // 要从remain中减掉的量，应该是（剩余量，本bpm区间允许消耗量）的最小值
                 remain -= toSubtract;
-                result += toSubtract * (dstBpm!.Value / srcBpm.Value);
+                result += toSubtract * (dstBpmNow!.Value / srcBpmNow.Value);
                 
                 bpmIndex += 1;
                 rangeStart = bpmRangeEnd;

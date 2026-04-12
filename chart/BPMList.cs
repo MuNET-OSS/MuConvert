@@ -37,6 +37,8 @@ public class BPMList : List<BPM>
         }
         return i-1;
     }
+    
+    public BPM Find(Rational time) => this[FindIndex(time)];
 
     public bool IsBpmChanged(Rational start, Rational end)
     {

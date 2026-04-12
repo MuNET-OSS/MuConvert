@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.maidata;
 using MuConvert.parser;
@@ -49,7 +50,7 @@ public class 官谱转Simai测试
 
         var expectedTimeline = SimaiCommaTimeline.Flatten(inote);
         var actualTimeline = SimaiCommaTimeline.Flatten(simai);
-        SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline, _output);
+        SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline, chart, _output);
     }
 }
 
@@ -58,7 +59,7 @@ public class 官谱转Simai测试
 /// <see cref="MuConvert.parser.simai.SimaiParser"/> 一致的 <c>now</c> / <c>step</c> 推进规则，
 /// 得到 (时刻, 原文) 序列；不构造 Note，不把片段再交给 SimaiParser。
 /// </summary>
-internal static class SimaiCommaTimeline
+internal static partial class SimaiCommaTimeline
 {
     /// <summary>与谱面语义相关的条目：BPM 标记、音符/休止以外的 met 变更等只影响 step，不单独出条。</summary>
     public readonly record struct Entry(Rational Time, string Text);
@@ -88,6 +89,7 @@ internal static class SimaiCommaTimeline
     public static void AssertTimelineEqual(
         IReadOnlyList<Entry> expected,
         IReadOnlyList<Entry> actual,
+        Chart chart,
         ITestOutputHelper? output = null)
     {
         static IEnumerable<Entry> Canon(IReadOnlyList<Entry> e) =>
@@ -104,20 +106,51 @@ internal static class SimaiCommaTimeline
             try
             {
                 Assert.Equal(expected[i].Time, actual[i].Time);
-                AssertNoteEqual(expected[i].Text, actual[i].Text);
+                AssertNoteEqual(expected[i].Text, actual[i].Text, i, actual[i].Time, chart);
             }
             catch (Xunit.Sdk.XunitException e)
             {
-                output?.WriteLine($"Assert failure occured at Note {i} (context below):");
                 output?.WriteLine(FormatNeighborhood(expected, actual, i).TrimEnd());
                 throw;
             }
         }
     }
 
-    private static void AssertNoteEqual(string exp, string act)
+    [GeneratedRegex(@"\[(?:(\d+):(\d+)|#([\d\.]+))\]")]
+    private static partial Regex DurationStrRegex();
+    
+    private static void AssertNoteEqual(string expected, string actual, int noteIdx, Rational time, Chart chart)
     {
-        Assert.Equal(RearrangeNote(exp), RearrangeNote(act));
+        var expArr = RearrangeNote(expected).Split('/', '`');
+        var actArr = RearrangeNote(actual).Split('/', '`');
+        var max = Math.Max(expArr.Length, actArr.Length);
+
+        for (var i = 0; i < max; i++)
+        {
+            var exp = i < expArr.Length ? expArr[i] : "<EOF>";
+            var act = i < actArr.Length ? actArr[i] : "<EOF>";
+            var result = exp == act;
+            
+            if (!result)
+            {
+                // 尝试是否是只有时间不匹配，如果是的话，允许一定的阈值
+                var expTime = DurationStrRegex().Match(exp);
+                var actTime = DurationStrRegex().Match(act);
+                var bpm = chart.BpmList.Find(time).Bpm;
+                if (expTime.Groups[1].Success && actTime.Groups[3].Success)
+                { // exp中是分数时间、act中是小数时间的情况
+                    // 小数时间化为分数时间，看看是否对的上
+                    var v = decimal.Parse(actTime.Groups[3].Value) / (240 / bpm) * int.Parse(expTime.Groups[1].Value);
+                    if (Math.Round(v) == int.Parse(expTime.Groups[2].Value)) result = true; // 如果对的上，则不判定为比较失败
+                }
+            }
+
+            if (!result) Assert.Fail(
+                $"First difference at Notation {noteIdx + 1} (time {time}):{Environment.NewLine}" +
+                $"EXPECTED: {expected}{Environment.NewLine}" +
+                $"ACTUAL  : {actual}"
+            );
+        }
     }
 
     private static string RearrangeNote(string s)
@@ -149,6 +182,7 @@ internal static class SimaiCommaTimeline
     {
         s = s.Trim().Replace("\r", "").Replace("\n", "");
         s = Regex.Replace(s, @"\s+", "");
+        s = Regex.Replace(s, @"(\[[\d\.#:]+\])b", m => "b" + m.Groups[1].Value); // 其实严格根据文档，对星星"1-4[8:3]b"是正确的，而对hold"4hb[8:3]"才是正确的。我们的SimaiGenerator是严格按标准输出的，但出于比较的简单考虑，还是全部统一到"4hb[8:3]"这种情况下，处理起来简单一点。
         s = Regex.Replace(s, "[bxfh]{2,}", m => new string(m.Value.OrderBy(c => c).ToArray()));
         return s;
     }

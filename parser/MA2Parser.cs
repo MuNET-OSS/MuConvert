@@ -75,7 +75,8 @@ public class MA2Parser : IParser
                      int.TryParse(values[2], out var btick) && decimal.TryParse(values[3], out var bpm))
             {
                 bpmRead = true;
-                chart.BpmList.Add(new BPM(bbar + new Rational(btick, RSL), bpm));
+                var time = bbar + new Rational(btick, RSL);
+                chart.BpmList.Add(new BPM(time.CanonicalForm, bpm));
             }
             else if (cmd == "MET" && values.Length == 5 && int.TryParse(values[1], out var _) && int.TryParse(values[2], out var _) 
                      && int.TryParse(values[3], out var _) && int.TryParse(values[4], out var _)) {} // MET不需要解析，忽略之
@@ -176,6 +177,7 @@ public class MA2Parser : IParser
                         note.IsEx = true;
                         break;
                 }
+                note.Time = note.Time.CanonicalForm;
                 chart.Notes.Add(note);
             }
             else
