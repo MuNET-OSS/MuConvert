@@ -104,7 +104,7 @@ internal static class SimaiCommaTimeline
             try
             {
                 Assert.Equal(expected[i].Time, actual[i].Time);
-                Assert.Equal(expected[i].Text, actual[i].Text, StringComparer.Ordinal);
+                AssertNoteEqual(expected[i].Text, actual[i].Text);
             }
             catch (Xunit.Sdk.XunitException e)
             {
@@ -113,6 +113,21 @@ internal static class SimaiCommaTimeline
                 throw;
             }
         }
+    }
+
+    private static void AssertNoteEqual(string exp, string act)
+    {
+        Assert.Equal(RearrangeNote(exp), RearrangeNote(act));
+    }
+
+    private static string RearrangeNote(string s)
+    {
+        return string.Join('`', s.Split('`').Select(x =>
+        {
+            var s = x.Split('/');
+            s.Sort();
+            return string.Join('/', s);
+        }));
     }
 
     private static string FormatNeighborhood(IReadOnlyList<Entry> a, IReadOnlyList<Entry> b, int i)
@@ -134,7 +149,7 @@ internal static class SimaiCommaTimeline
     {
         s = s.Trim().Replace("\r", "").Replace("\n", "");
         s = Regex.Replace(s, @"\s+", "");
-        s = Regex.Replace(s, "[bxf]{2,}", m => new string(m.Value.OrderBy(c => c).ToArray()));
+        s = Regex.Replace(s, "[bxfh]{2,}", m => new string(m.Value.OrderBy(c => c).ToArray()));
         return s;
     }
 

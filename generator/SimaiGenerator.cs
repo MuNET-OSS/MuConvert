@@ -99,21 +99,23 @@ public class SimaiGenerator : IGenerator
         }
     }
 
-    private string DurationStr(Note note)
+    private string DurationStr(Rational start, Duration duration)
     {
-        var ib = note.Duration.InvariantBar;
+        var ib = duration.InvariantBar;
         // 当发生以下两种情况之一时，返回bar格式原值；否则返回秒
         // 1. duration全程bpm没有变化
         // 2. 算出来的InvariantBar，分母小于等于16分音
-        if (ib.Denominator <= 16 || !chart.BpmList.IsBpmChanged(note.Time, note.Time + ib))
+        if (ib.Denominator <= 16 || !chart.BpmList.IsBpmChanged(start, start + ib))
         {
             return $"[{ib.Denominator}:{ib.Numerator}]";
         }
         else
         { // 返回绝对时间
-            return $"[#{(decimal)note.Duration.Seconds:0.###}]";
+            return $"[#{(decimal)duration.Seconds:0.###}]";
         }
     }
+
+    private string DurationStr(Note note) => DurationStr(note.Time, note.Duration);
     
     public (string, List<Alert>) Generate(Chart _chart)
     {
@@ -166,7 +168,7 @@ public class SimaiGenerator : IGenerator
                 }
                 else res = $"{slide.Key}?";
 
-                bool durationOccured = false;
+                Rational rollingTime = slide.Time;
                 foreach (var seg in slide.segments)
                 {
                     res += seg.Type.ToSimai(seg.StartKey);
@@ -174,10 +176,17 @@ public class SimaiGenerator : IGenerator
                     
                     if (seg.Duration != null)
                     {
-                        durationOccured = true;
+                        var durationStr = DurationStr(rollingTime, seg.Duration);
+                        if (rollingTime == slide.Time && // 是带有时间标记的第一段
+                            slide.WaitTime.InvariantBar != new Rational(1, 4))
+                        { // 非标准等待时间的星星，应该加上等待时间标记。simai仅支持绝对时间的等待时间标记。
+                            durationStr = $"[{(decimal)slide.WaitTime.Seconds:0.###}##{durationStr[1..].TrimStart('#')}";
+                        }
+                        res += durationStr;
+                        rollingTime += seg.Duration.Bar;
                     }
-                    else if (durationOccured)
-                    { // 如果此前有某段出现过时间，说明是分段时间的写法。但我自己却没有时间，说明是非法的写法
+                    else if (rollingTime != slide.Time)
+                    { // 说明此前已经有某段出现过时间标记了，即这根星星是分段时间的写法。但我自己现在却没有时间，说明是非法的写法
                         alerts.Add(new Alert(Error, Locale.InvalidSlide, (chart, time), null, res));
                         throw new ConversionException(alerts);
                     }
@@ -218,7 +227,7 @@ public class SimaiGenerator : IGenerator
             
             # region 处理多押
             // 非常简单，发现是多押，直接append即可，下面的逻辑全不需要管
-            if (i > 0 && note.Time == buf[i-1].Time)
+            if (i > 0 && note.Time == buf[i-1].Time && !buf[i-1].IsBpm)
             {
                 // 看FalseEachIndex是否有增大，决定用"/"还是"`"连接
                 var isFalseEach = note.FalseEachIndex > buf[i - 1].FalseEachIndex;

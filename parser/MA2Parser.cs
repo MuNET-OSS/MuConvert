@@ -34,6 +34,11 @@ public class MA2Parser : IParser
     }
 
     private Rational _endTime(Slide slide) => slide.Time + slide.WaitTime.Bar + slide.Duration.Bar;
+
+    private Dictionary<string, string> Cmd103 = new()
+    {
+        ["BRK"] = "BRTAP", ["XTP"] = "EXTAP", ["XHO"] = "EXHLD", ["BST"] = "BRSTR", ["XST"] = "EXSTR"
+    };
     
     public (Chart, List<Alert>) Parse(string text)
     {
@@ -86,14 +91,14 @@ public class MA2Parser : IParser
                 key++;
                 Note? note = null;
                 Rational time = bar + new Rational(tick, RSL);
-                string cc = cmd.Length == 5 ? cmd[2..5] : cmd;
-                int len;
+                string cc = cmd.Length == 3 ? Cmd103.GetValueOrDefault(cmd, cmd) : cmd, md = "";
+                if (cc.Length == 5) (cc, md) = (cc[2..5], cc[..2]);
                 
-                if (cc is "TAP" or "STR" || cmd == "BRK")
+                int len;
+                if (cc is "TAP" or "STR")
                 {
                     note = cc == "STR" ? new Star(chart, time) : new Tap(chart, time);
                     note.Key = key;
-                    if (cmd == "BRK") note.IsBreak = true;
                     if (values.Length != 4) WarnParamsCount(lineNo, line, time);
                 }
                 else if (cc == "HLD" && values.Length >= 5 && int.TryParse(values[4], out len))
@@ -120,7 +125,7 @@ public class MA2Parser : IParser
                 {
                     endKey++;
                     Slide slide;
-                    if (cmd.Length == 5 && cmd[..2] == "CN")
+                    if (md == "CN")
                     { // 连接星星
                         if (waitLen > 0) Fail(Locale.MA2CNSlideHasWait, lineNo, line);
                         // 查找到前面的星星
@@ -158,21 +163,18 @@ public class MA2Parser : IParser
                 }
 
                 if (note == null) continue;
-                if (cmd.Length == 5)
+                switch (md)
                 {
-                    switch (cmd[..2])
-                    {
-                        case "BR":
-                            note.IsBreak = true;
-                            break;
-                        case "EX":
-                            note.IsEx = true;
-                            break;
-                        case "BX":
-                            note.IsBreak = true;
-                            note.IsEx = true;
-                            break;
-                    }
+                    case "BR":
+                        note.IsBreak = true;
+                        break;
+                    case "EX":
+                        note.IsEx = true;
+                        break;
+                    case "BX":
+                        note.IsBreak = true;
+                        note.IsEx = true;
+                        break;
                 }
                 chart.Notes.Add(note);
             }
