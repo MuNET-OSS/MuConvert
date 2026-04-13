@@ -294,6 +294,33 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string PrepFix1 {
+            get {
+                return ResourceManager.GetString("PrepFix1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string PrepFix2 {
+            get {
+                return ResourceManager.GetString("PrepFix2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to TODO.
+        /// </summary>
+        public static string PrepFix3 {
+            get {
+                return ResourceManager.GetString("PrepFix3", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Failed to parse simai syntax! .
         /// </summary>
         public static string SimaiGrammarFailed {

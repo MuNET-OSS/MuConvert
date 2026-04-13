@@ -151,4 +151,13 @@
   <data name="NoteTooNear" xml:space="preserve">
     <value>此音符与前一个音符的相距时间小于384分音！受MA2语法限制，MA2所能表示的时间精度仅能达到1/384，因此您的这两个音符无法被精确表示、并且可能被生成为黄色双押。如果您需要的是“伪双押”，请使用"1`2"这种语法来表示伪双押，或确保错开一个384分音的时间。</value>
   </data>
+  <data name="PrepFix1" xml:space="preserve">
+    <value>尝试修复了谱面中的{0}处语法错误（补上了可能缺失的逗号）: {1}</value>
+  </data>
+  <data name="PrepFix2" xml:space="preserve">
+    <value>尝试修复了谱面中的{0}处语法错误（持续时间标记中误用了"-"，而不是":"）: {1}</value>
+  </data>
+  <data name="PrepFix3" xml:space="preserve">
+    <value>尝试修复了谱面中的{0}处语法错误（对星星头的修饰符，应该出现在键位号后、星星类型标记之前）: {1}</value>
+  </data>
 </root>

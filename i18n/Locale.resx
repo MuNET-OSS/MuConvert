@@ -151,4 +151,13 @@
   <data name="NoteTooNear" xml:space="preserve">
     <value>This note is closer than a 384th note to the previous note. MA2 can only represent timing down to 1/384 of a whole note, so these two notes cannot be represented exactly and may be emitted as a yellow EACH pair. If you want a "fake EACH", use syntax such as "1`2", or offset the notes by at least one 384th note.</value>
   </data>
+  <data name="PrepFix1" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="PrepFix2" xml:space="preserve">
+    <value>TODO</value>
+  </data>
+  <data name="PrepFix3" xml:space="preserve">
+    <value>TODO</value>
+  </data>
 </root>

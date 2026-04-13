@@ -9,19 +9,20 @@ using P = MuConvert.Antlr.SimaiParser;
 
 namespace MuConvert.parser;
 
-public class SimaiParser : SimaiBaseVisitor<object>, IParser
+public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 {
     private readonly Chart chart;
     private readonly List<Alert> alerts = [];
+    public bool DontTryFix = false; // 不准调用Preprocess中的tryFix，而是如遇问题直接报错。
 
     private Rational now = 0;
     private Rational step = new(1, 4);
-    private decimal? absoluteTimeStep = null; // 此项必须和step本体一起更改
+    private decimal? absoluteTimeStep; // 此项必须和step本体一起更改
 
     private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private readonly List<string> extraModifiers = [];
-    private bool absoluteTimeStepWarned = false; // 用于确保Warning只打印一次
+    private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
 
     public SimaiParser(bool bigTouch = false, bool isUtage = false, int clockCount = 4)
     {
@@ -45,25 +46,55 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         // 这个是给 Parser 用的 (IToken)
         public void SyntaxError(TextWriter output, IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
         {
-            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e.Context?.GetText()));
+            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract 这是ANTLR的bug，e可以是空的但却被标记了非空类型
+            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e?.Context?.GetText()??offendingSymbol.Text));
             throw new ConversionException(parser.alerts, e);
         }
 
         // 这个是给 Lexer 用的 (int)
         public void SyntaxError(TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
         {
-            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e.Context?.GetText()));
+            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract 这是ANTLR的bug，e可以是空的但却被标记了非空类型
+            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e?.Context?.GetText()));
             throw new ConversionException(parser.alerts, e);
         }
     }
 
-    public string Preprocess(string text)
+    private string _replaceAndRecord(Match m, string repl, List<string> msgArr)
+    {
+        var res = m.Result(repl);
+        msgArr.Add($"{m.Value} → {res}");
+        return res;
+    }
+
+    private void _warnPrepfixMsg(string messageTemplate, List<string> msgArr)
+    {
+        if (msgArr.Count == 0) return;
+        alerts.Add(new Alert(Warning, string.Format(messageTemplate, msgArr.Count, string.Join("; ", msgArr))));
+    }
+    
+    [GeneratedRegex(@"(\d)([{(])")]
+    private static partial Regex PrepFix1(); // 补上可能缺失的逗号
+    
+    [GeneratedRegex(@"\[(\d+)-(\d+)\]")]
+    private static partial Regex PrepFix2(); // 错误的Duration语法
+    
+    public string Preprocess(string text, bool tryFix = false)
     {
         // 移除注释
         var commentRegex = new Regex(@"((?<!\[[^\]]*|\{[^\}]*)#|\|\|).*$", RegexOptions.Multiline);
         text = commentRegex.Replace(text, "");
-        
-        // TODO 应用更多的纠错修改（从MCM现有代码里面抄）
+
+        if (tryFix)
+        {
+            List<string> prepFix1Msgs = [];
+            text = PrepFix1().Replace(text, m => _replaceAndRecord(m, "$1,$2", prepFix1Msgs));
+            _warnPrepfixMsg(Locale.PrepFix1, prepFix1Msgs);
+            
+            List<string> prepFix2Msgs = [];
+            text = PrepFix2().Replace(text, m => _replaceAndRecord(m, "[$1:$2]", prepFix2Msgs));
+            _warnPrepfixMsg(Locale.PrepFix2, prepFix2Msgs);
+        }
         
         return text;
     }
@@ -76,19 +107,17 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         try
         {
             text = Preprocess(text);
-            var inputStream = new AntlrInputStream(text);
-            
-            var errorListener = new AntlrErrorListener(this);
-            var lexer = new SimaiLexer(inputStream);
-            lexer.RemoveErrorListeners();
-            lexer.AddErrorListener(errorListener);
-            var tokens = new CommonTokenStream(lexer);
-            
-            var parser = new P(tokens); // MuConvert.Antlr.SimaiParser
-            parser.RemoveErrorListeners();
-            parser.AddErrorListener(errorListener);
-            root = parser.chart();
-            
+            try
+            {
+                root = RunAntlr(text); // 普通预处理下，antlr词语法分析一次（仅去除注释）
+            }
+            catch (ConversionException)
+            {
+                if (DontTryFix) throw;
+                alerts.Clear();
+                root = RunAntlr(Preprocess(text, true)); // 尝试应用tryFix之后再来一次
+            }
+            // 如果成功，则root就是语法分析树的根节点。从这里开始遍历语法分析树完成工作。
             VisitChart(root);
         }
         catch (ConversionException)
@@ -103,6 +132,24 @@ public class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         
         return (chart, alerts);
+    }
+
+    private P.ChartContext RunAntlr(string text)
+    {
+        var inputStream = new AntlrInputStream(text);
+        var errorListener = new AntlrErrorListener(this);
+        
+        var lexer = new SimaiLexer(inputStream);
+        lexer.RemoveErrorListeners();
+        lexer.AddErrorListener(errorListener);
+        var tokens = new CommonTokenStream(lexer);
+            
+        var parser = new P(tokens); // MuConvert.Antlr.SimaiParser
+        parser.RemoveErrorListeners();
+        parser.AddErrorListener(errorListener);
+        var root = parser.chart();
+        
+        return root;
     }
 
     public sealed override object VisitChart(P.ChartContext context)
