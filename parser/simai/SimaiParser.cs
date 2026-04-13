@@ -79,6 +79,12 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     [GeneratedRegex(@"\[(\d+)-(\d+)\]")]
     private static partial Regex PrepFix2(); // 错误的Duration语法
     
+    [GeneratedRegex(@"(\d)([\-v<>\^pqVszw]|pp|qq)([@?!bx]+)(\d)")]
+    private static partial Regex PrepFix3(); // 星星头的modifier应该在键位号之后、星星体之前
+    
+    [GeneratedRegex(@"\((\(\d+\))\)?|(\(\d+\))\)|\[(\[\d+\])\]?|(\[\d+\])\]|\{(\{\d+\})\}?|(\{\d+\})\}")]
+    private static partial Regex PrepFix4(); // 重复的冗余括号
+    
     public string Preprocess(string text, bool tryFix = false)
     {
         // 移除注释
@@ -94,6 +100,14 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             List<string> prepFix2Msgs = [];
             text = PrepFix2().Replace(text, m => _replaceAndRecord(m, "[$1:$2]", prepFix2Msgs));
             _warnPrepfixMsg(Locale.PrepFix2, prepFix2Msgs);
+            
+            List<string> prepFix3Msgs = [];
+            text = PrepFix3().Replace(text, m => _replaceAndRecord(m, "$1$3$2$4", prepFix3Msgs));
+            _warnPrepfixMsg(Locale.PrepFix3, prepFix3Msgs);
+            
+            List<string> prepFix4Msgs = [];
+            text = PrepFix4().Replace(text, m => _replaceAndRecord(m, "$1$2$3$4$5$6", prepFix4Msgs));
+            _warnPrepfixMsg(Locale.PrepFix4, prepFix4Msgs);
         }
         
         return text;

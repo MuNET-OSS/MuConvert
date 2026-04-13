@@ -7,6 +7,7 @@ namespace MuConvert.Tests;
 /// <summary>
 /// 针对另一项目中 <c>FixChartSimaiSharp</c> / <c>SimaiParser.Preprocess</c> 计划支持的常见非标准 Simai 写法。
 /// 每个用例比较：纠错后应与「规范写法」解析得到的 MA2 完全一致。
+/// 另含带 <c>#</c>、<c>||</c> 行注释的谱面（见 <see cref="Comment_Cases"/> / <see cref="含有注释"/>），与 Preprocess 去注释行为对齐。
 /// 在 <see cref="SimaiParser.Preprocess"/> 尚未接入对应替换逻辑前，本文件中的测试失败或抛错属于预期行为（TDD）。
 /// </summary>
 public class Simai预处理纠错测试

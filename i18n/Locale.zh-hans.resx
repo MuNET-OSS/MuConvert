@@ -160,4 +160,7 @@
   <data name="PrepFix3" xml:space="preserve">
     <value>尝试修复了谱面中的{0}处语法错误（对星星头的修饰符，应该出现在键位号后、星星类型标记之前）: {1}</value>
   </data>
+  <data name="PrepFix4" xml:space="preserve">
+    <value>尝试修复了谱面中的{0}处语法错误（重复的括号，可能是多打了一些）: {1}</value>
+  </data>
 </root>
