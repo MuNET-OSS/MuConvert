@@ -3,7 +3,7 @@ using MuConvert.utils;
 
 namespace MuConvert.maidata;
 
-public record MaidataChart(string? Level, string? NoteDesigner, string Inote);
+public record MaidataChart(string Inote, string? Level = null, string? NoteDesigner = null);
 
 public class Maidata : Dictionary<string, string>
 {
@@ -19,6 +19,15 @@ public class Maidata : Dictionary<string, string>
      * 而由于Maidata类继承自Dictionary，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
      */
     public Dictionary<string, string> Infos => _splitLevels().Item2;
+
+    public void AddLevel(int levelId, MaidataChart maidataChart)
+    {
+        this[$"inote_{levelId}"] = maidataChart.Inote;
+        if (maidataChart.Level != null) this[$"lv_{levelId}"] = maidataChart.Level;
+        if (maidataChart.NoteDesigner != null) this[$"des_{levelId}"] = maidataChart.NoteDesigner;
+    }
+    
+    public Maidata() {}
     
     /**
      * 将maidata.txt的文本传给此函数，即可构造Maidata对象。
@@ -70,7 +79,7 @@ public class Maidata : Dictionary<string, string>
                 infos.Remove(k, out var v);
                 infos.Remove($"lv_{id}", out var level);
                 infos.Remove($"des_{id}", out var noteDesigner);
-                levels.Add(id, new MaidataChart(level, noteDesigner, v!));
+                levels.Add(id, new MaidataChart(v!, level, noteDesigner));
             }
         }
         return (levels, infos);
@@ -102,7 +111,7 @@ public class Maidata : Dictionary<string, string>
         }
 
         var (levels, infos) = _splitLevels();
-        foreach (var (k, v) in Infos)
+        foreach (var (k, v) in infos)
         {
             if (fixedKeys.Contains(k)) continue; // 刚刚已经输出过了
             result.AppendLine($"&{k}={v}");

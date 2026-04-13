@@ -7,7 +7,7 @@ using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 using P = MuConvert.Antlr.SimaiParser;
 
-namespace MuConvert.parser.simai;
+namespace MuConvert.parser;
 
 public class SimaiParser : SimaiBaseVisitor<object>, IParser
 {
