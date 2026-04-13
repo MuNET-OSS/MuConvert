@@ -122,6 +122,16 @@ public class Duration
      */
     private Rational ConvertTime(Rational value, Rational? srcBpm, Rational? dstBpm)
     {
+        var startTime = _note.Time;
+        if (_note is Slide slide && slide.WaitTime != this)
+        { // 如果我不是WaitTime，则我是Duration，则应加上等待时间
+            startTime += slide.WaitTime.Bar;
+        }
+        return ConvertTime(startTime, value, srcBpm, dstBpm, BpmList);
+    }
+    
+    public static Rational ConvertTime(Rational startTime, Rational value, Rational? srcBpm, Rational? dstBpm, BPMList bpmList)
+    {
         if (srcBpm != null && dstBpm != null)
         {
             // 静态的src和dst，直接算一下即可，无需遍历bpm表
@@ -129,18 +139,14 @@ public class Duration
         }
         else
         {
-            var rangeStart = _note.Time;
-            if (_note is Slide slide && slide.WaitTime != this)
-            { // 如果我不是WaitTime，则我是Duration，则应加上等待时间
-                rangeStart += slide.WaitTime.Bar;
-            }
-            var bpmIndex = BpmList.FindIndex(rangeStart);
+            var rangeStart = startTime;
+            var bpmIndex = bpmList.FindIndex(rangeStart);
             Rational result = 0;
             Rational remain = value;
             while (remain > 0)
             {
                 // 当前所处bpm区间的结束位置。如果当前已经是最后一个区间了，则结束位置写成一个很大的数就可以了，反正本轮remain一定会被清空
-                var bpmRangeEnd = bpmIndex < BpmList.Count - 1 ? BpmList[bpmIndex + 1].Time : 9999999;
+                var bpmRangeEnd = bpmIndex < bpmList.Count - 1 ? bpmList[bpmIndex + 1].Time : 9999999;
                 // 本区间可以消耗掉remain的最大数量，以src的bpm为单位。
                 Rational curRangeCapacity = bpmRangeEnd - rangeStart;
                 
@@ -148,12 +154,12 @@ public class Duration
                 var dstBpmNow = dstBpm;
                 if (srcBpmNow == null)
                 { // 如果srcBpm传入的是None，说明应该使用当前的实时bpm作为srcBpm
-                    srcBpmNow = (Rational)BpmList[bpmIndex].Bpm;
+                    srcBpmNow = (Rational)bpmList[bpmIndex].Bpm;
                     // 此时capacity已经是以srcBpm为单位了，无需再转换
                 }
                 else if (dstBpmNow == null)
                 {
-                    dstBpmNow = (Rational)BpmList[bpmIndex].Bpm;
+                    dstBpmNow = (Rational)bpmList[bpmIndex].Bpm;
                     // 此时capacity是基于可变bpm即dstBpm的，需要换算到srcBpm上
                     curRangeCapacity *= (srcBpmNow.Value / dstBpmNow.Value);
                 }

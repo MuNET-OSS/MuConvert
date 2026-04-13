@@ -7,6 +7,9 @@ namespace MuConvert.chart;
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class BPMList : List<BPM>
 {
+    public BPMList() {}
+    public BPMList(IEnumerable<BPM> bpms): base(bpms) {}
+    
     private List<BPM> ToSeconds()
     {
         List<BPM> result = [this[0]];
