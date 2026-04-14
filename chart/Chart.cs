@@ -72,4 +72,7 @@ public class Chart
         note is Slide { segments.Count: > 1 }); // 星星段数大于1（fes星星）
 
     public Statistics Statistics => new(this);
+    
+    // 总音符数量（物量）
+    public int TotalNotes => Statistics.Total;
 }
