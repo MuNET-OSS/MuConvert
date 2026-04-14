@@ -7,12 +7,12 @@ namespace MuConvert.utils;
 
 public static class Utils
 {
-    public static void Assert(bool condition, string msg = "")
+    internal static void Assert(bool condition, string msg = "")
     {
         if (!condition) throw new Exception(string.Format(Locale.AssertionFailed, msg));
     }
     
-    public static Exception Fail(string msg = "")
+    internal static Exception Fail(string msg = "")
     {
         return new Exception(string.Format(Locale.AssertionFailed, msg));
     }
@@ -21,7 +21,7 @@ public static class Utils
 
     public static void SetLocale(CultureInfo culture) => Locale.Culture = culture;
 
-    public static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
+    internal static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
     {
         if (!dict.ContainsKey(key)) dict[key] = new();
         dict[key].Add(value);

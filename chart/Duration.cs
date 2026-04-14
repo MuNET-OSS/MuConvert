@@ -130,7 +130,7 @@ public class Duration
         return ConvertTime(startTime, value, srcBpm, dstBpm, BpmList);
     }
     
-    public static Rational ConvertTime(Rational startTime, Rational value, Rational? srcBpm, Rational? dstBpm, BPMList bpmList)
+    internal static Rational ConvertTime(Rational startTime, Rational value, Rational? srcBpm, Rational? dstBpm, BPMList bpmList)
     {
         if (srcBpm != null && dstBpm != null)
         {
@@ -200,5 +200,5 @@ public class Duration
         return new Duration(a._note){_type = a._type, _data = (a._data / b).CanonicalForm};
     }
     
-    public string DebuggerDisplay() => _type == Type.Seconds ? $"[#{(float)_data}]" : $"[{_data.Denominator}:{_data.Numerator}]";
+    internal string DebuggerDisplay() => _type == Type.Seconds ? $"[#{(float)_data}]" : $"[{_data.Denominator}:{_data.Numerator}]";
 }

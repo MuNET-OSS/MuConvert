@@ -24,6 +24,7 @@ public class Chart
         Notes = Notes.OrderBy(n => n.Time).ThenBy(n=>n.FalseEachIdx).ToList(); // LINQ OrderBy 是稳定排序
     }
     
+    // 谱面开头的BPM
     public decimal StartBpm {
         get
         {
@@ -32,14 +33,16 @@ public class Chart
         }
     }
 
-    public Rational FirstNoteTime => Notes[0].Time;
-
-    public decimal FirstNoteTimeInSeconds => (decimal)Duration.ConvertTime(0, FirstNoteTime, null, 240, BpmList);
-
+    /**
+     * 获得“谱面中第一个音符的时刻”，或者返回的Duration也可以理解成“从谱面开头到出现第一个音符所经过的时长”。
+     * 所以同样的，它也有Bar、InvariantBar、Seconds的不同形态，因此使用Duration的形式存储。
+     */
+    public Duration FirstNoteTime => new(new PseudoNote(this)) {Bar = Notes[0].Time};
+    
     /**
      * 对整首歌曲，应用一个偏移量进行整体平移。
      * <param name="offset">偏移量，正数表示歌曲整体向后，负数表示歌曲整体向前。</param>
-     * <param name="bpm">上述偏移量所对应的Bpm。若不传，默认使用歌曲开头的BPM。</param>
+     * <param name="bpm">上述偏移量所对应的Bpm。若不传，默认使用歌曲开头的BPM（即chart.StartBpm）。</param>
      */
     public void Shift(Rational offset, decimal? bpm = null)
     {
@@ -63,4 +66,12 @@ public class Chart
         Utils.Assert(BpmList[0].Time == 0, "BPM列表的开头必须为0时刻");
         Notes = Notes.Select(x => { x.Time += offset; return x; }).Where(x => x.Time >= 0).ToList();
     }
+
+    public bool IsDxChart => Notes.Any(note => // 判定DX谱的标准：存在
+        note is Touch || note.IsEx || (note.IsBreak && note is not Tap) || // Touch 或者 保护套 或者 非Tap/Star的绝赞
+        note is Slide { segments.Count: > 1 }); // 星星段数大于1（fes星星）
+    
+    // TODO 把谱面统计搬到Chart类下面来
+    
+    
 }

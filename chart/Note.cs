@@ -43,7 +43,7 @@ public abstract class Note
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Tap(Chart chart, Rational time) : Note(chart, time)
 {
-    public string DebuggerDisplay() => $"{Key}{Modifiers}";
+    internal string DebuggerDisplay() => $"{Key}{Modifiers}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
@@ -100,3 +100,6 @@ public class TouchHold : Touch
 
     private string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
+
+// 仅用于内部实现某些trick时使用的“伪音符”。用户在正常的谱面中是不会看到这个的。
+internal class PseudoNote(Chart chart) : Note(chart, 0);

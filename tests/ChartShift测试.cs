@@ -32,7 +32,7 @@ public class ChartShift测试
         
         Assert.NotEmpty(chart.Notes);
         Assert.NotEmpty(chart.BpmList);
-        Utils.Assert(chart.BpmList[0].Time == 0, "sanity");
+        Assert.True(chart.BpmList[0].Time == 0, "sanity");
         Assert.DoesNotContain(alerts, a => a.Level >= Alert.LEVEL.Error);
         return chart;
     }
@@ -44,7 +44,7 @@ public class ChartShift测试
 
     private static void AssertShiftResultTimelineValid(Chart c)
     {
-        Utils.Assert(c.BpmList[0].Time == 0, "BPM 起点应在 0");
+        Assert.True(c.BpmList[0].Time == 0, "BPM 起点应在 0");
         foreach (var b in c.BpmList)
             Assert.True(b.Time >= 0);
         foreach (var n in c.Notes)
@@ -125,7 +125,7 @@ public class ChartShift测试
         chart.Shift(0);
 
         Assert.Equal(startBpm, chart.StartBpm);
-        Utils.Assert(chart.BpmList[0].Time == 0, "BPM 起点应在 0");
+        Assert.True(chart.BpmList[0].Time == 0, "BPM 起点应在 0");
         Assert.Equal(notesBefore, NotesInStableOrder(chart));
         Assert.Equal(bpmsBefore, BpmInOrder(chart));
     }
@@ -153,12 +153,11 @@ public class ChartShift测试
         var notesBefore = NotesInStableOrder(chart);
         var bpmsBefore = BpmInOrder(chart);
         var userOffset = -QuarterBar;
-        var appliedBarOffset = -Duration.ConvertTime(Rational.Zero, -userOffset, (Rational)chart.StartBpm, null, chart.BpmList);
 
         chart.Shift(userOffset);
 
         AssertShiftResultTimelineValid(chart);
-        AssertBpmAndNotesMatchPositiveShiftOffset(bpmsBefore, BpmInOrder(chart), notesBefore, NotesInStableOrder(chart), appliedBarOffset);
+        AssertBpmAndNotesMatchPositiveShiftOffset(bpmsBefore, BpmInOrder(chart), notesBefore, NotesInStableOrder(chart), userOffset);
     }
 
     [Fact]
