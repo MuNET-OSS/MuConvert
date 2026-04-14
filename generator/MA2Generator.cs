@@ -206,7 +206,7 @@ GENERATED_BY	MuConvert v{8}
         var stats = chart.Statistics;
         foreach (var (k, v) in statsNameConversion())
         {
-            result.AppendLine($"T_REC_{k}\t{stats.Data[v]}");
+            result.AppendLine($"T_REC_{k}\t{stats.Data.GetValueOrDefault(v)}");
         }
         var totalNum = stats.Total;
         result.AppendLine($"T_REC_ALL\t{totalNum}");

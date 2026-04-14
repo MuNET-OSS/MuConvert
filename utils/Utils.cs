@@ -21,12 +21,6 @@ public static class Utils
 
     public static void SetLocale(CultureInfo culture) => Locale.Culture = culture;
 
-    internal static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
-    {
-        if (!dict.ContainsKey(key)) dict[key] = new();
-        dict[key].Add(value);
-    }
-    
     public static BigInteger LCM(BigInteger a, BigInteger b) => a / BigInteger.GreatestCommonDivisor(a, b) * b;
 
     public static BigInteger LCM(IEnumerable<BigInteger> values) => values.Aggregate(LCM);
@@ -35,4 +29,22 @@ public static class Utils
     public static Rational Ceil(Rational r) => r.WholePart + (r.FractionPart == 0 ? 0 : 1);
     
     public static BigInteger Max(BigInteger a, BigInteger b) => a > b ? a : b;
+}
+
+internal static class ExtensionUtils
+{
+    internal static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
+    {
+        if (!dict.ContainsKey(key)) dict[key] = [];
+        dict[key].Add(value);
+    }
+
+    internal static Dictionary<K, V> EnsureKeys<K, V>(
+        this Dictionary<K, V> dict,
+        IEnumerable<K> requiredKeys,
+        V defaultValue = default!) where K : notnull
+    {
+        foreach (var key in requiredKeys) dict.TryAdd(key, defaultValue);
+        return dict;
+    }
 }

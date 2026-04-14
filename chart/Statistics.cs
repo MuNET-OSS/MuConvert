@@ -46,16 +46,17 @@ public class Statistics
     public int Total => _data.Values.Sum();
 
     // 返回按音符类型分组的数量。所返回的字典中会包含的key：TAP,STR,HLD,SLD,TTP,THO
-    public Dictionary<string, int> ByNoteType =>
-        _data.GroupBy(x => x.Key[2..5]).ToDictionary(x => x.Key, x => x.Sum(v => v.Value));
+    public Dictionary<string, int> ByNoteType => _data.GroupBy(x => x.Key[2..5])
+            .ToDictionary(x => x.Key, x => x.Sum(v => v.Value))
+            .EnsureKeys(["TAP", "STR", "HLD", "SLD", "TTP", "THO"]);
     
     // 返回按音符的修饰符分组的数量。所返回的字典中会包含的key：NM,BR,EX,BX
-    public Dictionary<string, int> ByModifiers => 
-        _data.GroupBy(x => x.Key[..2]).ToDictionary(x => x.Key, x => x.Sum(v => v.Value));
+    public Dictionary<string, int> ByModifiers => _data.GroupBy(x => x.Key[..2])
+        .ToDictionary(x => x.Key, x => x.Sum(v => v.Value))
+        .EnsureKeys(["NM", "BR", "EX", "BX"]);
     
     // 返回按游戏结算画面上屏判定表分类的数量。所返回的字典中会包含的key：TAP,HOLD,SLIDE,TOUCH,BREAK
-    public Dictionary<string, int> ByScoring =>
-        _data.GroupBy(x =>
+    public Dictionary<string, int> ByScoring => _data.GroupBy(x =>
         {
             if (x.Key[0] == 'B') return "BREAK";
             var type = x.Key[2..5];
@@ -64,7 +65,9 @@ public class Statistics
             else if (type == "TTP") return "TOUCH";
             else if (type is "TAP" or "STR") return "TAP";
             else throw Utils.Fail();
-        }).ToDictionary(x => x.Key, x => x.Sum(v => v.Value));
+        })
+        .ToDictionary(x => x.Key, x => x.Sum(v => v.Value))
+        .EnsureKeys(["TAP","HOLD","SLIDE","TOUCH","BREAK"]);
     
     // 绝赞总数
     public int Break => _data.Where(x=>x.Key[0] == 'B').Sum(x=>x.Value);
