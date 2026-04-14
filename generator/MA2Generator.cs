@@ -203,92 +203,57 @@ GENERATED_BY	MuConvert v{8}
         result.AppendLine();
         
         // 统计段
-        var stats_num = new Dictionary<string, int>
+        var stats = chart.Statistics;
+        foreach (var (k, v) in statsNameConversion())
         {
-            ["TAP"] = 0, ["BRK"] = 0, ["HLD"] = 0, ["SLD"] = 0,
-        };
-        var stats_rec = new Dictionary<string, int>();
-        var stNamesCvt = statsNameConversion();
-        foreach (var key in stNamesCvt.Values.Select(x=>x?.Item1).Where(x=>x!=null).Distinct())
-        {
-            stats_rec[key!] = 0;
+            result.AppendLine($"T_REC_{k}\t{stats.Data[v]}");
         }
-        foreach (var l in lines)
-        {
-            var r = stNamesCvt[l.Name];
-            if (r == null) continue;
-            var (rec, num) = r.Value;
-            stats_rec[rec]++;
-            stats_num[num]++;
-        }
+        var totalNum = stats.Total;
+        result.AppendLine($"T_REC_ALL\t{totalNum}");
 
-        var rec_all = 0;
-        foreach (var (k, v) in stats_rec)
-        {
-            result.AppendLine($"T_REC_{k}\t{v}");
-            rec_all += v;
-        }
-        result.AppendLine($"T_REC_ALL\t{rec_all}");
-        foreach (var (k, v) in stats_num)
-        {
-            result.AppendLine($"T_NUM_{k}\t{v}");
-        }
-        result.AppendLine($"T_NUM_ALL\t{rec_all}");
+        var statsScoring = stats.ByScoring;
+        result.AppendLine($"T_NUM_TAP\t{statsScoring["TAP"] + statsScoring["TOUCH"]}");
+        result.AppendLine($"T_NUM_BRK\t{statsScoring["BREAK"]}");
+        result.AppendLine($"T_NUM_HLD\t{statsScoring["HOLD"]}");
+        result.AppendLine($"T_NUM_SLD\t{statsScoring["SLIDE"]}");
+        result.AppendLine($"T_NUM_ALL\t{totalNum}");
 
+        var statsNoteType = stats.ByNoteType;
         var stats_judge = new Dictionary<string, int>
         {
-            ["TAP"] = stats_num["TAP"] + stats_rec["BRK"] + stats_rec["BXX"] + stats_rec["BST"] + stats_rec["XBS"],
+            ["TAP"] = statsNoteType["TAP"] + statsNoteType["STR"] + statsNoteType["TTP"],
             ["HLD"] = 0, // TODO 还在研究中
-            ["SLD"] = stats_rec["SLD"] + stats_rec["BSL"],
+            ["SLD"] = statsNoteType["SLD"],
         };
-        var judge_all = 0;
         foreach (var (k, v) in stats_judge)
         {
             result.AppendLine($"T_JUDGE_{k}\t{v}");
-            judge_all += v;
         }
-        result.AppendLine($"T_JUDGE_ALL\t{judge_all}");
+        result.AppendLine($"T_JUDGE_ALL\t{stats_judge.Sum(x=>x.Value)}");
         
         result.AppendLine($"TTM_EACHPAIRS\t{0}"); // TODO 还在研究中
         
-        var stats_score = new Dictionary<string, int>
-        {
-            ["TAP"] = stats_num["TAP"] * 500,
-            ["BRK"] = stats_num["BRK"] * 2600,
-            ["HLD"] = stats_num["HLD"] * 1000,
-            ["SLD"] = stats_num["SLD"] * 1500,
-        };
-        var score_all = 0;
-        foreach (var (k, v) in stats_score)
-        {
-            result.AppendLine($"TTM_SCR_{k}\t{v}");
-            score_all += v;
-        }
-        result.AppendLine($"TTM_SCR_ALL\t{score_all}");
-        var score_sss = score_all - stats_num["BRK"] * 100; // 旧框扣除额外分
-        result.AppendLine($"TTM_SCR_S\t{score_sss * 0.97 / 50 * 50}");
+        result.AppendLine($"TTM_SCR_TAP\t{(statsScoring["TAP"] + statsScoring["TOUCH"]) * 500}");
+        result.AppendLine($"TTM_SCR_BRK\t{statsScoring["BREAK"] * 2600}");
+        result.AppendLine($"TTM_SCR_HLD\t{statsScoring["HOLD"] * 1000}");
+        result.AppendLine($"TTM_SCR_SLD\t{statsScoring["SLIDE"] * 1500}");
+        var theoryScore = stats.OldScore;
+        result.AppendLine($"TTM_SCR_ALL\t{theoryScore}");
+        
+        var score_sss = stats.WeightedNoteCount * 500; // 旧框扣除额外分
+        result.AppendLine($"TTM_SCR_S\t{Math.Ceiling(score_sss * 0.97 / 50) * 50}");
         result.AppendLine($"TTM_SCR_SS\t{score_sss}");
-        result.AppendLine($"TTM_RAT_ACV\t{(long)score_all * 10000 / score_sss }"); // 用long避免溢出
+        result.AppendLine($"TTM_RAT_ACV\t{(long)theoryScore * 10000 / score_sss }"); // 用long避免溢出
         
         return (result.ToString(), alerts);
     }
-    
-    /* 从音符名字到statistics部分的项目名的转换表 */
-    private Dictionary<string, (string, string)?> statsNameConversion()
+
+    private Dictionary<string, string> statsNameConversion() => new()
     {
-        var result = new Dictionary<string, (string, string)?>
-        {
-            ["NMTAP"] = ("TAP", "TAP"), ["BRTAP"] = ("BRK", "BRK"), ["EXTAP"] = ("XTP", "TAP"), ["BXTAP"] = ("BXX", "BRK"),
-            ["NMHLD"] = ("HLD", "HLD"), ["EXHLD"] = ("XHO", "HLD"), ["BRHLD"] = ("BHO", "BRK"), ["BXHLD"] = ("BXH", "BRK"),
-            ["NMSTR"] = ("STR", "TAP"), ["BRSTR"] = ("BST", "BRK"), ["EXSTR"] = ("XST", "TAP"), ["BXSTR"] = ("XBS", "BRK"),
-            ["NMTTP"] = ("TTP", "TAP"), ["NMTHO"] = ("THO", "HLD"),
-        };
-        foreach (var name in Enum.GetNames<SlideType>())
-        {
-            result["NM" + name] = ("SLD", "SLD");
-            result["BR" + name] = ("BSL", "BRK");
-            result["CN" + name] = null;
-        }
-        return result;
-    }
+        ["TAP"] = "NMTAP", ["BRK"] = "BRTAP", ["XTP"] = "EXTAP", ["BXX"] = "BXTAP",
+        ["HLD"] = "NMHLD", ["XHO"] = "EXHLD", ["BHO"] = "BRHLD", ["BXH"] = "BXHLD",
+        ["STR"] = "NMSTR", ["BST"] = "BRSTR", ["XST"] = "EXSTR", ["XBS"] = "BXSTR",
+        ["TTP"] = "NMTTP", ["THO"] = "NMTHO", 
+        ["SLD"] = "NMSLD", ["BSL"] = "BRSLD",
+    };
 }

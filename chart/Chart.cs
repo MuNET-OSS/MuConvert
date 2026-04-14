@@ -70,8 +70,6 @@ public class Chart
     public bool IsDxChart => Notes.Any(note => // 判定DX谱的标准：存在
         note is Touch || note.IsEx || (note.IsBreak && note is not Tap) || // Touch 或者 保护套 或者 非Tap/Star的绝赞
         note is Slide { segments.Count: > 1 }); // 星星段数大于1（fes星星）
-    
-    // TODO 把谱面统计搬到Chart类下面来
-    
-    
+
+    public Statistics Statistics => new(this);
 }
