@@ -1,7 +1,160 @@
-﻿MuConvert - 支持Simai与MA2谱面互转的新一代转谱器
+MuConvert - 支持Simai与MA2谱面互转的新一代转谱器
 ================
 
-用户文档TODO
+MuConvert 是一个支持**Simai与MA2互转**的转谱器。
+
+#### 本项目的主要优势
+- 特性支持完善：本项目严格按照[Simai语言文档](https://w.atwiki.jp/simai/pages/1002.html)编写，全面支持Simai官方标准的所有特性；同时也加入了许多官方文档未注明、但在自制谱圈被广泛使用的语法，如`||`行内注释，`&demo_seek`，`&clock_count`等。同时也对一些常见的非标准语法具有兼容性。
+- 无精度损失：内部使用Rational高精度分数类作为时间等相关运算的基础，确保没有精度损失，不会见到大于384分或无法被384整除的分音就无法处理等。
+- 创新采用ANTLR作为Simai的解析器，减少手写解析可能导致的错误等问题，同时保持良好的代码可读、可维护性。
+- 工具+基础库：既可以直接当作命令行工具使用，也可以把它作为一个C#依赖库嵌入到你的工程里。
+- 可扩展的架构设计：本项目以中间表示(Chart类)为核心，通过为每种语言编写parser、将语言解析为统一的Chart对象的中间表示，再为每种语言编写generator，实现任意两个语言间的互转。尽管目前只支持了Simai和MA2，但项目设计具有良好的可扩展性，您可轻松按照自己的需求定制自己的语言格式，或直接把Chart的解析结果拿来服务于您自己的下游项目如谱面播放器等。
+
+## 使用文档
+本项目具有两种使用方式：
+- 首先，您可以直接当作命令行工具使用。本项目会编译出名为`MuConvert.exe`的应用程序，详见下面文档的第一部分。
+- 此外，本项目也可作为一个C#依赖库，嵌入到您的其他项目里，以库的方式进行使用。详见下面文档的第二部分。
+
+### 1) 直接使用本程序进行转谱（CLI）
+
+#### 基本用法
+
+```shell
+MuConvert <path> [-l|--levels N[,N...]]
+```
+
+- **`path`**：输入路径（必填），可以是 `.txt` / `.ma2` / 目录（见下文）
+- **`-l, --levels`**：仅转换指定难度（以 `maidata.txt` 的 `&inote_编号` 为准），多个难度用英文逗号分隔；省略则转换全部难度
+
+#### `path` 支持的输入形式与输出规则
+通过命令行传入的参数，既可以是文件，也可以是目录。
+- **输入 `.txt`（`maidata.txt` 或“纯 simai 单谱”）**：把Simai转为MA2。
+  - **如果是 `maidata.txt`（含 `&inote_`）**：会在输入文件的相同目录下，产生 `lv_{id}.ma2`（每个难度一个文件）。
+    - 可用类似 `-l 5,6` 的选项，只导出部分难度
+  - **如果是纯 simai Notes（不含 maidata 头信息）**：会在输入文件的相同目录下，产生 `lv_0.ma2`。
+
+- **输入 `.ma2` 文件**：把MA2转为Simai。
+  - 输出：会在输入文件的相同目录下，产生 `maidata.txt`（当然，里面只有您传入的MA2所对应的一个难度）。
+  - 如果想把多张不同难度的 `.ma2` 合并进一个 `maidata.txt`，请直接传入目录（见下一条）。
+
+- **输入目录**：智能识别
+  - **目录中包含 `maidata.txt`**：等价于输入该 `maidata.txt`
+  - **目录中包含一个或多个 `.ma2`**：将它们合并转为同目录的 `maidata.txt`
+  - 若目录中 **同时存在** `maidata.txt` 与 `.ma2`，或两者都不存在，会报错
+
+#### 示例
+- **Simai（maidata）→ MA2（按难度导出）**
+```shell
+MuConvert "D:\charts\MyChart\maidata.txt"
+MuConvert "D:\charts\MyChart" # 与上面等价
+MuConvert "D:\charts\MyChart\maidata.txt" -l 5,6 # 只转紫谱和白谱
+# 生成的转谱结果位于D:\charts\MyChart\lv_X.ma2
+```
+
+- **MA2 → Simai（生成/覆盖 `maidata.txt`）**
+```shell
+MuConvert "D:\charts\MyChart\000000_00.ma2" # 只转一个难度
+MuConvert "D:\charts\MyChart" # 转换目录中的所有难度，生成一个maidata.txt文件
+MuConvert "D:\charts\MyChart" -l 5,6 # 只转紫谱和白谱
+# 生成的转谱结果位于D:\charts\MyChart\maidata.txt
+```
+
+### 2) 将本项目作为依赖库使用
+#### 导入依赖库
+- **推荐做法**：把本仓库作为 git submodule 引入你的工程仓库，然后把 `MuConvert.csproj` 加入你的 `.sln`/`.slnx`。
+
+```shell
+git submodule add https://github.com/MuNET-OSS/MuConvert MuConvert # 将本项目的源码导入为submodule
+dotnet sln .\YourSolution.sln add .\MuConvert\MuConvert.csproj # 将项目加入解决方案
+```
+
+#### 使用方法（TLDR）：
+**Simai → MA2**：
+```csharp
+string maidataText = File.ReadAllText(@"D:\charts\MyChart\maidata.txt", Encoding.UTF8); // maidata.txt 作为字符串
+var maidata = new Maidata(maidataText); // 通过 Maidata 模块解析 maidata，得到整张谱的元信息，和每个难度的谱面
+var inote = maidata.Levels[5].Inote; // 以紫谱为例，取出该难度的谱面内容（&inote_5）
+
+var (chart, alerts) = new SimaiParser().Parse(inote); // 将 simai 解析为 Chart（中间表示）
+var (ma2Text, alerts) = new MA2Generator().Generate(chart); // 将Chart对象导出为MA2的字符串
+return ma2Text; // ma2Text即为转谱结果
+```
+
+**MA2 → Simai**：
+```csharp
+string ma2Text = File.ReadAllText(@"D:\charts\MyChart\000000_00.ma2", Encoding.UTF8); // MA2文件，整体读取为字符串
+var (chart, alerts) = new MA2Parser().Parse(ma2Text); // 将MA2解析为Chart类的对象（谱面解析结果，中间表示）。alerts是解析时可能产生的警告信息等，建议打印出来。
+var (simaiText, alerts) = new SimaiGenerator().Generate(chart); // 将Chart对象导出为Simai语言的字符串
+
+// 注意simaiText这时只是一个纯simai的inotes序列，而不是maidata；需要通过下面的方式构造maidata。
+var maidata = new Maidata();
+maidata.AddLevel(5, new MaidataChart(inote: simaiText, "13+", "谱师名字")); // 把刚刚转出的谱面的inote添加进去
+// 为maidata添加你想要的属性
+maidata.Title = "MyChart";
+maidata.First = 0;
+maidata.ClockCount = chart.ClockCount;
+// ... 还可继续添加更多你想要的属性。对于非标准属性，则可以直接用字典的方式添加（Maidata类继承自Dictionary<string, string>）：
+maidata["somethingelse"] = "xxx";
+
+var maidataText = maidata.ToString(); // 通过ToString方法将Maidata对象序列化为文本
+return maidataText; // maidataText即为转谱结果
+```
+
+#### parser和generator的选项
+- 部分parser和generator，在其构造参数中带有可选的选项参数，可以控制转谱时的一些行为。
+  - SimaiParser带有以下选项：
+    - bool `bigTouch` (默认为false): 是否将谱面中的Touch和TouchHold生成为大尺寸。
+    - int `clockCount` (默认为4): 控制在谱面开头的“哒哒哒哒”的那几声，有几下。
+  - MA2Generator带有以下选项：
+    - bool `isUtage` (默认为false): 仅影响生成的MA2的文件头区域的`FES_MODE`的值是1还是0，一般来说是不重要的。
+
+#### 更多示例（异常处理）
+注意：当解析/生成步骤失败时，会抛出ConversionException异常，其中含有Alerts属性，是转谱过程中遇到的错误和警告等信息。（类比于C语言编译器会打印出Error和Warning信息）  
+因此，建议您采用try-catch的写法，捕获可能出现的异常，并无论转谱成功失败、总是打印出Alert信息：（下面例子以Simai → MA2为例，如果反过来转则直接更换Parser和Generator即可）
+```csharp
+using System.Text;
+using MuConvert.generator;
+using MuConvert.parser;
+using MuConvert.utils;
+
+var maidata = new Maidata(File.ReadAllText(@"D:\charts\MyChart\maidata.txt", Encoding.UTF8));
+var inote = maidata.Levels[5].Inote; // 以紫谱为例，取出该难度的谱面内容（&inote_5）
+
+List<Alert> alerts = [];
+try
+{
+    var (chart, alerts1) = new SimaiParser().Parse(inote);
+    alerts.AddRange(alerts1);
+    var (ma2Text, alerts2) = new MA2Generator().Generate(chart);
+    alerts.AddRange(alerts2);
+    return ma2Text;
+}
+catch (ConversionException e)
+{
+    alerts.AddRange(e.Alerts);
+    throw;
+}
+finally
+{
+    foreach (Alert a in alerts) Console.Error.WriteLine(a);
+}
+```
+
+#### 核心概念（parser / IR / generator）
+
+- **parser（解析器）**：把“源格式文本”解析成中间表示
+  - `SimaiParser.Parse(string)` → `Chart`
+  - `MA2Parser.Parse(string)` → `Chart`
+  - 返回值同时带有 `List<Alert>`；如果遇到致命错误会抛出 `ConversionException`
+
+- **中间表示 IR（`Chart`）**：MuConvert 内部统一的数据结构
+  - 入口类型是 `MuConvert.chart.Chart`
+  - 关键字段包括 `Chart.BpmList` 与 `Chart.Notes`，以及 `Touch/Hold/Slide` 等具体 `Note` 子类
+
+- **generator（生成器）**：把 `Chart` 转回“目标格式文本”
+  - `SimaiGenerator.Generate(Chart)` → simai 文本（可写入 `maidata.txt` 的 `&inote_*`）
+  - `MA2Generator.Generate(Chart)` → `.ma2` 文本
+
 
 ## 开发者指南
 > 以下内容是面向对于本程序感兴趣，想要了解技术细节/调试bug/参与开发的开发者的。如果你只是普通用户，可以不必阅读以下内容；如果你遇到了bug，请通过[issue](https://github.com/MuNet-OSS/MuConvert/issues)进行反馈。
