@@ -33,6 +33,7 @@ public class Duration
     }
 
     private BPMList BpmList => _note.Chart.BpmList;
+    internal decimal InvariantBpm => BpmList[BpmList.FindIndex(_note.Time)].Bpm;
 
     public Rational Bar
     {
@@ -43,9 +44,7 @@ public class Duration
                 case Type.Bar:
                     return _data;
                 case Type.InvariantBar:
-                    var bpmIndex = BpmList.FindIndex(_note.Time);
-                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, (Rational)invariantBpm, null);
+                    return ConvertTime(_data, (Rational)InvariantBpm, null);
                 case Type.Seconds:
                     return ConvertTime(_data, 240, null); // seconds秒数可以等效为240bpm下的小节数
                 default:
@@ -68,13 +67,9 @@ public class Duration
                 case Type.InvariantBar:
                     return _data;
                 case Type.Bar:
-                    var bpmIndex = BpmList.FindIndex(_note.Time);
-                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, null, (Rational)invariantBpm);
+                    return ConvertTime(_data, null, (Rational)InvariantBpm);
                 case Type.Seconds:
-                    bpmIndex = BpmList.FindIndex(_note.Time);
-                    invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, 240, (Rational)invariantBpm); // seconds秒数可以等效为240bpm下的小节数
+                    return ConvertTime(_data, 240, (Rational)InvariantBpm); // seconds秒数可以等效为240bpm下的小节数
                 default:
                     throw new InvalidOperationException();
             }
@@ -97,9 +92,7 @@ public class Duration
                 case Type.Bar:
                     return ConvertTime(_data, null, 240); // seconds秒数可以等效为240bpm下的小节数
                 case Type.InvariantBar:
-                    var bpmIndex = BpmList.FindIndex(_note.Time);
-                    var invariantBpm = BpmList[bpmIndex].Bpm; // 音符开始时刻的bpm是不变bpm
-                    return ConvertTime(_data, (Rational)invariantBpm, 240);
+                    return ConvertTime(_data, (Rational)InvariantBpm, 240);
                 default:
                     throw new InvalidOperationException();
             }

@@ -10,13 +10,6 @@ namespace MuConvert.Tests;
 /// 官谱 MA2 → Chart（<see cref="MA2Parser"/>）→ MA2（<see cref="MA2Generator"/>）轮回合后，
 /// 与原版 MA2 末尾统计段（<c>T_REC_*</c> 起至文件结束）逐项一致。
 /// </summary>
-/// <remarks>
-/// 下列键与官机/导出工具的规则尚未在 <see cref="MA2Generator"/> 内完全复现，测试中跳过比对：
-/// <list type="bullet">
-/// <item><description><c>TTM_EACHPAIRS</c>：官机 EACH 对计数与谱面对象模型对应关系仍待考证。</description></item>
-/// <item><description><c>T_JUDGE_HLD</c> / <c>T_JUDGE_ALL</c>：Hold 在判定统计中的折算与官机不一致（生成器侧 HLD 仍为 TODO）。</description></item>
-/// </list>
-/// </remarks>
 public class Statistics测试
 {
     private readonly ITestOutputHelper _output;

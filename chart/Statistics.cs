@@ -1,4 +1,5 @@
 using MuConvert.utils;
+using Rationals;
 
 namespace MuConvert.chart;
 
@@ -100,5 +101,17 @@ public class Statistics
             $"Break: {ByModifiers["BR"] + ByModifiers["BX"]}", $"Ex: {ByModifiers["EX"] + ByModifiers["BX"]}", 
             $"Firework: {Firework}"];
         return string.Join(", ", r);
+    }
+
+    public int T_JUDGE_HLD { get; private set; } = 0;
+    public int TTM_EACHPAIRS { get; private set; } = 0;
+    
+    private Rational _now = -1; // 计算双押个数用
+    
+    private int getProgJudgeGrid(decimal bpm)
+    {
+        if (bpm < 15) return 3;
+        int exp = (int)Math.Min(Math.Floor(Math.Log2((double)bpm / 15)), 6);
+        return 6 * (int)Math.Pow(2, exp);
     }
 }

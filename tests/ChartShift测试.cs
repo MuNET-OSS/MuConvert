@@ -1,8 +1,4 @@
-﻿using System.Text;
-using MuConvert.chart;
-using MuConvert.maidata;
-using MuConvert.parser;
-using MuConvert.utils;
+﻿using MuConvert.chart;
 using Rationals;
 using static MuConvert.Tests.TestUtils;
 
@@ -14,28 +10,6 @@ namespace MuConvert.Tests;
 public class ChartShift测试
 {
     private static readonly Rational QuarterBar = new(1, 4);
-
-    private static Chart LoadChart(out List<Alert> alerts)
-    {
-        var repo = FindRepoRoot();
-        var maidataPath = Path.Combine(repo.FullName, "tests", "testset", "官谱", "Xaleid◆scopiX [DX]", "maidata.txt");
-        Assert.True(File.Exists(maidataPath), $"Missing test maidata: {maidataPath}");
-
-        var maidata = new Maidata(File.ReadAllText(maidataPath, Encoding.UTF8));
-        Assert.True(maidata.Levels.ContainsKey(6), "Expected lv6 (inote_6) in maidata.");
-        var chartInfo = maidata.Levels[6];
-
-        var (chart, parseAlerts) = new SimaiParser(clockCount: maidata.ClockCount)
-            .Parse(chartInfo.Inote);
-        alerts = parseAlerts;
-        chart.Sort();
-        
-        Assert.NotEmpty(chart.Notes);
-        Assert.NotEmpty(chart.BpmList);
-        Assert.True(chart.BpmList[0].Time == 0, "sanity");
-        Assert.DoesNotContain(alerts, a => a.Level >= Alert.LEVEL.Error);
-        return chart;
-    }
 
     private static List<(Rational Time, int FalseEachIdx)> NotesInStableOrder(Chart c) =>
         c.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx).Select(n => (n.Time, n.FalseEachIdx)).ToList();
@@ -117,7 +91,7 @@ public class ChartShift测试
     [Fact]
     public void Shift_Zero()
     {
-        var chart = LoadChart(out _);
+        var chart = LoadOneChart(out _);
         var notesBefore = NotesInStableOrder(chart);
         var bpmsBefore = BpmInOrder(chart);
         var startBpm = chart.StartBpm;
@@ -133,7 +107,7 @@ public class ChartShift测试
     [Fact]
     public void Shift_PositiveQuarterBar()
     {
-        var chart = LoadChart(out _);
+        var chart = LoadOneChart(out _);
         var notesBefore = NotesInStableOrder(chart);
         var bpmsBefore = BpmInOrder(chart);
 
@@ -149,7 +123,7 @@ public class ChartShift测试
     [Fact]
     public void Shift_NegativeQuarterBar()
     {
-        var chart = LoadChart(out _);
+        var chart = LoadOneChart(out _);
         var notesBefore = NotesInStableOrder(chart);
         var bpmsBefore = BpmInOrder(chart);
         var userOffset = -QuarterBar;
@@ -163,7 +137,7 @@ public class ChartShift测试
     [Fact]
     public void Shift_PositiveThenNegativeQuarterBar_RoundTrip()
     {
-        var chart = LoadChart(out _);
+        var chart = LoadOneChart(out _);
         var notesBefore = NotesInStableOrder(chart);
         var bpmsBefore = BpmInOrder(chart);
 
@@ -179,7 +153,7 @@ public class ChartShift测试
     [Fact]
     public void Shift_WithExplicitBpm_ScalesPositiveOffsetInBarSpace()
     {
-        var chart = LoadChart(out _);
+        var chart = LoadOneChart(out _);
         var startBpm = chart.StartBpm;
         var halfBar = new Rational(1, 2);
 
@@ -188,7 +162,7 @@ public class ChartShift测试
         chart.Shift(halfBar);
         var shiftedDefaultBpm = chart.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx).First().Time;
 
-        var chartScaled = LoadChart(out _);
+        var chartScaled = LoadOneChart(out _);
         chartScaled.Shift(halfBar, bpm: startBpm * 2);
         var shiftedDoubleBpmArg = chartScaled.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx).First().Time;
 

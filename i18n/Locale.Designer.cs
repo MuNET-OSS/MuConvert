@@ -294,7 +294,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (inserting possibly missing commas): {1}.
         /// </summary>
         public static string PrepFix1 {
             get {
@@ -303,7 +303,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (duration markers used &quot;-&quot; instead of &quot;:&quot;): {1}.
         /// </summary>
         public static string PrepFix2 {
             get {
@@ -312,7 +312,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (star-head modifiers should appear after the lane number and before the star type marker): {1}.
         /// </summary>
         public static string PrepFix3 {
             get {
@@ -321,7 +321,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to TODO.
+        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (redundant duplicate parentheses, possibly from extra typing): {1}.
         /// </summary>
         public static string PrepFix4 {
             get {

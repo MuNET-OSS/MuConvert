@@ -29,6 +29,8 @@ public static class Utils
     public static Rational Ceil(Rational r) => r.WholePart + (r.FractionPart == 0 ? 0 : 1);
     
     public static BigInteger Max(BigInteger a, BigInteger b) => a > b ? a : b;
+    
+    public static Rational Min(Rational a, Rational b) => a < b ? a : b;
 }
 
 internal static class ExtensionUtils

@@ -15,7 +15,7 @@ public abstract class Note
 
     public int FalseEachIdx = 0; // 如果>0，表示这是一个伪双押，数字越大、延后的时刻越多
 
-    public Rational TimeInSeconds => throw new NotImplementedException();
+    public Rational TimeInSecond => Chart.ToSecond(Time);
     
     public virtual Duration Duration
     {
@@ -40,6 +40,26 @@ public abstract class Note
     }
     
     public virtual string Modifiers => (IsBreak ? "b" : "") + (IsEx ? "x" : "");
+
+    // 当前音符落在了哪些BPM区间内、分别有多长。
+    public List<(int bpmIdx, decimal bpm, Rational start, Rational len)> BpmRanges
+    {
+        get
+        {
+            List<(int, decimal, Rational, Rational)> result = [];
+            var now = Time.CanonicalForm;
+            var end = (Time + Duration.Bar).CanonicalForm;
+            while (now < end)
+            {
+                var bpmIdx = Chart.BpmList.FindIndex(now);
+                var curBpmRangeEnd = bpmIdx < Chart.BpmList.Count - 1 ? Chart.BpmList[bpmIdx + 1].Time : 999999; // 当前BPM区间的结束时刻
+                var len = Utils.Min(end, curBpmRangeEnd) - now; // 音符落在本区间内的长度为，从当前时刻开始，到（本区间结束或音符结束的较早者）
+                result.Add((bpmIdx, Chart.BpmList[bpmIdx].Bpm, now, len.CanonicalForm));
+                now = (now + len).CanonicalForm;
+            }
+            return result;
+        }
+    }
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

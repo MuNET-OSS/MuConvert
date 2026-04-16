@@ -228,7 +228,7 @@ GENERATED_BY	MuConvert v{8}
         var stats_judge = new Dictionary<string, int>
         {
             ["TAP"] = statsNoteType["TAP"] + statsNoteType["STR"] + statsNoteType["TTP"],
-            ["HLD"] = 0, // TODO 还在研究中
+            ["HLD"] = stats.T_JUDGE_HLD,
             ["SLD"] = statsNoteType["SLD"],
         };
         foreach (var (k, v) in stats_judge)
@@ -237,7 +237,7 @@ GENERATED_BY	MuConvert v{8}
         }
         result.AppendLine($"T_JUDGE_ALL\t{stats_judge.Sum(x=>x.Value)}");
         
-        result.AppendLine($"TTM_EACHPAIRS\t{0}"); // TODO 还在研究中
+        result.AppendLine($"TTM_EACHPAIRS\t{stats.TTM_EACHPAIRS}");
         
         result.AppendLine($"TTM_SCR_TAP\t{(statsScoring["TAP"] + statsScoring["TOUCH"]) * 500}");
         result.AppendLine($"TTM_SCR_BRK\t{statsScoring["BREAK"] * 2600}");

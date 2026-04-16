@@ -9,26 +9,18 @@ public class BPMList : List<BPM>
 {
     public BPMList() {}
     public BPMList(IEnumerable<BPM> bpms): base(bpms) {}
-    
-    private List<BPM> ToSeconds()
-    {
-        List<BPM> result = [this[0]];
-        Utils.Assert(this[0].Time == 0, "BPM列表的开头必须为0时刻");
-        Rational accumulation = 0;
-        for (int i = 1; i < Count; i++)
-        {
-            accumulation += 240 / (Rational)this[i-1].Bpm * (this[i].Time - this[i-1].Time);
-            result.Add(new BPM(accumulation, this[i].Bpm));
-        }
-        return result;
-    }
 
     public Rational ToSecond(Rational barTime)
     {
-        var bpmIdx = FindIndex(barTime);
-        var seconds = ToSeconds()[bpmIdx].Time;
-        seconds += (barTime - this[bpmIdx].Time) * (240 / (Rational)this[bpmIdx].Bpm);
-        return seconds;
+        Utils.Assert(this[0].Time == 0, "BPM列表的开头必须为0时刻");
+        Rational accumulation = 0;
+        for (int i = 0; i < Count; i++)
+        {
+            var bpmRangeEnd = i < Count - 1 ? this[i + 1].Time : 999999;
+            accumulation += 240 / (Rational)this[i].Bpm * (Utils.Min(barTime, bpmRangeEnd) - this[i].Time);
+            if (barTime <= bpmRangeEnd) break;
+        }
+        return accumulation;
     }
     
     public int FindIndex(Rational time)

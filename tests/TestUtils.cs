@@ -1,3 +1,9 @@
+using System.Text;
+using MuConvert.chart;
+using MuConvert.maidata;
+using MuConvert.parser;
+using MuConvert.utils;
+
 namespace MuConvert.Tests;
 
 internal static class TestUtils
@@ -11,6 +17,28 @@ internal static class TestUtils
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, "MuConvert.csproj")))
             dir = dir.Parent;
         return dir ?? throw new DirectoryNotFoundException("Could not locate repo root (MuConvert.csproj).");
+    }
+    
+    public static Chart LoadOneChart(out List<Alert> alerts)
+    {
+        var repo = FindRepoRoot();
+        var maidataPath = Path.Combine(repo.FullName, "tests", "testset", "官谱", "Xaleid◆scopiX [DX]", "maidata.txt");
+        Assert.True(File.Exists(maidataPath), $"Missing test maidata: {maidataPath}");
+
+        var maidata = new Maidata(File.ReadAllText(maidataPath, Encoding.UTF8));
+        Assert.True(maidata.Levels.ContainsKey(6), "Expected lv6 (inote_6) in maidata.");
+        var chartInfo = maidata.Levels[6];
+
+        var (chart, parseAlerts) = new SimaiParser(clockCount: maidata.ClockCount)
+            .Parse(chartInfo.Inote);
+        alerts = parseAlerts;
+        chart.Sort();
+        
+        Assert.NotEmpty(chart.Notes);
+        Assert.NotEmpty(chart.BpmList);
+        Assert.True(chart.BpmList[0].Time == 0, "sanity");
+        Assert.DoesNotContain(alerts, a => a.Level >= Alert.LEVEL.Error);
+        return chart;
     }
 }
 

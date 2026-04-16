@@ -164,7 +164,7 @@ finally
 ## 开发者指南
 > 以下内容是面向对于本程序感兴趣，想要了解技术细节/调试bug/参与开发的开发者的。如果你只是普通用户，可以不必阅读以下内容；如果你遇到了bug，请通过[issue](https://github.com/MuNet-OSS/MuConvert/issues)进行反馈。
 
-首先，推荐阅读：[simai语文档](TODO)
+首先，推荐阅读：[Simai语言文档](https://w.atwiki.jp/simai/pages/1002.html)
 
 ### MuConvert的设计理念
 - 转谱的本质就是transpiler。MuConvert严格遵循`源语言 ---parser--> 中间表示(IR) ---generator--> 目标语言`的transpiler通用设计模式，以确保代码的清晰和可维护性、减少冗余代码。
