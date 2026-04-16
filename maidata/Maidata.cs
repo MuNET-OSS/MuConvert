@@ -12,13 +12,13 @@ public class Maidata : Dictionary<string, string>
      * 除了谱面之外的信息，如title、artist、first等，可通过Infos获取；
      * 而由于，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
      */
-    public Dictionary<int, MaidataChart> Levels => _splitLevels().Item1;
+    public IReadOnlyDictionary<int, MaidataChart> Levels => _splitLevels().Item1;
     
     /**
      * 便捷的获得一个maidata中，除了谱面相关的所有信息字段的方法。
      * 而由于Maidata类继承自Dictionary，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
      */
-    public Dictionary<string, string> Infos => _splitLevels().Item2;
+    public IReadOnlyDictionary<string, string> Infos => _splitLevels().Item2;
 
     public void AddLevel(int levelId, MaidataChart maidataChart)
     {

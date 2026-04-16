@@ -9,19 +9,19 @@ using static MuConvert.Tests.TestUtils;
 namespace MuConvert.Tests;
 
 /* 都是让AI写的 */
-public class 自制谱测试
+public class Simai转MA2测试
 {
     private readonly ITestOutputHelper _output;
 
-    public 自制谱测试(ITestOutputHelper output) => _output = output;
+    public Simai转MA2测试(ITestOutputHelper output) => _output = output;
 
     /// <summary>
     /// 每个元素对应一张谱面：一条 Theory 用例只跑一个 chart。
     /// </summary>
-    public static IEnumerable<object[]> AllCharts()
+    public static IEnumerable<object[]> AllCharts(string dataDir)
     {
         var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", "自制谱");
+        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
         if (!Directory.Exists(testsetRoot))
             throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
 
@@ -35,8 +35,10 @@ public class 自制谱测试
     }
 
     [Theory]
-    [MemberData(nameof(AllCharts))]
-    public void TestChart(TestInput input)
+    [MemberData(nameof(AllCharts), "自制谱")]
+    public void 自制谱转MA2测试(TestInput c) => TestChart(c);
+    
+    private void TestChart(TestInput input)
     {
         var maidata = new Maidata(File.ReadAllText(input.Maidata, Encoding.UTF8));
         var chartInfo = maidata.Levels[input.LevelId];
@@ -44,8 +46,7 @@ public class 自制谱测试
 
         var (chart, _) = new SimaiParser(bigTouch: false, isUtage: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
         var (ma2, _) = new MA2Generator().Generate(chart);
-
-
+        
         ma2 = keepNotesOnly(ma2);
         expectedMa2 = keepNotesOnly(expectedMa2);
         AssertTextEqual(expectedMa2, ma2);

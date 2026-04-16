@@ -15,16 +15,16 @@ namespace MuConvert.Tests;
 /// 官谱 MA2 → Simai 与 maidata 中 inote 的比对：不逐字对比 Simai 文本，而是把双方按「顶层逗号」展开为
 /// (Rational 时刻, 片段原文)，再比较时间轴（容忍分音写法不同导致的空白差异，以及少量 modifier 顺序差异）。
 /// </summary>
-public class 官谱转Simai测试
+public class MA2转Simai测试
 {
     private readonly ITestOutputHelper _output;
 
-    public 官谱转Simai测试(ITestOutputHelper output) => _output = output;
+    public MA2转Simai测试(ITestOutputHelper output) => _output = output;
 
-    public static IEnumerable<object[]> AllLevels()
+    public static IEnumerable<object[]> AllLevels(string dataDir)
     {
         var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", "官谱");
+        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
         if (!Directory.Exists(testsetRoot))
             throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
 
@@ -39,8 +39,10 @@ public class 官谱转Simai测试
     }
 
     [Theory]
-    [MemberData(nameof(AllLevels))]
-    public void TestChart(TestInput c)
+    [MemberData(nameof(AllLevels), "官谱")]
+    public void 官谱转Simai测试(TestInput c) => TestChart(c);
+    
+    private void TestChart(TestInput c)
     {
         var maidata = new Maidata(File.ReadAllText(c.Maidata, Encoding.UTF8));
         var inote = maidata.Levels[c.LevelId].Inote;
@@ -133,6 +135,12 @@ internal static partial class SimaiCommaTimeline
             var exp = i < expArr.Length ? expArr[i] : "<EOF>";
             var act = i < actArr.Length ? actArr[i] : "<EOF>";
             var result = exp == act;
+            
+            if (!result && exp.StartsWith("C1"))
+            { // groundtruth里有一部分是写成了C1，此时不要报错，应该给予兼容。
+                exp = exp.Replace("C1", "C");
+                result = exp == act;
+            }
             
             if (!result)
             {

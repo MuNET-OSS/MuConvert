@@ -80,7 +80,7 @@ GENERATED_BY	MuConvert v{8}
         StringBuilder result = new StringBuilder();
         
         // 文件头
-        var bpmStatistics = this.bpmStats(chart);
+        var bpmStatistics = bpmStats(chart);
         string head = string.Format(headTemplate, 
             $"{MA2Version / 100}.{MA2Version % 100:D2}.00", chart.IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,

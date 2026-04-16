@@ -112,12 +112,12 @@ public class MA2Parser : IParser
                 }
                 else if (cc == "TTP" && values.Length >= 7)
                 {
-                    note = new Touch(chart, time) { TouchArea = values[4]+key, IsFirework = values[5] == "1", TouchSize = values[6]};
+                    note = new Touch(chart, time) { TouchArea = GetTouchArea(values[4], key), IsFirework = values[5] == "1", TouchSize = values[6]};
                     if (values.Length != 7) WarnParamsCount(lineNo, line, time);
                 }
                 else if (cc == "THO" && values.Length >= 8 && int.TryParse(values[4], out len))
                 {
-                    note = new TouchHold(chart, time) { TouchArea = values[5]+key, IsFirework = values[6] == "1", TouchSize = values[7]};
+                    note = new TouchHold(chart, time) { TouchArea = GetTouchArea(values[5], key), IsFirework = values[6] == "1", TouchSize = values[7]};
                     var duration = new Duration(note) { Bar = new Rational(len, RSL) };
                     note.Duration = duration;
                     if (values.Length != 8) WarnParamsCount(lineNo, line, time);
@@ -204,6 +204,12 @@ public class MA2Parser : IParser
         ConnectSlideHeads();
         
         return (chart, alerts);
+    }
+
+    private static string GetTouchArea(string series, int key)
+    {
+        var touchArea = series + key;
+        return touchArea != "C1" ? touchArea : "C"; // C区没有C1，C1等于C中心
     }
 
     private void ConnectSlideHeads()
