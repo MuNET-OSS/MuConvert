@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using MuConvert.utils;
 
@@ -85,11 +86,40 @@ public class Maidata : Dictionary<string, string>
         return (levels, infos);
     }
     
-    public string Title => this.GetValueOrDefault("title", "");
-    public string Artist => this.GetValueOrDefault("artist", "");
-    public float? WholeBpm => float.TryParse(this.GetValueOrDefault("wholebpm", ""), out var wholebpm) ? wholebpm : null;
-    public float First => float.TryParse(this.GetValueOrDefault("first", ""), out var first) ? first : 0f;
-    public int ClockCount => int.TryParse(this.GetValueOrDefault("clock_count", ""), out var clockCount) ? clockCount : 4;
+    public string Title
+    {
+        get => this.GetValueOrDefault("title", "");
+        set => this["title"] = value ?? "";
+    }
+    
+    public string Artist
+    {
+        get => this.GetValueOrDefault("artist", "");
+        set => this["artist"] = value ?? "";
+    }
+    
+    public float? WholeBpm
+    {
+        get => float.TryParse(this.GetValueOrDefault("wholebpm", ""), out var wholebpm) ? wholebpm : null;
+        set
+        {
+            if (value is null) Remove("wholebpm");
+            else this["wholebpm"] = value.Value.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+    
+    public float First
+    {
+        get => float.TryParse(this.GetValueOrDefault("first", ""), out var first) ? first : 0f;
+        set => this["first"] = $"{value:0.####}";
+    }
+    
+    public int ClockCount
+    {
+        get => int.TryParse(this.GetValueOrDefault("clock_count", ""), out var clockCount) ? clockCount : 4;
+        set => this["clock_count"] = value.ToString();
+    }
+    
     public (float, float?)? Demo
     {
         get
@@ -97,6 +127,20 @@ public class Maidata : Dictionary<string, string>
             if (!float.TryParse(this.GetValueOrDefault("demo_seek", ""), out var demoStart)) return null;
             float? demoLen = float.TryParse(this.GetValueOrDefault("demo_len", ""), out var v) ? v : null;
             return (demoStart, demoLen);
+        }
+        set
+        {
+            if (value is null)
+            {
+                Remove("demo_seek");
+                Remove("demo_len");
+                return;
+            }
+
+            var (start, len) = value.Value;
+            this["demo_seek"] = $"{start:0.####}";
+            if (len is null) Remove("demo_len");
+            else this["demo_len"] = $"{len:0.####}";
         }
     }
 

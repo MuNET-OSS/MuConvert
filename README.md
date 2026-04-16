@@ -109,7 +109,7 @@ return maidataText; // maidataText即为转谱结果
     - bool `isUtage` (默认为false): 仅影响生成的MA2的文件头区域的`FES_MODE`的值是1还是0，一般来说是不重要的。
 
 #### 更多示例（异常处理）
-注意：当解析/生成步骤失败时，会抛出ConversionException异常，其中含有Alerts属性，是转谱过程中遇到的错误和警告等信息。（类比于C语言编译器会打印出Error和Warning信息）  
+注意：当解析/生成步骤失败时，会抛出`ConversionException`异常，其中含有`Alerts`属性，是转谱过程中遇到的错误和警告等信息。（类比于C语言编译器会打印出Error和Warning信息）  
 因此，建议您采用try-catch的写法，捕获可能出现的异常，并无论转谱成功失败、总是打印出Alert信息：（下面例子以Simai → MA2为例，如果反过来转则直接更换Parser和Generator即可）
 ```csharp
 using System.Text;
@@ -135,7 +135,7 @@ catch (ConversionException e)
     throw;
 }
 finally
-{
+{ // 无论转换成功还是失败，都打印出Alert信息
     foreach (Alert a in alerts) Console.Error.WriteLine(a);
 }
 ```
