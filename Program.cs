@@ -34,7 +34,7 @@ internal static class Program
     {
         var root = new RootCommand
         {
-            Description = $"MuConvert {Utils.AppVersion} — 新一代Simai ↔ MA2互转转谱器\n"
+            Description = $"MuConvert {Utils.AppVersion} — 新一代Simai与MA2互转转谱器\n"
         };
 
         var levelsOption = new Option<string?>("--levels", "-l")
@@ -46,7 +46,7 @@ internal static class Program
         var inputArgument = new Argument<string>("path")
         {
             Description = "可以输入以下几种情况：\n" +
-                          "1.单个.txt文件（标准maidata.txt，或是不含maidata的头信息、直接是Simai的Notes的文件，都可以）。请通过-l指定要转换的谱面难度，不指定则默认转换全部难度。\n" +
+                          "1.单个.txt文件（标准maidata.txt，或是不含maidata的头信息、直接是Simai的Notes的文件，都可以）。会把它转为MA2。请通过-l指定要转换的谱面难度，不指定则默认转换全部难度。\n" +
                           "2.单个.ma2文件。会把它转为Simai，输出maidata.txt。如果想要转换多个难度，请传入目录，详见第4条。\n" +
                           "3.一个包含有maidata.txt的目录。行为同第一条。\n" +
                           "4.一个包含有一个或多个.ma2文件的目录。会把它们转为一个maidata.txt。请通过-l指定要转换的谱面难度，不指定则默认转换全部难度。",
