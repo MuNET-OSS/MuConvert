@@ -15,6 +15,8 @@ public abstract class Note
 
     public int FalseEachIdx = 0; // 如果>0，表示这是一个伪双押，数字越大、延后的时刻越多
 
+    public Rational TimeInSeconds => throw new NotImplementedException();
+    
     public virtual Duration Duration
     {
         get => new(this);

@@ -10,12 +10,18 @@ record MA2Line(string Name, int Bar, int Tick, int Key, string Extra = "");
 
 public class MA2Generator : IGenerator
 {
-    private List<MA2Line> lines = [];
-    private readonly List<Alert> alerts = [];
+    public MA2Generator(bool isUtage = false)
+    {
+        IsUtage = isUtage;
+    }
 
     // 除非你知道你在做什么，不然以下两个变量请勿修改！
+    public bool IsUtage;
     public int MA2Version = 105;
     public int RSL = 384;
+    
+    private List<MA2Line> lines = [];
+    private readonly List<Alert> alerts = [];
     
     private string headTemplate = @"VERSION	0.00.00	{0}
 FES_MODE	{1}
@@ -82,7 +88,7 @@ GENERATED_BY	MuConvert v{8}
         // 文件头
         var bpmStatistics = bpmStats(chart);
         string head = string.Format(headTemplate, 
-            $"{MA2Version / 100}.{MA2Version % 100:D2}.00", chart.IsUtage?1:0, 
+            $"{MA2Version / 100}.{MA2Version % 100:D2}.00", IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,
             RSL, RSL/4 * chart.ClockCount, Utils.AppVersion);
         result.Append(head);

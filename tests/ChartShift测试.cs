@@ -25,7 +25,7 @@ public class ChartShift测试
         Assert.True(maidata.Levels.ContainsKey(6), "Expected lv6 (inote_6) in maidata.");
         var chartInfo = maidata.Levels[6];
 
-        var (chart, parseAlerts) = new SimaiParser(bigTouch: false, isUtage: false, clockCount: maidata.ClockCount)
+        var (chart, parseAlerts) = new SimaiParser(clockCount: maidata.ClockCount)
             .Parse(chartInfo.Inote);
         alerts = parseAlerts;
         chart.Sort();

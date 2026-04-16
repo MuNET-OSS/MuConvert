@@ -44,8 +44,8 @@ public class Simai转MA2测试
         var chartInfo = maidata.Levels[input.LevelId];
         var expectedMa2 = File.ReadAllText(input.MA2, Encoding.UTF8);
 
-        var (chart, _) = new SimaiParser(bigTouch: false, isUtage: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
-        var (ma2, _) = new MA2Generator().Generate(chart);
+        var (chart, _) = new SimaiParser(bigTouch: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
+        var (ma2, _) = new MA2Generator(isUtage: false).Generate(chart);
         
         ma2 = keepNotesOnly(ma2);
         expectedMa2 = keepNotesOnly(expectedMa2);

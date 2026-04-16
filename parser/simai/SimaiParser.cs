@@ -24,9 +24,9 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     private readonly List<string> extraModifiers = [];
     private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
 
-    public SimaiParser(bool bigTouch = false, bool isUtage = false, int clockCount = 4)
+    public SimaiParser(bool bigTouch = false, int clockCount = 4)
     {
-        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", IsUtage = isUtage, ClockCount = clockCount};
+        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", ClockCount = clockCount};
     }
     
     private void AddAlert(Alert.LEVEL level, string content, ParserRuleContext? context = null)

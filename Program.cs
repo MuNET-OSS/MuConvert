@@ -312,9 +312,9 @@ internal static class Program
 
     private static string SimaiToMa2(string inote, int clockCount=4, bool bigTouch=false, bool isUtage=false)
     {
-        var (chart, parseAlerts) = new SimaiParser(bigTouch, isUtage, clockCount).Parse(inote);
+        var (chart, parseAlerts) = new SimaiParser(bigTouch, clockCount).Parse(inote);
         PrintAlerts(parseAlerts);
-        var (ma2, genAlerts) = new MA2Generator().Generate(chart);
+        var (ma2, genAlerts) = new MA2Generator(isUtage).Generate(chart);
         PrintAlerts(genAlerts);
         return ma2;
     }
