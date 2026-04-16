@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build_windows_cli:
+    name: Build MuConvert.exe (win-x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore MuConvert.slnx
+
+      - name: Publish (win-x64)
+        run: >
+          dotnet publish MuConvert.csproj
+          -c Release
+          -r win-x64
+          -o publish/win-x64
+          -p:SelfContained=true
+          -p:UseAppHost=true
+          -p:PublishSingleFile=true
+
+      - name: Upload artifact (MuConvert.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MuConvert.exe
+          path: publish/win-x64/MuConvert.exe
+

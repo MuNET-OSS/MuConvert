@@ -20,6 +20,7 @@ public class Simai转MA2测试
     /// </summary>
     public static IEnumerable<object[]> AllCharts(string dataDir)
     {
+        // TODO 再多找一些自制谱加进来吧
         var repoRoot = FindRepoRoot();
         var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
         if (!Directory.Exists(testsetRoot))

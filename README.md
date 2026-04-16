@@ -17,10 +17,15 @@ MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 
 ### 1) 直接使用本程序进行转谱（CLI）
 
+#### 如何下载
+- 请到 GitHub Actions 的 [`Build` 工作流页面](https://github.com/MuNET-OSS/MuConvert/actions/workflows/build.yml)，打开最新一次分支的构建，在 Artifacts 中下载 `MuConvert.exe即可`。
+  - 下载到的`MuConvert.exe`，按照下文所述的用法，从命令行中直接运行即可。
+  > 如果你希望自己编译，也可以参考后面“开发者指南”部分的[编译为单文件exe模式](#编译为单文件exe模式)。
+
 #### 基本用法
 
 ```shell
-MuConvert <path> [-l|--levels N[,N...]]
+MuConvert.exe <path> [-l|--levels N[,N...]]
 ```
 
 - **`path`**：输入路径（必填），可以是 `.txt` / `.ma2` / 目录（见下文）
