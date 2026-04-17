@@ -7,7 +7,7 @@ using static MuConvert.Tests.TestUtils;
 namespace MuConvert.Tests;
 
 /// <summary>
-/// 官谱 MA2 → Chart（<see cref="MA2Parser"/>）→ MA2（<see cref="MA2Generator"/>）轮回合后，
+/// 官谱 MA2 → Chart（<see cref="MA2Parser"/>）→ MA2（<see cref="MA2Generator"/> / <see cref="MA2_103Generator"/>）轮回合后，
 /// 与原版 MA2 末尾统计段（<c>T_REC_*</c> 起至文件结束）逐项一致。
 /// </summary>
 public class Statistics测试
@@ -38,7 +38,9 @@ public class Statistics测试
         var (chart, parseAlerts) = new MA2Parser().Parse(ma2Original);
         Assert.Empty(parseAlerts);
 
-        var (ma2RoundTrip, genAlerts) = new MA2Generator().Generate(chart);
+        var ma2Version = TryParseMa2HeaderVersion(ma2Original);
+        MA2Generator generator = ma2Version == 103 ? new MA2_103Generator() : new MA2Generator();
+        var (ma2RoundTrip, genAlerts) = generator.Generate(chart);
         Assert.Empty(genAlerts);
 
         var expected = Ma2StatisticsSection.Parse(ma2Original);
@@ -46,6 +48,27 @@ public class Statistics测试
 
         var actual = Ma2StatisticsSection.Parse(ma2RoundTrip);
         Ma2StatisticsSection.AssertEqual(expected, actual, input.ToString(), _output);
+    }
+
+    /// <summary>解析 <c>VERSION</c> 行第三列（如 <c>1.03.00</c>）为整数版本号（如 103）；未找到则返回 <c>null</c>。</summary>
+    private static int? TryParseMa2HeaderVersion(string ma2Text)
+    {
+        foreach (var raw in ma2Text.EnumerateLines())
+        {
+            if (raw.IsWhiteSpace()) continue;
+            var line = raw.ToString().TrimEnd('\r');
+            var parts = line.Split('\t');
+            if (parts.Length < 3 || parts[0] != "VERSION")
+                continue;
+            var ver = parts[2].Split('.');
+            if (ver.Length >= 2 &&
+                int.TryParse(ver[0], out var major) &&
+                int.TryParse(ver[1], out var minor))
+                return major * 100 + minor;
+            return null;
+        }
+
+        return null;
     }
 }
 
@@ -115,8 +138,6 @@ internal static class Ma2StatisticsSection
             if (SkippedKeys.Contains(kv.Key))
                 continue;
             if (expected.ContainsKey(kv.Key))
-                continue;
-            if (IsZeroStatValue(kv.Value))
                 continue;
             Assert.Fail($"{context}: 多出原版没有的统计键 {kv.Key}={kv.Value}");
         }

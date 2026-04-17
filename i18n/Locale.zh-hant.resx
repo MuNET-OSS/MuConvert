@@ -163,4 +163,13 @@
   <data name="PrepFix4" xml:space="preserve">
     <value>嘗試修復了譜面中的{0}處語法錯誤（重複的括號，可能是多打了一些）: {1}</value>
   </data>
+  <data name="BreakExIn103" xml:space="preserve">
+    <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 + 保護套）。相關特性已被忽略，並還原回非保護絕贊。</value>
+  </data>
+  <data name="BreakHoldOrSlideIn103" xml:space="preserve">
+    <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 Hold 或 Slide）。相關特性已被忽略，並還原回一般版本。</value>
+  </data>
+  <data name="ConnectingSlideIn103" xml:space="preserve">
+    <value>譜面中含有 MA2 1.03 所不支援的特性（多段連接的星星）。僅保留第一段星星。</value>
+  </data>
 </root>

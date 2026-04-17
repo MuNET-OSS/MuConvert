@@ -163,4 +163,13 @@
   <data name="PrepFix4" xml:space="preserve">
     <value>Attempted to fix {0} syntax error(s) in the chart (redundant duplicate parentheses, possibly from extra typing): {1}</value>
   </data>
+  <data name="BreakExIn103" xml:space="preserve">
+    <value>The chart contains features not supported by MA2 1.03 (BreakEx). Those features were ignored and converted back to a pure break.</value>
+  </data>
+  <data name="BreakHoldOrSlideIn103" xml:space="preserve">
+    <value>The chart contains features not supported by MA2 1.03 (Break on Hold or Slide). Those features were ignored and converted back to the normal versions.</value>
+  </data>
+  <data name="ConnectingSlideIn103" xml:space="preserve">
+    <value>The chart contains features not supported by MA2 1.03 (multi-segment connecting slides). Only the first slide segment was kept.</value>
+  </data>
 </root>

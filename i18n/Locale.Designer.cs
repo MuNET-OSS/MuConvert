@@ -78,6 +78,33 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (BreakEx). Those features were ignored and converted back to a pure break..
+        /// </summary>
+        public static string BreakExIn103 {
+            get {
+                return ResourceManager.GetString("BreakExIn103", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (Break on Hold or Slide). Those features were ignored and converted back to the normal versions..
+        /// </summary>
+        public static string BreakHoldOrSlideIn103 {
+            get {
+                return ResourceManager.GetString("BreakHoldOrSlideIn103", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (multi-segment connecting slides). Only the first slide segment was kept..
+        /// </summary>
+        public static string ConnectingSlideIn103 {
+            get {
+                return ResourceManager.GetString("ConnectingSlideIn103", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to DEBUG:.
         /// </summary>
         public static string Debug {
