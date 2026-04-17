@@ -20,11 +20,10 @@ NO_STAR: '?' | '!';
 KEY: [1-8];
 SLIDE_TYPE: '-' | 'v' | '<' | '>' | '^' | 'p' | 'q' | 'pp' | 'qq' | 's' | 'z' | 'w' | 'V' KEY;  // 只有V后面需要多跟一个键位号
 TOUCH_AREA: 'A' [1-8] | 'B' [1-8] | 'C' [1-2]? | 'D' [1-8] | 'E' [1-8];
+INT: [0-9];
 
-INT: [0-9]+;
-FLOAT: [0-9]+ ('.' [0-9]+)?;
-number: KEY | INT | FLOAT;
-int: KEY | INT;
+int: (KEY | INT)+;
+number: int ('.' int)?;
 
 CHART_END: 'E';// 谱面结束那个E
 
