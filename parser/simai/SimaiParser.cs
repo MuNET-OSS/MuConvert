@@ -456,7 +456,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             var key = int.Parse(context.KEY()[i].GetText());
             var segment = new SlideSegment((Slide)currNote!)
             {
-                Type = SlideTypeTool.FromSimai(context.slideType()[i].GetText(), slide.EndKey), // 在新的segment被添加之前，此前的slide部分的EndKey就是新segment的StartKey
+                Type = SlideTypeTool.FromSimai(context.slideType()[i].GetText(), slide.EndKey, key), // 在新的segment被添加之前，此前的slide部分的EndKey就是新segment的StartKey
                 EndKey = key
             };
             slide.segments.Add(segment);

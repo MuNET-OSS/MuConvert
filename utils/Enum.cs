@@ -50,7 +50,7 @@ public static class SlideTypeTool
         throw Utils.Fail();
     }
 
-    public static SlideType FromSimai(string s, int? startKey)
+    public static SlideType FromSimai(string s, int? startKey, int? endKey)
     {
         if (s[0] is >= '1' and <= '8')
         {
@@ -69,8 +69,8 @@ public static class SlideTypeTool
                 return startKey is >= 3 and <= 6 ? SlideType.SCL : SlideType.SCR;
             case '^':
                 Utils.Assert(startKey != null, "startKey没传进来");
-                if (!int.TryParse(s[1..2], out var endKey)) throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}"));
-                var distance = (endKey - startKey!.Value + 8) % 8; // 先假设按顺时针的方向走，看看距离
+                Utils.Assert(endKey != null, "endKey没传进来");
+                var distance = (endKey - startKey + 8) % 8; // 先假设按顺时针的方向走，看看距离
                 if (distance is 0 or 4) throw new ArgumentException(string.Format(Locale.InvalidSlide, $"{startKey}{s}(^的endKey不能是整半圈)"));
                 return distance < 4 ? SlideType.SCR : SlideType.SCL; // <4说明顺时针走更近；反之如果顺时针走的距离>4，则说明逆时针更近。
             case 'p':
