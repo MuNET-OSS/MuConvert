@@ -7,7 +7,6 @@ using MuConvert.maidata;
 using MuConvert.parser;
 using Rationals;
 using Xunit.Abstractions;
-using static MuConvert.Tests.TestUtils;
 
 namespace MuConvert.Tests;
 
@@ -21,25 +20,10 @@ public class MA2转Simai测试
 
     public MA2转Simai测试(ITestOutputHelper output) => _output = output;
 
-    public static IEnumerable<object[]> AllLevels(string dataDir)
-    {
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
-        if (!Directory.Exists(testsetRoot))
-            throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
-
-        foreach (var maidataPath in Directory.EnumerateFiles(testsetRoot, "maidata.txt", SearchOption.AllDirectories))
-        {
-            var maidataTxt = File.ReadAllText(maidataPath, Encoding.UTF8);
-            var maidata = new Maidata(maidataTxt);
-            foreach (var id in maidata.Levels.Keys.OrderBy(k => k))
-                // if (maidataPath.Contains("系ぎて") && id == 3)
-                yield return [new TestInput(maidataPath, id)];
-        }
-    }
-
+    public static IEnumerable<object[]> GetTestInputs(string dataDir) => TestUtils.GetTestInputs(dataDir);
+    
     [Theory]
-    [MemberData(nameof(AllLevels), "官谱")]
+    [MemberData(nameof(GetTestInputs), "官谱")]
     public void 官谱转Simai测试(TestInput c) => TestChart(c);
     
     private void TestChart(TestInput c)

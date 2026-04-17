@@ -4,7 +4,6 @@ using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 using Xunit.Abstractions;
-using static MuConvert.Tests.TestUtils;
 
 namespace MuConvert.Tests;
 
@@ -15,28 +14,11 @@ public class Simai转MA2测试
 
     public Simai转MA2测试(ITestOutputHelper output) => _output = output;
 
-    /// <summary>
-    /// 每个元素对应一张谱面：一条 Theory 用例只跑一个 chart。
-    /// </summary>
-    public static IEnumerable<object[]> AllCharts(string dataDir)
-    {
-        // TODO 再多找一些自制谱加进来吧
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
-        if (!Directory.Exists(testsetRoot))
-            throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
+    public static IEnumerable<object[]> GetTestInputs(string dataDir) => TestUtils.GetTestInputs(dataDir);
 
-        foreach (var maidataPath in Directory.EnumerateFiles(testsetRoot, "maidata.txt", SearchOption.AllDirectories))
-        {
-            var maidataTxt = File.ReadAllText(maidataPath, Encoding.UTF8);
-            var maidata = new Maidata(maidataTxt);
-            foreach (var id in maidata.Levels.Keys.OrderBy(k => k))
-                yield return [new TestInput(maidataPath, id)];
-        }
-    }
-
+    // TODO 再多找一些自制谱加进来吧
     [Theory]
-    [MemberData(nameof(AllCharts), "自制谱")]
+    [MemberData(nameof(GetTestInputs), "自制谱")]
     public void 自制谱转MA2测试(TestInput c) => TestChart(c);
     
     private void TestChart(TestInput input)

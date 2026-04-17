@@ -40,6 +40,26 @@ internal static class TestUtils
         Assert.DoesNotContain(alerts, a => a.Level >= Alert.LEVEL.Error);
         return chart;
     }
+    
+    public static IEnumerable<object[]> GetTestInputs(string dataDir, int? lv = null, string? title = null)
+    {
+        var repoRoot = FindRepoRoot();
+        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
+        if (!Directory.Exists(testsetRoot))
+            throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
+
+        foreach (var maidataPath in Directory.EnumerateFiles(testsetRoot, "maidata.txt", SearchOption.AllDirectories))
+        {
+            var maidataTxt = File.ReadAllText(maidataPath, Encoding.UTF8);
+            var maidata = new Maidata(maidataTxt);
+            foreach (var id in maidata.Levels.Keys.OrderBy(k => k))
+            {
+                // 如果指定了lv或title、但与要求不符，则不返回
+                if ((lv != null && id != lv) || (title != null && !maidataPath.Contains("title"))) continue;
+                yield return [new TestInput(maidataPath, id)];
+            }
+        }
+    }
 }
 
 public record TestInput(string Maidata, int LevelId)
