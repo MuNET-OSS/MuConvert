@@ -1,0 +1,8 @@
+simai: "{8}1`2/3`4,5,6,"
+ma2: |
+  NMTAP	0	0	0
+  NMTAP	0	1	1
+  NMTAP	0	1	2
+  NMTAP	0	2	3
+  NMTAP	0	48	4
+  NMTAP	0	96	5
