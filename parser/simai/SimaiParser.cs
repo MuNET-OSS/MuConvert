@@ -21,6 +21,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
+    private bool isRealExactWaitTime; // 用于在VisitSlideBody和VisitSlideDuration之间传递额外的参数
     private readonly List<string> extraModifiers = [];
     private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
 
@@ -145,6 +146,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             throw new ConversionException(alerts, e);
         }
         
+        chart.Sort();
         return (chart, alerts);
     }
 
@@ -419,6 +421,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     {
         var result = new Duration(currNote!);
         Duration? waitTime = null;
+        isRealExactWaitTime = false;
 
         if (context.waitTime() != null)
         {
@@ -426,6 +429,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             {
                 Seconds = (Rational)(decimal)VisitNumber(context.waitTime().number())
             };
+            isRealExactWaitTime = true;
         }
         if (context.number() != null) result.Seconds = (Rational)(decimal)VisitNumber(context.number());
         else
@@ -437,10 +441,8 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 // 根据强行指定的bpm换算为秒数
                 var bpm = (Rational)(decimal)VisitNumber(context.asBpm().number());
                 result.Seconds = value * (240 / bpm);
-                waitTime ??= new Duration(currNote!)
-                {
-                    Seconds = 60 / bpm
-                };
+                // 如果未显式指定waitTime，则waitTime也要变成强行指定的bpm下的一拍。不然就是音符所在时刻下的一拍了。
+                waitTime ??= new Duration(currNote!) { Seconds = 60 / bpm };
             }
         }
         return (waitTime, result);
@@ -473,22 +475,23 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         else if (durationCount == context.slideType().Length)
         { // 第二种情况，每个上都有时间标记
-            var waitTimeSet = false;
+            var waitTimeSet = 0; // 0:waitTime还未被设置，1:waitTime已被隐式设置，2:waitTime已被显式设置
             for (int i = 0; i < durationCount; i++)
             {
                 var C = context.slideDuration()[i];
                 var (waitTime, duration) = ((Duration?, Duration))VisitSlideDuration(C);
                 if (waitTime != null)
                 {
-                    if (waitTimeSet || (i > 0 && i < durationCount - 1))
-                    {
-                        AddAlert(Warning, Locale.InvalidWaitTime);
-                    }
-                    else
+                    // 本次返回的waitTime的强度。用户显式设置的记为2，用户未显式设置、但是中括号中形如[190#8:3]这样指定了bpm、导致产生了一个隐式的waitTime的，记为1。
+                    var hereStrength = isRealExactWaitTime ? 2 : 1;
+                    // 采信这个waitTime的条件：必须在头尾，且强度更大
+                    if ((i == 0 || i == durationCount - 1) && hereStrength > waitTimeSet)
                     {
                         slide.WaitTime = waitTime;
-                        waitTimeSet = true;
+                        waitTimeSet = hereStrength;
                     }
+                    // 给警告的条件：未被采信（即上一个分支没命中），且是显式设置的
+                    else if (isRealExactWaitTime) AddAlert(Warning, Locale.InvalidWaitTime);
                 }
                 slide.segments[i].Duration = duration;
             }
