@@ -30,6 +30,7 @@ public class Simai转MA2测试
         var (chart, _) = new SimaiParser(bigTouch: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
         var (ma2, _) = new MA2Generator(isUtage: false).Generate(chart);
         
+        Assert.Equal(maidata.ClockCount * 96, TestUtils.TryParseMa2ClkDef(ma2));
         ma2 = keepNotesOnly(ma2);
         expectedMa2 = keepNotesOnly(expectedMa2);
         AssertTextEqual(expectedMa2, ma2);

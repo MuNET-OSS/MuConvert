@@ -35,6 +35,7 @@ public class MA2转Simai测试
         var (chart, _) = new MA2Parser().Parse(ma2Text);
         var (simai, _) = new SimaiGenerator().Generate(chart);
 
+        Assert.Equal(TestUtils.TryParseMa2ClkDef(ma2Text), chart.ClockCount * 96);
         var expectedTimeline = SimaiCommaTimeline.Flatten(inote);
         var actualTimeline = SimaiCommaTimeline.Flatten(simai);
         SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline, chart, _output);

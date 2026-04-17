@@ -49,27 +49,6 @@ public class Statistics测试
         var actual = Ma2StatisticsSection.Parse(ma2RoundTrip);
         Ma2StatisticsSection.AssertEqual(expected, actual, input.ToString(), _output);
     }
-
-    /// <summary>解析 <c>VERSION</c> 行第三列（如 <c>1.03.00</c>）为整数版本号（如 103）；未找到则返回 <c>null</c>。</summary>
-    private static int? TryParseMa2HeaderVersion(string ma2Text)
-    {
-        foreach (var raw in ma2Text.EnumerateLines())
-        {
-            if (raw.IsWhiteSpace()) continue;
-            var line = raw.ToString().TrimEnd('\r');
-            var parts = line.Split('\t');
-            if (parts.Length < 3 || parts[0] != "VERSION")
-                continue;
-            var ver = parts[2].Split('.');
-            if (ver.Length >= 2 &&
-                int.TryParse(ver[0], out var major) &&
-                int.TryParse(ver[1], out var minor))
-                return major * 100 + minor;
-            return null;
-        }
-
-        return null;
-    }
 }
 
 internal static class Ma2StatisticsSection
@@ -142,9 +121,6 @@ internal static class Ma2StatisticsSection
             Assert.Fail($"{context}: 多出原版没有的统计键 {kv.Key}={kv.Value}");
         }
     }
-
-    private static bool IsZeroStatValue(string v) =>
-        v == "0" || v == "0.0" || v == "0.00" || v == "0.000";
 
     private static bool ValuesEqual(string key, string expected, string actual)
     {

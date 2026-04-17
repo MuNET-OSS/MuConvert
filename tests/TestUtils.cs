@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using MuConvert.chart;
 using MuConvert.maidata;
 using MuConvert.parser;
@@ -8,6 +9,8 @@ namespace MuConvert.Tests;
 
 internal static class TestUtils
 {
+    private static readonly Regex Ma2ClkDefLineRegex = new(@"^CLK_DEF\t(\d+)\s*$", RegexOptions.Multiline | RegexOptions.CultureInvariant);
+
     /// <summary>
     /// 从测试运行目录向上查找包含 MuConvert.csproj 的仓库根目录。
     /// </summary>
@@ -17,6 +20,37 @@ internal static class TestUtils
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, "MuConvert.csproj")))
             dir = dir.Parent;
         return dir ?? throw new DirectoryNotFoundException("Could not locate repo root (MuConvert.csproj).");
+    }
+    
+    /// <summary>
+    /// 自 MA2 文本中用正则匹配首行 <c>CLK_DEF\t…</c>（官机头字段名；部分资料误写为 CLOCK_DEF），返回其整数值；
+    /// 与 <see cref="Chart.ClockCount"/> 的关系为 <c>CLK_DEF = 96 * ClockCount</c>（<c>RESOLUTION</c> 为 384 时）。
+    /// </summary>
+    public static int? TryParseMa2ClkDef(string ma2Text)
+    {
+        var m = Ma2ClkDefLineRegex.Match(ma2Text);
+        if (!m.Success || !int.TryParse(m.Groups[1].Value, out var v)) return null;
+        return v;
+    }
+
+    /// <summary>解析 <c>VERSION</c> 行第三列（如 <c>1.03.00</c>）为整数版本号（如 103）；未找到则返回 <c>null</c>。</summary>
+    public static int? TryParseMa2HeaderVersion(string ma2Text)
+    {
+        foreach (var raw in ma2Text.EnumerateLines())
+        {
+            if (raw.IsWhiteSpace()) continue;
+            var line = raw.ToString().TrimEnd('\r');
+            var parts = line.Split('\t');
+            if (parts.Length < 3 || parts[0] != "VERSION")
+                continue;
+            var ver = parts[2].Split('.');
+            if (ver.Length >= 2 &&
+                int.TryParse(ver[0], out var major) &&
+                int.TryParse(ver[1], out var minor))
+                return major * 100 + minor;
+            return null;
+        }
+        return null;
     }
     
     public static Chart LoadOneChart(out List<Alert> alerts)
