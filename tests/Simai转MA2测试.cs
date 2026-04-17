@@ -4,6 +4,7 @@ using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 using Xunit.Abstractions;
+using static MuConvert.Tests.TestUtils;
 
 namespace MuConvert.Tests;
 
@@ -31,29 +32,9 @@ public class Simai转MA2测试
         var (ma2, _) = new MA2Generator(isUtage: false).Generate(chart);
         
         Assert.Equal(maidata.ClockCount * 96, TestUtils.TryParseMa2ClkDef(ma2));
-        ma2 = keepNotesOnly(ma2);
-        expectedMa2 = keepNotesOnly(expectedMa2);
+        ma2 = KeepNotesOnly(ma2);
+        expectedMa2 = KeepNotesOnly(expectedMa2);
         AssertTextEqual(expectedMa2, ma2);
-    }
-
-    private static string keepNotesOnly(string text)
-    {
-        var result = new StringBuilder();
-        var METEncountered = false;
-        foreach (var l in text.EnumerateLines())
-        {
-            var line = l.ToString();
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            if (line.StartsWith("MET\t"))
-            {
-                METEncountered = true;
-                continue;
-            }
-            if (!METEncountered) continue;
-            if (line.StartsWith("T_REC")) break; // 结束
-            result.Append(line + "\n");
-        }
-        return result.ToString();
     }
 
     private static (int, int, string) GetSlideTime(string slide)

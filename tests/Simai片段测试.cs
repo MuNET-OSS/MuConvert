@@ -1,65 +1,58 @@
+using System.Globalization;
 using System.Text;
 using MuConvert.generator;
-using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 using static MuConvert.Tests.TestUtils;
 
 namespace MuConvert.Tests;
 
-/// <summary>
-/// 官谱中 golden MA2 头为 <c>1.03.00</c> 的谱面：Simai（lv5）→ <see cref="MA2_103Generator"/> 与对应 <c>*03.ma2</c> 音符段一致。
-/// </summary>
-public class MA2_103测试
+public class Simai片段测试
 {
-    public static IEnumerable<object[]> Official103Lv5()
+    public static IEnumerable<object[]> FragmentYamlFiles()
     {
-        const int levelId = 5;
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", "官谱");
-        if (!Directory.Exists(testsetRoot))
-            throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
+        var root = Path.Combine(FindRepoRoot().FullName, "tests", "testset", "片段");
+        if (!Directory.Exists(root))
+            throw new DirectoryNotFoundException($"片段测例目录不存在: {root}");
 
-        foreach (var maidataPath in Directory.EnumerateFiles(testsetRoot, "maidata.txt", SearchOption.AllDirectories)
+        foreach (var path in Directory.EnumerateFiles(root, "*.yaml", SearchOption.TopDirectoryOnly)
                      .OrderBy(p => p, StringComparer.Ordinal))
-        {
-            var maidata = new Maidata(File.ReadAllText(maidataPath, Encoding.UTF8));
-            if (!maidata.Levels.ContainsKey(levelId))
-                continue;
-
-            var input = new TestInput(maidataPath, levelId);
-            var golden = File.ReadAllText(input.MA2, Encoding.UTF8);
-            if (TryParseMa2HeaderVersion(golden) != 103)
-                continue;
-
-            yield return [input];
-        }
+            yield return [TestSegment.Load(path)];
     }
 
     [Theory]
-    [MemberData(nameof(Official103Lv5))]
-    public void Simai转MA2_103(TestInput input)
+    [MemberData(nameof(FragmentYamlFiles))]
+    public void Simai片段转MA2(TestSegment c)
     {
-        var maidata = new Maidata(File.ReadAllText(input.Maidata, Encoding.UTF8));
-        var chartInfo = maidata.Levels[input.LevelId];
-        var expectedMa2 = File.ReadAllText(input.MA2, Encoding.UTF8);
+        var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
+        var (ma2Full, genAlerts) = new MA2Generator(isUtage: false).Generate(chart);
 
-        var (chart, parseAlerts) = new SimaiParser(bigTouch: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
-        Assert.DoesNotContain(parseAlerts, a => a.Level >= Alert.LEVEL.Error);
+        var actual = KeepNotesOnly(ma2Full);
+        var expected = NormalizeMa2Block(c.Ma2);
+        AssertMa2NotesEqual(expected, actual, c.ToString());
+    }
 
-        var (ma2, genAlerts) = new MA2_103Generator(isUtage: false).Generate(chart);
-        Assert.DoesNotContain(genAlerts, a => a.Level >= Alert.LEVEL.Error);
-
-        ma2 = KeepNotesOnly(ma2);
-        expectedMa2 = KeepNotesOnly(expectedMa2);
-        AssertMa2NotesEqual(expectedMa2, ma2, input.ToString());
+    private static string NormalizeMa2Block(string text)
+    {
+        // 与生成结果一致：统一换行、去掉文末空行
+        var sb = new StringBuilder();
+        foreach (var l in text.EnumerateLines())
+        {
+            var line = l.ToString().TrimEnd('\r');
+            if (string.IsNullOrWhiteSpace(line) && sb.Length == 0)
+                continue;
+            sb.Append(line).Append('\n');
+        }
+        while (sb.Length > 0 && sb[^1] == '\n' && (sb.Length == 1 || sb[^2] == '\n'))
+            sb.Length--;
+        return sb.ToString().TrimEnd();
     }
 
     private static (int TimeTick, int Len, string Extra) GetSlideTime(string slide)
     {
         var values = slide.Split('\t');
-        return (int.Parse(values[1]) * 384 + int.Parse(values[2]),
-            int.Parse(values[5]),
+        return (int.Parse(values[1], CultureInfo.InvariantCulture) * 384 + int.Parse(values[2], CultureInfo.InvariantCulture),
+            int.Parse(values[5], CultureInfo.InvariantCulture),
             string.Join("\t", values[0], values[3], values[4], values[6]));
     }
 

@@ -4,6 +4,7 @@ using MuConvert.chart;
 using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
+using YamlDotNet.Serialization;
 
 namespace MuConvert.Tests;
 
@@ -52,6 +53,44 @@ internal static class TestUtils
         }
         return null;
     }
+
+    /// <summary>
+    /// 提取 MA2 音符段至 <c>T_REC</c> 之前：跳过头部与 <c>BPM</c> 行；若存在 <c>MET\t</c> 小节行则跳过该行；
+    /// 部分旧官谱 golden 无 <c>MET</c>，则在 <c>BPM</c> 块后的首条非头行开始收集。与 <see cref="Simai片段测试"/> / <see cref="MA2_103测试"/> 断言用逻辑一致。
+    /// </summary>
+    public static string KeepNotesOnly(string text)
+    {
+        var result = new StringBuilder();
+        var inNotes = false;
+        foreach (var l in text.EnumerateLines())
+        {
+            var line = l.ToString().TrimEnd('\r');
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (line.StartsWith("T_REC", StringComparison.Ordinal)) break;
+
+            if (!inNotes)
+            {
+                if (IsMa2HeaderOrBpmLine(line)) continue;
+                if (line.StartsWith("MET\t", StringComparison.Ordinal)) continue;
+                inNotes = true;
+            }
+
+            result.Append(line).Append('\n');
+        }
+
+        return result.ToString().Trim();
+    }
+
+    private static bool IsMa2HeaderOrBpmLine(string line) =>
+        line.StartsWith("VERSION\t", StringComparison.Ordinal) ||
+        line.StartsWith("FES_MODE\t", StringComparison.Ordinal) ||
+        line.StartsWith("BPM_DEF\t", StringComparison.Ordinal) ||
+        line.StartsWith("MET_DEF\t", StringComparison.Ordinal) ||
+        line.StartsWith("RESOLUTION\t", StringComparison.Ordinal) ||
+        line.StartsWith("CLK_DEF\t", StringComparison.Ordinal) ||
+        line.StartsWith("COMPATIBLE_CODE\t", StringComparison.Ordinal) ||
+        line.StartsWith("GENERATED_BY\t", StringComparison.Ordinal) ||
+        line.StartsWith("BPM\t", StringComparison.Ordinal);
     
     public static Chart LoadOneChart(out List<Alert> alerts)
     {
@@ -93,6 +132,42 @@ internal static class TestUtils
                 yield return [new TestInput(maidataPath, id)];
             }
         }
+    }
+}
+
+public sealed class TestSegment
+{
+    private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder()
+        .IgnoreUnmatchedProperties()
+        .Build();
+
+    /// <summary>YAML 文件的原始文件名（不含目录）。</summary>
+    [YamlIgnore]
+    public string YamlFileName { get; private set; } = "";
+    [YamlMember(Alias = "simai")]
+    public string Simai { get; set; } = "";
+    [YamlMember(Alias = "ma2")]
+    public string Ma2 { get; set; } = "";
+
+    public override string ToString() => YamlFileName;
+
+    public static TestSegment Load(string yamlPath)
+    {
+        var yamlFileName = Path.GetFileName(yamlPath);
+        var text = File.ReadAllText(yamlPath, Encoding.UTF8);
+        var seg = YamlDeserializer.Deserialize<TestSegment>(text)
+                  ?? throw new FormatException($"{yamlPath}: 空 YAML 或根节点无法解析为映射");
+
+        seg.YamlFileName = yamlFileName;
+        seg.Simai = seg.Simai.Trim();
+        seg.Ma2 = seg.Ma2.Trim();
+
+        if (string.IsNullOrWhiteSpace(seg.Simai))
+            throw new FormatException($"{yamlPath}: 缺少或为空 simai");
+        if (string.IsNullOrWhiteSpace(seg.Ma2))
+            throw new FormatException($"{yamlPath}: 缺少或为空 ma2");
+        
+        return seg;
     }
 }
 

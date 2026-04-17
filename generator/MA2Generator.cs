@@ -17,7 +17,9 @@ public class MA2Generator : IGenerator
         }
     };
     
+#pragma warning disable CS8618
     public MA2Generator(bool isUtage = false)
+#pragma warning restore CS8618
     {
         IsUtage = isUtage;
     }
