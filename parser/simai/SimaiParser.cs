@@ -405,9 +405,14 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return result;
     }
 
-    public sealed override object VisitDuration(P.DurationContext context)
+    public sealed override object VisitDuration(P.DurationContext? context)
     {
         var result = new Duration(currNote!);
+        if (context == null)
+        { // context为0，说明hold上没有写持续时间标记。根据文档，这属于“疑似each”，持续时间定义为0。
+            result.InvariantBar = 0;
+            return result;
+        }
         if (context.beats() != null) result.InvariantBar = (Rational)VisitBeats(context.beats());
         else result.Seconds = (Rational)(decimal)VisitNumber(context.number());        
         return result;
