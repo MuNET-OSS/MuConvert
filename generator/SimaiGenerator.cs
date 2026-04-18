@@ -24,6 +24,15 @@ class SimaiNote
 
 public class SimaiGenerator : IGenerator
 {
+    /**
+     * 这是一个Workaround的选项。
+     * 形如[0.4567##8:1]的，组合使用等待时间秒数和持续时间分数的星星持续时长写法，尽管Simai官方文档中明确其为标准语法，但MajdataView中却无法显示出来。（会把这根星星，以及同时刻的所有其他音符（如有），全部给吞掉。）
+     * 因此，这里提供了一个bool选项，默认为开启：
+     * 当本选项开启时，不会生成形如[0.4567##8:1]的语句出来。对于非标准等待时间的星星，会一律写成[0.4567##0.125]这种前后都是绝对时间的格式。
+     * 如果你不希望开启本选项，请new SimaiGenerator() { Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime = false } 即可。
+     */
+    public bool Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime = true;
+    
     private readonly List<Alert> alerts = [];
     private string result = ""; // 不用StringBuilder是因为生成过程不可避免地需要对字符串做一些回溯的操作，需要倒着从字符串中查找字符。这样的场景下，StringBuilder并无性能优势，用string就够了。
 #pragma warning disable CS8618
@@ -99,13 +108,16 @@ public class SimaiGenerator : IGenerator
         }
     }
 
-    private string DurationStr(Rational start, Duration duration)
+    private string DurationStr(Rational start, Duration duration, bool forceAbsTime = false)
     {
         var ib = duration.InvariantBar;
         // 当发生以下两种情况之一时，返回bar格式原值；否则返回秒
-        // 1. duration全程bpm没有变化
+        // 1. duration全程bpm没有变化，且分母小于384
         // 2. 算出来的InvariantBar，分母小于等于16分音
-        if (ib.Denominator <= 16 || !chart.BpmList.IsBpmChanged(start, start + ib))
+        if (!forceAbsTime && (
+                ib.Denominator <= 16 ||
+                (!chart.BpmList.IsBpmChanged(start, start + ib) && ib.Denominator <= 384)
+            ))
         {
             return $"[{ib.Denominator}:{ib.Numerator}]";
         }
@@ -178,9 +190,12 @@ public class SimaiGenerator : IGenerator
                     
                     if (seg.Duration != null)
                     {
-                        var durationStr = DurationStr(rollingTime, seg.Duration);
-                        if (rollingTime == slide.Time && // 是带有时间标记的第一段
-                            slide.WaitTime.InvariantBar != new Rational(1, 4))
+                        bool nonStdWaitTime = rollingTime == slide.Time && // 是带有时间标记的第一段
+                                              slide.WaitTime.InvariantBar != new Rational(1, 4);
+                        var durationStr = DurationStr(rollingTime, seg.Duration,
+                            // 对非标准等待时间的星星，如果相关Workaround选项开启，则强制其使用绝对时间。
+                            forceAbsTime: nonStdWaitTime && Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime);
+                        if (nonStdWaitTime)
                         { // 非标准等待时间的星星，应该加上等待时间标记。simai仅支持绝对时间的等待时间标记。
                             durationStr = $"[{(decimal)slide.WaitTime.Seconds:0.####}##{durationStr[1..].TrimStart('#')}";
                         }
