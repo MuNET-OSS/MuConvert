@@ -9,7 +9,16 @@ public class Chart
     public List<Note> Notes = [];
     
     public string DefaultTouchSize = "M1";
-    public int ClockCount = 4;
+
+    public int ClockCount
+    {
+        get => ExplicitClocks?.Count ?? field;
+        set
+        {
+            field = value;
+            ExplicitClocks = null;
+        }
+    } = 4;
     
     public Rational ToSecond(Rational barTime) => BpmList.ToSecond(barTime);
 
@@ -74,4 +83,12 @@ public class Chart
     
     // 总音符数量（物量）
     public int TotalNotes => Statistics.Total;
+    
+    /**
+     * 这是MA2语句中，通过CLK指令所显式指定的哒哒哒哒的时刻。
+     * 一般来说极少会用到，这里只是忠实地记录一下；一方面符合我们“0信息损失”的原则、忠实地记录铺面中的信息；
+     * 另一方面，可以用作ClockCount自动推导的来源之一。
+     * 普通用户理论上极少会用到这个东西。
+     */
+    public List<Rational>? ExplicitClocks = null;
 }

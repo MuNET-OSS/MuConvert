@@ -81,6 +81,11 @@ public class MA2Parser : IParser
             else if (cmd == "MET" && values.Length == 5 && int.TryParse(values[1], out var _) && int.TryParse(values[2], out var _) 
                      && int.TryParse(values[3], out var _) && int.TryParse(values[4], out var _)) {} // MET不需要解析，忽略之
             else if (cmd == "SEF") {} // SEF不需要解析，忽略之
+            else if (cmd == "CLK" && values.Length == 3 && int.TryParse(values[1], out var clkBar) && int.TryParse(values[2], out var clkTick))
+            { // CLK指令，现在就是添加到Chart.ExplicitClocks即可。避免“不认识的指令报错”，同时作为ClockCount的override
+                chart.ExplicitClocks ??= [];
+                chart.ExplicitClocks.Add(clkBar + new Rational(clkTick, RSL));
+            } 
             // 读到了统计段，后面就不用读了，谱面解析结束
             else if (cmd.StartsWith("T_REC") || cmd.StartsWith("T_NUM") || cmd.StartsWith("T_JUDGE") || cmd.StartsWith("TTM_"))
             {

@@ -71,7 +71,6 @@ internal static class TestUtils
             if (!inNotes)
             {
                 if (IsMa2HeaderOrBpmLine(line)) continue;
-                if (line.StartsWith("MET\t", StringComparison.Ordinal)) continue;
                 inNotes = true;
             }
 
@@ -90,7 +89,9 @@ internal static class TestUtils
         line.StartsWith("CLK_DEF\t", StringComparison.Ordinal) ||
         line.StartsWith("COMPATIBLE_CODE\t", StringComparison.Ordinal) ||
         line.StartsWith("GENERATED_BY\t", StringComparison.Ordinal) ||
-        line.StartsWith("BPM\t", StringComparison.Ordinal);
+        line.StartsWith("BPM\t", StringComparison.Ordinal) ||
+        line.StartsWith("MET\t", StringComparison.Ordinal) ||
+        line.StartsWith("CLK\t", StringComparison.Ordinal);
     
     public static Chart LoadOneChart(out List<Alert> alerts)
     {
