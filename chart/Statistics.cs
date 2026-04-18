@@ -36,6 +36,14 @@ public class Statistics
 
         var res = prefix + type;
         _data[res] = _data.GetValueOrDefault(res) + 1;
+        
+        // TTM_EACHPAIRS 双押数量
+        if (note is Tap)
+        {
+            if (note.Time == _now && note.FalseEachIdx == _nowFalseEachIndex) TTM_EACHPAIRS++;
+            _now = note.Time;
+            _nowFalseEachIndex = note.FalseEachIdx;
+        }
     }
 
     internal Statistics(Chart chart)
@@ -107,6 +115,7 @@ public class Statistics
     public int TTM_EACHPAIRS { get; private set; } = 0;
     
     private Rational _now = -1; // 计算双押个数用
+    private int _nowFalseEachIndex = 0;
     
     private int getProgJudgeGrid(decimal bpm)
     {

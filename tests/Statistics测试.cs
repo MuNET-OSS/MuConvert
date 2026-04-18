@@ -56,7 +56,6 @@ internal static class Ma2StatisticsSection
     /// <summary>与 <see cref="MA2Generator"/> 当前实现尚未对齐的统计键，不参与等价断言。</summary>
     public static readonly HashSet<string> SkippedKeys =
     [
-        "TTM_EACHPAIRS",
         "T_JUDGE_HLD",
         "T_JUDGE_ALL",
     ];
