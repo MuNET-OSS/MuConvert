@@ -54,6 +54,14 @@ internal static class TestUtils
         return null;
     }
 
+    public static (int, int) ExtractMa2Time(string ma2Line)
+    {
+        var para = ma2Line.Split('\t');
+        return (int.Parse(para[1]), int.Parse(para[2]));
+    }
+
+    public static bool IsSameTime(string ma2Line1, string ma2Line2) => ExtractMa2Time(ma2Line1) == ExtractMa2Time(ma2Line2);
+
     /// <summary>
     /// 提取 MA2 音符段至 <c>T_REC</c> 之前：跳过头部与 <c>BPM</c> 行；若存在 <c>MET\t</c> 小节行则跳过该行；
     /// 部分旧官谱 golden 无 <c>MET</c>，则在 <c>BPM</c> 块后的首条非头行开始收集。与 <see cref="Simai片段测试"/> / <see cref="MA2_103测试"/> 断言用逻辑一致。

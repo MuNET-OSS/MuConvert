@@ -77,8 +77,9 @@ public class Simai转MA2测试
             var result = CompareLine(exp, act);
             if (!result)
             {
-                // 尝试下面五行之内有无相同的，如果有，交换之
-                for (int j = 1; j < Math.Min(expectedLines.Length, i+5); j++)
+                // 尝试同一时刻的其他行有无相同的，如果有，交换之
+                var j = i + 1;
+                while (j < expectedLines.Length && IsSameTime(expectedLines[i], actualLines[j]))
                 {
                     if (CompareLine(expectedLines[j], act))
                     {
@@ -86,6 +87,7 @@ public class Simai转MA2测试
                         result = true;
                         break;
                     }
+                    j++;
                 }
             }
 
