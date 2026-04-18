@@ -31,7 +31,7 @@ public class Alert
         {
             var (chart, time) = BarTime.Value;
             var sec = chart.BpmList.Count > 0 ? (float)chart.ToSecond(time) : float.NaN;
-            tags.Add(string.Format(Locale.MessageTime, time, sec));
+            tags.Add(string.Format(Locale.MessageTime, time.CanonicalForm, sec));
         }
         if (RelevantNote != null) tags.Add(string.Format(Locale.MessageParsing, RelevantNote));
         var tagString = tags.Count > 0 ? $"({Locale.MessageAt} {string.Join(", ", tags)}) " : "";
