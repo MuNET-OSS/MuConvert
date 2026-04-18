@@ -15,7 +15,12 @@ internal static class Program
         var root = BuildRootCommand();
         try
         {
-            return root.Parse(args).Invoke();
+            var parseResult = root.Parse(args);
+            var invocation = new InvocationConfiguration
+            {
+                EnableDefaultExceptionHandler = false
+            };
+            return parseResult.Invoke(invocation);
         }
         catch (ConversionException ex)
         {
@@ -43,6 +48,17 @@ internal static class Program
             HelpName = "N[,N...]"
         };
 
+        var outputOption = new Option<string?>("--output", "-o")
+        {
+            Description =
+                "输出位置：\n" +
+                "· 省略：写入输入文件同目录，文件名按默认规则（maidata.txt、lv_N.ma2 等）。\n" +
+                "· 目录：写入该目录，文件名同上按默认规则。\n" +
+                "· 文件：仅当本次转换只会生成一个输出文件时可用；扩展名须为 .txt（输出 maidata）或 .ma2（输出 MA2）。\n" +
+                "· \"-\"：仅当本次转换只会生成一个输出文件时可用；将输出内容写到stdout。",
+            HelpName = "path"
+        };
+
         var inputArgument = new Argument<string>("path")
         {
             Description = "可以输入以下几种情况：\n" +
@@ -54,6 +70,7 @@ internal static class Program
         };
 
         root.Options.Add(levelsOption);
+        root.Options.Add(outputOption);
         root.Arguments.Add(inputArgument);
 
         root.SetAction(parseResult =>
@@ -61,10 +78,39 @@ internal static class Program
             var inputPath = parseResult.GetValue(inputArgument)
                 ?? throw new InvalidOperationException("缺少参数 path。");
             var levelsRaw = parseResult.GetValue(levelsOption);
+            _outputSpec = OutputSpec.Parse(parseResult.GetValue(outputOption));
             RunConvert(inputPath, levelsRaw);
         });
 
         return root;
+    }
+
+    /// <summary>由 CLI 在每次 <c>SetAction</c> 入口赋值；转换逻辑只读此字段。</summary>
+    private static OutputSpec _outputSpec;
+
+    private enum OutputSinkKind { Default, Stdout, Directory, File }
+    
+    private readonly record struct OutputSpec(OutputSinkKind Kind, string? FsPath)
+    {
+        internal static OutputSpec Parse(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return new OutputSpec(OutputSinkKind.Default, null);
+            var t = raw.Trim();
+            if (t == "-")
+                return new OutputSpec(OutputSinkKind.Stdout, null);
+            var full = Path.GetFullPath(t);
+            if (Directory.Exists(full))
+                return new OutputSpec(OutputSinkKind.Directory, full);
+            if (File.Exists(full))
+                return new OutputSpec(OutputSinkKind.File, full);
+            if (!string.IsNullOrEmpty(Path.GetExtension(full)))
+                return new OutputSpec(OutputSinkKind.File, full);
+            return new OutputSpec(OutputSinkKind.Directory, full);
+        }
+
+        internal string ResolveOutputDir(string defaultDir) =>
+            Kind == OutputSinkKind.Directory ? FsPath! : defaultDir;
     }
 
     private static void RunConvert(string inputPath, string? levelsRaw)
@@ -139,9 +185,22 @@ internal static class Program
         var text = File.ReadAllText(inputPath, Encoding.UTF8);
 
         if (LooksLikeMaidata(text))
-            ConvertMaidata(text, inputDir, levelFilter, inputPath);
+        {
+            var maidata = new Maidata(text);
+            var ids = maidata.Levels.Keys.OrderBy(k => k).ToList();
+            if (ids.Count == 0) throw new ArgumentException("maidata 中未找到任何 &inote_* 谱面。");
+            var selected = levelFilter == null ? ids : ids.Where(id => levelFilter.Contains(id)).ToList();
+            if (selected.Count == 0) throw new ArgumentException("-l / --levels 指定的难度在文件中均不存在。");
+            ValidateOutputForMa2Targets(selected.Count);
+            
+            ConvertMaidata(maidata, selected, inputDir, inputPath);
+        }
         else
-            ConvertPlainSimai(text, inputDir, levelFilter, inputPath);
+        {
+            if (levelFilter != null) throw new ArgumentException("纯 simai 单谱（非 maidata）不能使用 -l / --levels。");
+            ValidateOutputForMa2Targets(1);
+            ConvertPlainSimai(text, inputDir, inputPath);
+        }
     }
 
     /// <summary>
@@ -201,14 +260,20 @@ internal static class Program
             .OrderBy(t => t.LevelId)
             .Where((_, lv)=> levelFilter == null || levelFilter.Contains(lv))
             .ToList();
-        var outPath = Path.Combine(outputDir, "maidata.txt");
+
+        if (assignments.Count == 0) throw new ArgumentException("-l / --levels 过滤后没有可转换的 .ma2 文件。");
+        ValidateOutputForMaidataTxt();
+
+        var baseDir = _outputSpec.ResolveOutputDir(outputDir);
+        var diskPath = _outputSpec.Kind == OutputSinkKind.File ? _outputSpec.FsPath! : Path.Combine(baseDir, "maidata.txt");
+        var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : diskPath;
 
         int clockCount = 4;
         var inoteBlocks = new List<(int LevelId, string Inote)>();
 
         foreach (var (fullPath, levelId) in assignments)
         {
-            Console.WriteLine($"Simai → MA2: {fullPath}(lv{levelId}) → {outPath}");
+            Console.Error.WriteLine($"Simai → MA2: {fullPath}(lv{levelId}) → {destNote}");
             var ma2Text = File.ReadAllText(fullPath, Encoding.UTF8);
             var (chart, parseAlerts) = new MA2Parser().Parse(ma2Text);
             PrintAlerts(parseAlerts);
@@ -224,7 +289,10 @@ internal static class Program
         maidata["clock_count"] = clockCount.ToString();
         foreach (var (levelId, inote) in inoteBlocks)
             maidata.AddLevel(levelId, new MaidataChart(inote));
-        File.WriteAllText(outPath, maidata.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var maidataText = maidata.ToString();
+        if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(maidataText);
+        else File.WriteAllText(diskPath, maidataText, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static HashSet<int> ParseLevelList(string s)
@@ -272,42 +340,56 @@ internal static class Program
             Console.Error.WriteLine(a.ToString());
     }
 
-    private static void ConvertMaidata(string text, string outputDir, HashSet<int>? levelFilter, string inputPath)
+    private static void ConvertMaidata(Maidata maidata, IReadOnlyList<int> selected, string inputDir, string inputPath)
     {
-        var maidata = new Maidata(text);
-        var ids = maidata.Levels.Keys.OrderBy(k => k).ToList();
-        if (ids.Count == 0)
-            throw new ArgumentException("maidata 中未找到任何 &inote_* 谱面。");
-
-        var selected = levelFilter == null
-            ? ids
-            : ids.Where(id => levelFilter.Contains(id)).ToList();
-
-        if (selected.Count == 0)
-            throw new ArgumentException("-l / --levels 指定的难度在文件中均不存在。");
-
+        var baseDir = _outputSpec.ResolveOutputDir(inputDir);
         foreach (var id in selected)
         {
-            var outPath = Path.Combine(outputDir, $"lv_{id}.ma2");
-            Console.WriteLine($"Simai → MA2: {inputPath}(lv${id}) → {outPath}");
+            var outPath = _outputSpec.Kind == OutputSinkKind.File ? _outputSpec.FsPath! : Path.Combine(baseDir, $"lv_{id}.ma2");
+            var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : outPath;
+            Console.Error.WriteLine($"Simai → MA2: {inputPath}(lv{id}) → {destNote}");
             var chartInfo = maidata.Levels[id];
             var bigTouch = id is 2 or 3;
             var isUtage = IsUtageFromLevelString(chartInfo.Level);
             var ma2 = SimaiToMa2(chartInfo.Inote, maidata.ClockCount, bigTouch, isUtage);
-            File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(ma2);
+            else File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
     }
 
-    private static void ConvertPlainSimai(string text, string outputDir, HashSet<int>? levelFilter, string inputPath)
+    private static void ConvertPlainSimai(string text, string inputDir, string inputPath)
     {
-        if (levelFilter != null)
-            throw new ArgumentException("纯 simai 单谱（非 maidata）不能使用 -l / --levels。");
-
         const int outputLevel = 0;
-        var outPath = Path.Combine(outputDir, $"lv_{outputLevel}.ma2");
-        Console.WriteLine($"Simai → MA2: {inputPath}(lv${outputLevel}) → {outPath}");
+        var baseDir = _outputSpec.ResolveOutputDir(inputDir);
+        var outPath = _outputSpec.Kind == OutputSinkKind.File ? _outputSpec.FsPath! : Path.Combine(baseDir, $"lv_{outputLevel}.ma2");
+        var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : outPath;
+        Console.Error.WriteLine($"Simai → MA2: {inputPath}(lv{outputLevel}) → {destNote}");
         var ma2 = SimaiToMa2(text);
-        File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(ma2);
+        else File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
+    private static void ValidateOutputForMa2Targets(int ma2FileCount)
+    {
+        if (_outputSpec.Kind == OutputSinkKind.Stdout && ma2FileCount != 1)
+            throw new ArgumentException($"-o \"-\" 仅适用于恰好输出一个 MA2 文件的情况（当前会输出 {ma2FileCount} 个）。请通过-l指定难度，或改为指定-o为一个目录。");
+        if (_outputSpec.Kind == OutputSinkKind.File && ma2FileCount != 1)
+            throw new ArgumentException($"使用 -o 指定输出为文件时，本次必须只生成一个 MA2 文件（当前会生成 {ma2FileCount} 个）。请通过-l指定难度，或改为指定-o为一个目录。");
+        if (_outputSpec.Kind == OutputSinkKind.File)
+            ValidateOutputFileExtension(_outputSpec.FsPath!, ".ma2");
+    }
+
+    private static void ValidateOutputForMaidataTxt()
+    {
+        if (_outputSpec.Kind == OutputSinkKind.File)
+            ValidateOutputFileExtension(_outputSpec.FsPath!, ".txt");
+    }
+
+    private static void ValidateOutputFileExtension(string filePath, string requiredExt)
+    {
+        var ext = Path.GetExtension(filePath);
+        if (!string.Equals(ext, requiredExt, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"输出文件扩展名须为「{requiredExt}」，当前为「{(string.IsNullOrEmpty(ext) ? "(无)" : ext)}」。");
     }
 
     private static string SimaiToMa2(string inote, int clockCount=4, bool bigTouch=false, bool isUtage=false)
