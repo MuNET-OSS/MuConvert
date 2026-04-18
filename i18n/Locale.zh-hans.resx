@@ -163,6 +163,12 @@
   <data name="PrepFix4" xml:space="preserve">
     <value>尝试修复了谱面中的{0}处语法错误（重复的括号，可能是多打了一些）: {1}</value>
   </data>
+  <data name="VisitFix1" xml:space="preserve">
+    <value>尝试修复了谱面中的语法错误（重复的双押"/"或伪双押"`"符号，可能是多打了一些）: {0}</value>
+  </data>
+  <data name="ExtenedFalseEach" xml:space="preserve">
+    <value>您使用了连续多个伪双押'`'的语法。这并非Simai标准语法，但遵循其他制谱软件的行为，解释为错开时间更长的两个音符（每个'`'错开128分音）。如果您并非有意为之，请检查您的输入以防输入错误。</value>
+  </data>
   <data name="BreakExIn103" xml:space="preserve">
     <value>谱面中含有MA2 1.03所不支持的特性（绝赞+保护套）。相关特性已被忽略、还原回非保护绝赞。</value>
   </data>

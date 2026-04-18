@@ -163,6 +163,12 @@
   <data name="PrepFix4" xml:space="preserve">
     <value>嘗試修復了譜面中的{0}處語法錯誤（重複的括號，可能是多打了一些）: {1}</value>
   </data>
+  <data name="VisitFix1" xml:space="preserve">
+    <value>嘗試修復了譜面中的語法錯誤（重複的雙押「/」或偽雙押「`」符號，可能是多打了一些）: {0}</value>
+  </data>
+  <data name="ExtenedFalseEach" xml:space="preserve">
+    <value>您使用了連續多個偽雙押「`」的語法。這並非 Simai 標準語法，但遵循其他製譜軟體的行為，解釋為錯開時間更長的兩個音符（每個「`」錯開 128 分音）。若您並非有意為之，請檢查您的輸入以防輸入錯誤。</value>
+  </data>
   <data name="BreakExIn103" xml:space="preserve">
     <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 + 保護套）。相關特性已被忽略，並還原回非保護絕贊。</value>
   </data>

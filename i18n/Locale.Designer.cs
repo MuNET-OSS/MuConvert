@@ -123,6 +123,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to You used multiple consecutive fake EACH &apos;`&apos; symbols. This is not standard Simai syntax, but following the behavior of other charting tools, it is interpreted as two notes staggered further apart in time (each &apos;`&apos; offsets timing by a 128th note). If this was not intentional, please review your input to avoid mistakes..
+        /// </summary>
+        public static string ExtenedFalseEach {
+            get {
+                return ResourceManager.GetString("ExtenedFalseEach", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unexpected modifier(s): {0}. Ignored..
         /// </summary>
         public static string ExtraModifiersIgnored {
@@ -389,6 +398,15 @@ namespace MuConvert {
         public static string UnsuppoertedMA2Version {
             get {
                 return ResourceManager.GetString("UnsuppoertedMA2Version", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Attempted to fix a syntax error in the chart (redundant duplicate EACH &apos;/&apos; or fake EACH &apos;`&apos; symbols, possibly from extra typing): {0}.
+        /// </summary>
+        public static string VisitFix1 {
+            get {
+                return ResourceManager.GetString("VisitFix1", resourceCulture);
             }
         }
         

@@ -163,6 +163,12 @@
   <data name="PrepFix4" xml:space="preserve">
     <value>Attempted to fix {0} syntax error(s) in the chart (redundant duplicate parentheses, possibly from extra typing): {1}</value>
   </data>
+  <data name="VisitFix1" xml:space="preserve">
+    <value>Attempted to fix a syntax error in the chart (redundant duplicate EACH '/' or fake EACH '`' symbols, possibly from extra typing): {0}</value>
+  </data>
+  <data name="ExtenedFalseEach" xml:space="preserve">
+    <value>You used multiple consecutive fake EACH '`' symbols. This is not standard Simai syntax, but following the behavior of other charting tools, it is interpreted as two notes staggered further apart in time (each '`' offsets timing by a 128th note). If this was not intentional, please review your input to avoid mistakes.</value>
+  </data>
   <data name="BreakExIn103" xml:space="preserve">
     <value>The chart contains features not supported by MA2 1.03 (BreakEx). Those features were ignored and converted back to a pure break.</value>
   </data>

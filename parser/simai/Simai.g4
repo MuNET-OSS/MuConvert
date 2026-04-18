@@ -38,12 +38,11 @@ modifiers: (MODIFIER | TAP_TO_STAR)*;
 chart: (notations ',')* CHART_END? EOF;
 
 // 同一时刻的所有标记，包括note标记、bpm标记等等
-notations: (bpmTag | absulouteStepTag | metTag)* noteGroup*;
-    
-noteGroup: note (eachNote | falseEachNote)*;
+notations: (bpmTag | absulouteStepTag | metTag)* noteGroup?;
 
-eachNote: '/' note;
-falseEachNote: '`' note;
+noteGroup: note eachNote*;
+eachSeparators: ('/' | '`')+;
+eachNote: eachSeparators note;
 
 bpmTag: '(' number ')';
 absulouteStepTag: '{' '#' number '}';

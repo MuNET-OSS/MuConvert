@@ -18,12 +18,15 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     private Rational now = 0;
     private Rational step = new(1, 4);
     private decimal? absoluteTimeStep; // 此项必须和step本体一起更改
+    private Rational extendedFalseEach = 0; // 扩展伪双押语法（多个连续的`）累计后移了多少时间。每次遇到逗号时，这个数字需要清零。
 
     private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private bool isRealExactWaitTime; // 用于在VisitSlideBody和VisitSlideDuration之间传递额外的参数
     private readonly List<string> extraModifiers = [];
+    
     private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
+    private bool extendedFalseEachWarned;
 
     public SimaiParser(bool bigTouch = false, int clockCount = 4)
     {
@@ -174,6 +177,11 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         {
             VisitNotations(notations);
             if (chart.BpmList.Count == 0) AddDefaultBpm();
+            if (extendedFalseEach > 0)
+            { // 如果之前的解析过程中，触发了extendedFalseEach的话。则要把被额外增加的时间扣回来。
+                now -= extendedFalseEach;
+                extendedFalseEach = 0;
+            }
             now = (now + step).CanonicalForm;
         }
         return true;
@@ -264,11 +272,35 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         {
             P.NoteContext noteC;
             if (child is P.NoteContext c1) noteC = c1;
-            else if (child is P.EachNoteContext c2) noteC = c2.note();
-            else if (child is P.FalseEachNoteContext c3)
+            else if (child is P.EachNoteContext c2)
             {
-                noteC = c3.note();
-                falseEachIdx++;
+                noteC = c2.note();
+                
+                var separators = c2.eachSeparators().GetText()!;
+                if (separators.Length >= 2 && separators.All(c=>c=='`'))
+                { 
+                    // 出现连续多个反引号的情况，如"2``3"。
+                    // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
+                    // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
+                    var length = separators.Length * new Rational(1, 128);
+                    now = (now + length).CanonicalForm;
+                    extendedFalseEach += length;
+                    falseEachIdx = 0;
+                    if (!extendedFalseEachWarned)
+                    {
+                        AddAlert(Warning, Locale.ExtenedFalseEach, context);
+                        extendedFalseEachWarned = true;
+                    }
+                }
+                else
+                {
+                    if (separators[0] == '`') falseEachIdx++; // （出于鲁棒性，只看开头符号）属于伪双押类型。自增falseEachIndex
+                    // 否则，就一定是'/'开头，属于普通双押，什么都不用做。
+                    if (separators.Length > 1)
+                    { // 如果连续出现多个双押符号，如上所示只采信第一个，然后给警告。
+                        AddAlert(Warning, string.Format(Locale.VisitFix1, separators), context);
+                    }
+                }
             }
             else throw Utils.Fail();
 
