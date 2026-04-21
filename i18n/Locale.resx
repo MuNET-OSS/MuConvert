@@ -178,4 +178,28 @@
   <data name="ConnectingSlideIn103" xml:space="preserve">
     <value>The chart contains features not supported by MA2 1.03 (multi-segment connecting slides). Only the first slide segment was kept.</value>
   </data>
+  <data name="AntlrUnknownError" xml:space="preserve">
+    <value>Simai parser error: {0}</value>
+  </data>
+  <data name="LexerNoViableAltException" xml:space="preserve">
+    <value>Unrecognized character: {0} (typo?). Ignored.</value>
+  </data>
+  <data name="LexerNoViableAltExceptionStrict" xml:space="preserve">
+    <value>Unrecognized character: {0} (typo?)</value>
+  </data>
+  <data name="RecoverInlineExtraneousToken" xml:space="preserve">
+    <value>Extraneous token: {0} (typo?). Ignored.</value>
+  </data>
+  <data name="RecoverInlineMissingToken" xml:space="preserve">
+    <value>Missing token {1} before {0} (typo?). Inserted automatically.</value>
+  </data>
+  <data name="InputMismatchException" xml:space="preserve">
+    <value>Unexpected token: {0}. Expected: {1}</value>
+  </data>
+  <data name="NoViableAltException" xml:space="preserve">
+    <value>Could not parse chart markup: {0}</value>
+  </data>
+  <data name="LaxTryfixReminder" xml:space="preserve">
+    <value>. The affected note(s) was discarded.</value>
+  </data>
 </root>

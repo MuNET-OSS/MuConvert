@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Antlr4.Runtime;
 using MuConvert.Antlr;
 using MuConvert.chart;
@@ -11,9 +11,18 @@ namespace MuConvert.parser;
 
 public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 {
-    private readonly Chart chart;
-    private readonly List<Alert> alerts = [];
-    public bool DontTryFix = false; // 不准调用Preprocess中的tryFix，而是如遇问题直接报错。
+    /**
+     * 表示parser工作的严格程度的枚举。默认为Normal。
+     * 
+     * Strict: 不允许任何语法错误，任何语法错误直接报错。
+     * Normal: 允许进行一些小的修复，如删除确定多出的符号、补充确定残缺的符号等。但遇到大的错误会直接解析失败。
+     * Lax: 尽全力解析，出现错误的音符直接吞掉不解析，以换取整个谱面不要解析失败。
+     */
+    public enum StrictLevelEnum { Strict, Normal, Lax }
+    public StrictLevelEnum StrictLevel;
+
+    internal readonly Chart chart;
+    internal readonly List<Alert> alerts = [];
 
     private Rational now = 0;
     private Rational step = new(1, 4);
@@ -28,9 +37,10 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
     private bool extendedFalseEachWarned;
 
-    public SimaiParser(bool bigTouch = false, int clockCount = 4)
+    public SimaiParser(bool bigTouch = false, int clockCount = 4, StrictLevelEnum strictLevel = StrictLevelEnum.Normal)
     {
         chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", ClockCount = clockCount};
+        StrictLevel = strictLevel;
     }
     
     private void AddAlert(Alert.LEVEL level, string content, ParserRuleContext? context = null)

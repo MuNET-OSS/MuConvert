@@ -178,4 +178,28 @@
   <data name="ConnectingSlideIn103" xml:space="preserve">
     <value>譜面中含有 MA2 1.03 所不支援的特性（多段連接的星星）。僅保留第一段星星。</value>
   </data>
+  <data name="AntlrUnknownError" xml:space="preserve">
+    <value>Simai 解析器發生錯誤: {0}</value>
+  </data>
+  <data name="LexerNoViableAltException" xml:space="preserve">
+    <value>無法解析的字元: {0}（是否手誤？），已忽略。</value>
+  </data>
+  <data name="LexerNoViableAltExceptionStrict" xml:space="preserve">
+    <value>無法解析的字元: {0}（是否手誤？）</value>
+  </data>
+  <data name="RecoverInlineExtraneousToken" xml:space="preserve">
+    <value>多餘的符號: {0}（是否手誤？），已忽略該符號。</value>
+  </data>
+  <data name="RecoverInlineMissingToken" xml:space="preserve">
+    <value>在 {0} 前似乎缺失了符號 {1}（是否漏打？），已嘗試為您補全。</value>
+  </data>
+  <data name="InputMismatchException" xml:space="preserve">
+    <value>遇到了不應在這裡出現的符號: {0} ，這裡應該出現的是 {1} </value>
+  </data>
+  <data name="NoViableAltException" xml:space="preserve">
+    <value>無法解析的譜面標記: {0} </value>
+  </data>
+  <data name="LaxTryfixReminder" xml:space="preserve">
+    <value>。出問題的音符已被捨棄。</value>
+  </data>
 </root>

@@ -69,6 +69,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Simai parser error: {0}.
+        /// </summary>
+        public static string AntlrUnknownError {
+            get {
+                return ResourceManager.GetString("AntlrUnknownError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to MuConvert hit an internal error (AssertionFailed). Please report it at https://github.com/MuNet-OSS/MuConvert/issues . ({0}).
         /// </summary>
         public static string AssertionFailed {
@@ -150,6 +159,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Unexpected token: {0}. Expected: {1}.
+        /// </summary>
+        public static string InputMismatchException {
+            get {
+                return ResourceManager.GetString("InputMismatchException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Parser/Generator instances are single-use; do not call Parse or Generate repeatedly! Create a new Parser/Generator for each chart you convert..
         /// </summary>
         public static string InstanceMultipleUsage {
@@ -227,6 +245,33 @@ namespace MuConvert {
         public static string InvalidWaitTime {
             get {
                 return ResourceManager.GetString("InvalidWaitTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to . The affected note(s) was discarded..
+        /// </summary>
+        public static string LaxTryfixReminder {
+            get {
+                return ResourceManager.GetString("LaxTryfixReminder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unrecognized character: {0} (typo?). Ignored..
+        /// </summary>
+        public static string LexerNoViableAltException {
+            get {
+                return ResourceManager.GetString("LexerNoViableAltException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unrecognized character: {0} (typo?).
+        /// </summary>
+        public static string LexerNoViableAltExceptionStrict {
+            get {
+                return ResourceManager.GetString("LexerNoViableAltExceptionStrict", resourceCulture);
             }
         }
         
@@ -330,6 +375,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Could not parse chart markup: {0}.
+        /// </summary>
+        public static string NoViableAltException {
+            get {
+                return ResourceManager.GetString("NoViableAltException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (inserting possibly missing commas): {1}.
         /// </summary>
         public static string PrepFix1 {
@@ -362,6 +416,24 @@ namespace MuConvert {
         public static string PrepFix4 {
             get {
                 return ResourceManager.GetString("PrepFix4", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Extraneous token: {0} (typo?). Ignored..
+        /// </summary>
+        public static string RecoverInlineExtraneousToken {
+            get {
+                return ResourceManager.GetString("RecoverInlineExtraneousToken", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Missing token {1} before {0} (typo?). Inserted automatically..
+        /// </summary>
+        public static string RecoverInlineMissingToken {
+            get {
+                return ResourceManager.GetString("RecoverInlineMissingToken", resourceCulture);
             }
         }
         

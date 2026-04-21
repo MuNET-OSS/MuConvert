@@ -12,6 +12,9 @@ options { language=CSharp; }
 // ---------------------------------------------------------------------------
 
 WS: [ \t\r\n]+ -> channel(HIDDEN);
+COMMENT: '||' ~[\r\n]* -> channel(HIDDEN);
+
+COMMA: ',';
 
 TAP_TO_STAR: '$$' | '$';
 STAR_TO_TAP: '@';
@@ -35,20 +38,21 @@ modifiers: (MODIFIER | TAP_TO_STAR)*;
 // 语法
 // ---------------------------------------------------------------------------
 
-chart: (notations ',')* CHART_END? EOF;
+chart: (notations COMMA)* CHART_END? EOF;
 
 // 同一时刻的所有标记，包括note标记、bpm标记等等
 notations: (bpmTag | absulouteStepTag | metTag)* noteGroup?;
 
 noteGroup: note eachNote*;
-eachSeparators: ('/' | '`')+;
+FALSE_EACH: '`';
+eachSeparators: '/' | FALSE_EACH+;
 eachNote: eachSeparators note;
 
 bpmTag: '(' number ')';
 absulouteStepTag: '{' '#' number '}';
 metTag: '{' int '}';
 
-note: slide (sharedHeadSlide)* | tap+ | hold | touch | touchHold; // tap+是因为，simai允许123这种语法、和1/2/3是等价的，但仅限tap之间。
+note: slide (sharedHeadSlide)* | tap | KEY+ | hold | touch | touchHold; // tap+是因为，simai允许123这种语法、和1/2/3是等价的，但仅限tap之间。
 
 tap: KEY modifiers;
 
