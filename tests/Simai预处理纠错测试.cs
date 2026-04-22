@@ -19,7 +19,7 @@ public class Simai预处理纠错测试
     /// <summary>规范 simai → 完整 MA2 文本（含头与 BPM）。</summary>
     private string SimaiToMa2(string inote, bool DontTryFix = false)
     {
-        var parser = new SimaiParser() { DontTryFix = DontTryFix };
+        var parser = new SimaiParser(strictLevel: DontTryFix ? SimaiParser.StrictLevelEnum.Strict : SimaiParser.StrictLevelEnum.Normal);
         var (chart, alerts) = parser.Parse(inote);
         var (ma2, alerts2) = new MA2Generator().Generate(chart);
         _output.WriteLine(string.Join('\n', alerts));

@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Antlr4.Runtime;
+using Antlr4.Runtime.Tree;
 using MuConvert.Antlr;
 using MuConvert.chart;
 using MuConvert.utils;
@@ -32,7 +33,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     private ParserRuleContext? currContext; // 供调试报错AddAlert函数使用
     private Note? currNote; // 用于在部分visitor之间传递额外的参数，如visitDuration、visitSlideBody等，都需要Note对象作为参数传入的情况
     private bool isRealExactWaitTime; // 用于在VisitSlideBody和VisitSlideDuration之间传递额外的参数
-    private readonly List<string> extraModifiers = [];
+    private readonly List<IToken> extraModifiers = []; // 通过ApplyModifiers不能通用处理的modifiers，需要落回到具体的音符处理逻辑中进行处理的。
     
     private bool absoluteTimeStepWarned; // 用于确保Warning只打印一次
     private bool extendedFalseEachWarned;
@@ -55,75 +56,14 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         alerts.Add(alert);
     }
     
-    public class AntlrErrorListener(SimaiParser parser) : IAntlrErrorListener<IToken>, IAntlrErrorListener<int>
-    {
-        // 这个是给 Parser 用的 (IToken)
-        public void SyntaxError(TextWriter output, IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
-        {
-            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract 这是ANTLR的bug，e可以是空的但却被标记了非空类型
-            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e?.Context?.GetText()??offendingSymbol.Text));
-            throw new ConversionException(parser.alerts, e);
-        }
+    [GeneratedRegex(@"(?<!\[[^\]]*|\{[^\}]*)#.*$", RegexOptions.Multiline)]
+    private static partial Regex InlineSharpCommentRegex(); // 这里仅处理#开头的注释，因为||开头的注释在语法文件里已经处理过了。
 
-        // 这个是给 Lexer 用的 (int)
-        public void SyntaxError(TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
-        {
-            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract 这是ANTLR的bug，e可以是空的但却被标记了非空类型
-            parser.alerts.Add(new Alert(Error, Locale.SimaiGrammarFailed + msg, line: line, relevantNote: e?.Context?.GetText()));
-            throw new ConversionException(parser.alerts, e);
-        }
-    }
-
-    private string _replaceAndRecord(Match m, string repl, List<string> msgArr)
-    {
-        var res = m.Result(repl);
-        msgArr.Add($"{m.Value} → {res}");
-        return res;
-    }
-
-    private void _warnPrepfixMsg(string messageTemplate, List<string> msgArr)
-    {
-        if (msgArr.Count == 0) return;
-        alerts.Add(new Alert(Warning, string.Format(messageTemplate, msgArr.Count, string.Join("; ", msgArr))));
-    }
-    
-    [GeneratedRegex(@"(\d)([{(])")]
-    private static partial Regex PrepFix1(); // 补上可能缺失的逗号
-    
-    [GeneratedRegex(@"\[(\d+)-(\d+)\]")]
-    private static partial Regex PrepFix2(); // 错误的Duration语法
-    
-    [GeneratedRegex(@"(\d)([\-v<>\^pqVszw]|pp|qq)([@?!bx]+)(\d)")]
-    private static partial Regex PrepFix3(); // 星星头的modifier应该在键位号之后、星星体之前
-    
-    [GeneratedRegex(@"\((\(\d+\))\)?|(\(\d+\))\)|\[(\[\d+\])\]?|(\[\d+\])\]|\{(\{\d+\})\}?|(\{\d+\})\}")]
-    private static partial Regex PrepFix4(); // 重复的冗余括号
-    
-    public string Preprocess(string text, bool tryFix = false)
+    private string Preprocess(string text)
     {
         // 移除注释
-        var commentRegex = new Regex(@"((?<!\[[^\]]*|\{[^\}]*)#|\|\|).*$", RegexOptions.Multiline);
-        text = commentRegex.Replace(text, "");
+        text = InlineSharpCommentRegex().Replace(text, "");
 
-        if (tryFix)
-        {
-            List<string> prepFix1Msgs = [];
-            text = PrepFix1().Replace(text, m => _replaceAndRecord(m, "$1,$2", prepFix1Msgs));
-            _warnPrepfixMsg(Locale.PrepFix1, prepFix1Msgs);
-            
-            List<string> prepFix2Msgs = [];
-            text = PrepFix2().Replace(text, m => _replaceAndRecord(m, "[$1:$2]", prepFix2Msgs));
-            _warnPrepfixMsg(Locale.PrepFix2, prepFix2Msgs);
-            
-            List<string> prepFix3Msgs = [];
-            text = PrepFix3().Replace(text, m => _replaceAndRecord(m, "$1$3$2$4", prepFix3Msgs));
-            _warnPrepfixMsg(Locale.PrepFix3, prepFix3Msgs);
-            
-            List<string> prepFix4Msgs = [];
-            text = PrepFix4().Replace(text, m => _replaceAndRecord(m, "$1$2$3$4$5$6", prepFix4Msgs));
-            _warnPrepfixMsg(Locale.PrepFix4, prepFix4Msgs);
-        }
-        
         return text;
     }
 
@@ -132,20 +72,26 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
         P.ChartContext root;
         
+        text = Preprocess(text); // 预处理
+        
         try
-        {
-            text = Preprocess(text);
-            try
+        { // 词语法分析
+            var inputStream = new AntlrInputStream(text);
+            var lexer = new SimaiLexer(inputStream) { ErrorListeners = { new ErrorListener(this) } };
+            var tokens = new CommonTokenStream(lexer);
+            var parser = new P(tokens) // MuConvert.Antlr.SimaiParser
             {
-                root = RunAntlr(text); // 普通预处理下，antlr词语法分析一次（仅去除注释）
-            }
-            catch (ConversionException)
-            {
-                if (DontTryFix) throw;
-                alerts.Clear();
-                root = RunAntlr(Preprocess(text, true)); // 尝试应用tryFix之后再来一次
-            }
-            // 如果成功，则root就是语法分析树的根节点。从这里开始遍历语法分析树完成工作。
+                ErrorHandler = ErrorStrategy(), ErrorListeners = { new ErrorListener(this) }
+            };
+            root = parser.chart();
+        }
+        catch (Antlr4.Runtime.Misc.ParseCanceledException e)
+        { // ErrorListener里会把alerts加好的，因此这里直接抛异常就可以了。
+            throw new ConversionException(alerts, e);
+        }
+        
+        try
+        { // 基于语法分析树，进行具体的解析和遍历
             VisitChart(root);
         }
         catch (ConversionException)
@@ -163,22 +109,18 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return (chart, alerts);
     }
 
-    private P.ChartContext RunAntlr(string text)
+    private IAntlrErrorStrategy ErrorStrategy()
     {
-        var inputStream = new AntlrInputStream(text);
-        var errorListener = new AntlrErrorListener(this);
-        
-        var lexer = new SimaiLexer(inputStream);
-        lexer.RemoveErrorListeners();
-        lexer.AddErrorListener(errorListener);
-        var tokens = new CommonTokenStream(lexer);
-            
-        var parser = new P(tokens); // MuConvert.Antlr.SimaiParser
-        parser.RemoveErrorListeners();
-        parser.AddErrorListener(errorListener);
-        var root = parser.chart();
-        
-        return root;
+        switch (StrictLevel)
+        {
+            case StrictLevelEnum.Strict:
+                return new BailErrorStrategy();
+            case StrictLevelEnum.Lax:
+                return new LaxErrorStrategy();
+            case StrictLevelEnum.Normal:
+            default:
+                return new ModerateErrorStrategy();
+        }
     }
 
     public sealed override object VisitChart(P.ChartContext context)
@@ -211,6 +153,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     { // 形如 (120){4}1/1 算作一组notations
         foreach (var child in context.children ?? [])
         {
+            if (child is IErrorNode) continue; // 忽略错误节点
             if (child is P.BpmTagContext bpmTag)
             {
                 VisitBpmTag(bpmTag);
@@ -237,6 +180,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
     {
+        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         if (!absoluteTimeStepWarned)
         {
             AddAlert(Warning, string.Format(Locale.AbsoluteStepUsed, context.GetText()), context);
@@ -250,6 +194,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitBpmTag(P.BpmTagContext context)
     {
+        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
         var bpm = (decimal)VisitNumber(context.number());
         chart.BpmList.Add(new BPM(now, bpm));
@@ -262,16 +207,12 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitMetTag(P.MetTagContext context)
     { // metTag指的是标记分音的tag，如{4}
+        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
         var quaver = int.Parse(context.@int().GetText());
         step = new Rational(1, quaver);
         absoluteTimeStep = null;
         return true;
-    }
-
-    public sealed override object VisitNumber(P.NumberContext context)
-    {
-        return decimal.Parse(context.GetText());
     }
 
     public sealed override object VisitNoteGroup(P.NoteGroupContext context)
@@ -280,6 +221,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         int falseEachIdx = 0;
         foreach (var child in context.children)
         {
+            if (child is IErrorNode) continue; // 忽略错误节点
             P.NoteContext noteC;
             if (child is P.NoteContext c1) noteC = c1;
             else if (child is P.EachNoteContext c2)
@@ -287,29 +229,24 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 noteC = c2.note();
                 
                 var separators = c2.eachSeparators().GetText()!;
-                if (separators.Length >= 2 && separators.All(c=>c=='`'))
-                { 
-                    // 出现连续多个反引号的情况，如"2``3"。
-                    // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
-                    // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
-                    var length = separators.Length * new Rational(1, 128);
-                    now = (now + length).CanonicalForm;
-                    extendedFalseEach += length;
-                    falseEachIdx = 0;
-                    if (!extendedFalseEachWarned)
-                    {
-                        AddAlert(Warning, Locale.ExtenedFalseEach, context);
-                        extendedFalseEachWarned = true;
-                    }
-                }
-                else
+                if (separators[0] == '`')
                 {
-                    if (separators[0] == '`') falseEachIdx++; // （出于鲁棒性，只看开头符号）属于伪双押类型。自增falseEachIndex
-                    // 否则，就一定是'/'开头，属于普通双押，什么都不用做。
-                    if (separators.Length > 1)
-                    { // 如果连续出现多个双押符号，如上所示只采信第一个，然后给警告。
-                        AddAlert(Warning, string.Format(Locale.VisitFix1, separators), context);
+                    if (separators.Length >= 2)
+                    { 
+                        // 出现连续多个反引号的情况，如"2``3"。
+                        // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
+                        // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
+                        var length = separators.Length * new Rational(1, 128);
+                        now = (now + length).CanonicalForm;
+                        extendedFalseEach += length;
+                        falseEachIdx = 0;
+                        if (!extendedFalseEachWarned)
+                        {
+                            AddAlert(Warning, Locale.ExtenedFalseEach, context);
+                            extendedFalseEachWarned = true;
+                        }
                     }
+                    else falseEachIdx++;
                 }
             }
             else throw Utils.Fail();
@@ -329,10 +266,12 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         // 注：这个函数返回的是List<Note>，因为ANTLR中的NoteContext，虽然大多数时候只对应一个Note，但有时也可能是两个以上！
         // 具体而言，两种情况：1. "1234"这种simai允许的tap多押简略记法（等价于"1/2/3/4"）
         // 2. 同头星星如"1-2[2:1]*-3[2:1]"，它在我们定义的ANTLR语法中是作为一个note节点的！
+        if (context.exception != null) return new List<Note>(); // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
         List<Note> result = [];
         foreach (var child in context.children)
         {
+            if (child is IErrorNode) continue;
             Note note;
             switch (child)
             {
@@ -354,6 +293,9 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 case P.SharedHeadSlideContext shSlideC:
                     note = (Slide)VisitSharedHeadSlide(shSlideC);
                     break;
+                case ITerminalNode n when n.Symbol.Type == SimaiLexer.KEY:
+                    note = new Tap(chart, now) { Key = int.Parse(n.GetText())};
+                    break;
                 default:
                     throw Utils.Fail();
             }
@@ -361,31 +303,42 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
             if (extraModifiers.Count > 0)
             {
-                AddAlert(Warning, string.Format(Locale.ExtraModifiersIgnored, string.Join("", extraModifiers)), (ParserRuleContext)child);
+                AddAlert(Warning, string.Format(Locale.ExtraModifiersIgnored, string.Join("", extraModifiers.Select(x=>x.Text))), (ParserRuleContext)child);
             }
         }
         return result;
     }
+    
+    public sealed override object VisitNumber(P.NumberContext context)
+    {
+        return decimal.Parse(context.GetText());
+    }
 
-    private void ApplyModifiers(P.ModifiersContext[] modifiersList, Note note)
+    private void ApplyModifiers(P.ModifiersContext[] modifiersList, Note note, bool clearExtraArr = true)
     { // 提取可能在不同位置出现的所有modifiers
       // 将通用的modifier(即b和x)应用到note上，其余的modifier则通过extraModifiers数组返回。
-        HashSet<string> set = new();
+        if (clearExtraArr) extraModifiers.Clear();
         foreach (var modifiers in modifiersList)
         {
-            foreach (var modifier in modifiers.children ?? [])
+            foreach (var child in modifiers.children ?? [])
             {
-                set.Add(modifier.GetText());
+                if (child is IErrorNode) continue;
+                if (child is not ITerminalNode modifier) throw Utils.Fail("modifiers里面居然不是ITerminalNode");
+                var token = modifier.Symbol;
+                if (token.Text == "b" && note is not Touch) note.IsBreak = true;
+                else if (token.Text == "x" && note is Tap) note.IsEx = false;
+                else if (token.Text == "f" && note is Touch touch) touch.IsFirework = true;
+                else extraModifiers.Add(token);
             }
         }
+    }
 
-        extraModifiers.Clear();
-        foreach (var k in set)
-        {
-            if (k == "b") note.IsBreak = true;
-            else if (k == "x") note.IsEx = true;
-            else extraModifiers.Add(k);
-        }
+    private bool GetModifier(int tokenType)
+    {
+        var idx = extraModifiers.FindIndex(x => x.Type == tokenType);
+        if (idx == -1) return false;
+        extraModifiers.RemoveAt(idx);
+        return true;
     }
 
     public sealed override object VisitTap(P.TapContext context)
@@ -396,10 +349,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             Key = int.Parse(context.KEY().GetText())
         };
         ApplyModifiers([context.modifiers()], result);
-        if (extraModifiers.Remove("$$") || extraModifiers.Remove("$"))
-        { // 发现了”TAP_TO_STAR“的标记，把Tap转换为星星
-            result = new Star(result);
-        }
+        if (context.Parent is not P.SlideContext && GetModifier(SimaiLexer.TAP_TO_STAR)) result = new Star(result); // 发现了”TAP_TO_STAR“的标记，把Tap转换为星星
         return result;
     }
 
@@ -411,7 +361,6 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             TouchArea = context.TOUCH_AREA().GetText()
         };
         ApplyModifiers([context.modifiers()], result);
-        if (extraModifiers.Remove("f")) result.IsFirework = true;
         return result;
     }
 
@@ -419,7 +368,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     {
         var result = new Duration(currNote!);
         if (context == null)
-        { // context为0，说明hold上没有写持续时间标记。根据文档，这属于“疑似each”，持续时间定义为0。
+        { // context为null，说明hold上没有写持续时间标记。根据文档，这属于“疑似each”，持续时间定义为0。
             result.InvariantBar = 0;
             return result;
         }
@@ -430,7 +379,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitBeats(P.BeatsContext context)
     {
-        return new Rational(int.Parse(context.children[2].GetText()), int.Parse(context.children[0].GetText()));
+        return new Rational(int.Parse(context.@int(1).GetText()), int.Parse(context.@int(0).GetText()));
     }
 
     public sealed override object VisitHold(P.HoldContext context)
@@ -460,7 +409,6 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         result.Duration = duration;
         
         ApplyModifiers(context.modifiers(), result);
-        if (extraModifiers.Remove("f")) result.IsFirework = true;
         return result;
     }
     
@@ -545,7 +493,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         else throw Utils.Fail("duration的个数不对"); // 已经在语法层做过检查了，所以这个分支按说是永远不会命中的。
 
-        ApplyModifiers(context.modifiers(), slide);
+        ApplyModifiers(context.modifiers(), slide, clearExtraArr: false);
         return true;
     }
 
@@ -556,12 +504,12 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         
         // 处理星星头
         Tap? head = (Tap)VisitTap(context.tap());
-        if (context.NO_STAR() != null)
+        if (GetModifier(SimaiLexer.NO_STAR))
         { // 标记了NO_STAR的星星，则不要放head、但是需要手动设置Key
             result.Key = head.Key;
             head = null;
         }
-        else if (context.STAR_TO_TAP() == null) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
+        else if (!GetModifier(SimaiLexer.STAR_TO_TAP)) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
         result.OwnHead = head;
         
         currNote = result;

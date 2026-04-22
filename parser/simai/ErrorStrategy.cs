@@ -108,7 +108,8 @@ public class LaxErrorStrategy : DefaultErrorStrategy
 
     private HashSet<int> insertionForbidden = [
         SimaiLexer.COMMA, SimaiLexer.KEY, SimaiLexer.SLIDE_TYPE, SimaiLexer.TOUCH_AREA, SimaiLexer.INT,
-        SimaiLexer.CHART_END, SimaiLexer.MODIFIER, SimaiLexer.FALSE_EACH
+        SimaiLexer.CHART_END, SimaiLexer.FALSE_EACH, 
+        SimaiLexer.MODIFIER, SimaiLexer.NO_STAR, SimaiLexer.STAR_TO_TAP, SimaiLexer.TAP_TO_STAR
     ]; // 逗号，和不确定的可能引起歧义的符号，一律不允许补充
     
     protected override IToken GetMissingSymbol(Parser recognizer)

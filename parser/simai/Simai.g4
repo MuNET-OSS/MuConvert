@@ -31,8 +31,7 @@ number: int ('.' int)?;
 CHART_END: 'E';// 谱面结束那个E
 
 MODIFIER: [bxf]; // 语法层不去检查modifier和tap/hold的搭配和合理性，都丢给语义层去搞
-
-modifiers: (MODIFIER | TAP_TO_STAR)*;
+modifiers: (MODIFIER | TAP_TO_STAR | STAR_TO_TAP | NO_STAR)*;
 
 // ---------------------------------------------------------------------------
 // 语法
@@ -76,7 +75,7 @@ slideDuration: '[' (
 waitTime: number;
 asBpm: number;
 
-slide: tap (NO_STAR | STAR_TO_TAP)? slideBody;
+slide: tap slideBody;
 sharedHeadSlide: '*' slideBody;
     
 slideBody // 根据Simai文档规定，分为两种情况
