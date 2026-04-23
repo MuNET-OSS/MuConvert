@@ -46,8 +46,8 @@ chart: (notations COMMA)* CHART_END? EOF;
 notations: (bpmTag | absulouteStepTag | metTag)* noteGroup?;
 
 noteGroup: note eachNote*;
-FALSE_EACH: '`';
-eachNote: (sep+=('/' | FALSE_EACH))+ note;
+FALSE_EACH: '`'+;
+eachNote: sep=('/' | FALSE_EACH) note?;
 
 bpmTag: (lp+='(')+ number (rp+=')')+;
 absulouteStepTag: (lp+='{')+ '#' number (rp+='}')+;

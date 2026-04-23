@@ -242,10 +242,9 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return true;
     }
 
-    private void WarnMoreThanOneTokens(IList<IToken> ps)
+    private void AlertExtraToken(string extraStr)
     {
-        if (ps.Count <= 1) return;
-        var extraStr = "'" + string.Join("", ps.Skip(1).Select(x => x.Text)) + "'";
+        if (extraStr.First() != '\'') extraStr = "'" + extraStr + "'";
         if (StrictLevel == StrictLevelEnum.Strict)
         { // 严格模式，抛异常
             AddAlert(Error, string.Format(Locale.RecoverInlineExtraneousTokenStrict, extraStr));
@@ -253,11 +252,18 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         else AddAlert(Warning, string.Format(Locale.RecoverInlineExtraneousToken, extraStr));
     }
-    
-    private void WarnMoreParentheses(IList<IToken> lp, IList<IToken> rp)
+
+    private void AlertIfMoreThanOneTokens(IList<IToken> ps)
     {
-        WarnMoreThanOneTokens(lp);
-        WarnMoreThanOneTokens(rp);
+        if (ps.Count <= 1) return;
+        var extraStr = string.Join("", ps.Skip(1).Select(x => x.Text));
+        AlertExtraToken(extraStr);
+    }
+    
+    private void AlertIfMoreParentheses(IList<IToken> lp, IList<IToken> rp)
+    {
+        AlertIfMoreThanOneTokens(lp);
+        AlertIfMoreThanOneTokens(rp);
     }
 
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
@@ -269,7 +275,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             absoluteTimeStepWarned = true;
         }
         currContext = context;
-        WarnMoreParentheses(context._lp, context._rp);
+        AlertIfMoreParentheses(context._lp, context._rp);
         absoluteTimeStep = (decimal)VisitNumber(context.number());
         var currentBpm = chart.BpmList.Last().Bpm;
         step = (Rational)absoluteTimeStep / (240 / (Rational)currentBpm);
@@ -280,7 +286,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     {
         if (SubtreeHasException(context)) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
-        WarnMoreParentheses(context._lp, context._rp);
+        AlertIfMoreParentheses(context._lp, context._rp);
         var bpm = (decimal)VisitNumber(context.number());
         chart.BpmList.Add(new BPM(now, bpm));
         if (absoluteTimeStep != null)
@@ -294,7 +300,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     { // metTag指的是标记分音的tag，如{4}
         if (SubtreeHasException(context)) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
-        WarnMoreParentheses(context._lp, context._rp);
+        AlertIfMoreParentheses(context._lp, context._rp);
         var quaver = int.Parse(context.@int().GetText());
         step = new Rational(1, quaver);
         absoluteTimeStep = null;
@@ -313,28 +319,31 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             else if (child is P.EachNoteContext c2)
             {
                 noteC = c2.note();
-                
-                var separators = c2._sep;
-                if (separators.Count >= 2 && separators.All(x=>x.Type == L.FALSE_EACH))
+                if (noteC == null)
                 {
-                    // 出现连续多个反引号的情况，如"2``3"。
-                    // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
-                    // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
-                    var length = separators.Count * new Rational(1, 128);
-                    now = (now + length).CanonicalForm;
-                    extendedFalseEach += length;
-                    falseEachIdx = 0;
-                    if (!extendedFalseEachWarned)
+                    AlertExtraToken(c2.sep.Text);
+                    continue;
+                }
+                if (c2.sep.Type == L.FALSE_EACH)
+                {
+                    if (c2.sep.Text.Length >= 2)
                     {
-                        AddAlert(Warning, Locale.ExtenedFalseEach, context);
-                        extendedFalseEachWarned = true;
+                        // 出现连续多个反引号的情况，如"2``3"。
+                        // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
+                        // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
+                        var length = c2.sep.Text.Length * new Rational(1, 128);
+                        now = (now + length).CanonicalForm;
+                        extendedFalseEach += length;
+                        falseEachIdx = 0;
+                        if (!extendedFalseEachWarned)
+                        {
+                            AddAlert(Warning, Locale.ExtenedFalseEach, context);
+                            extendedFalseEachWarned = true;
+                        }
                     }
+                    else falseEachIdx++; // 普通的伪双押
                 }
-                else
-                {
-                    WarnMoreThanOneTokens(separators);
-                    if (separators[0].Type == L.FALSE_EACH) falseEachIdx++;
-                }
+                // else 是普通双押符号'/'。无需做任何特殊处理，正常解析noteContext就好。
             }
             else throw Utils.Fail();
 
@@ -459,7 +468,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             result.InvariantBar = 0;
             return result;
         }
-        WarnMoreParentheses(context._lp, context._rp);
+        AlertIfMoreParentheses(context._lp, context._rp);
         if (context.beats() != null) result.InvariantBar = (Rational)VisitBeats(context.beats());
         else result.Seconds = (Rational)(decimal)VisitNumber(context.number());        
         return result;
@@ -505,7 +514,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         var result = new Duration(currNote!);
         Duration? waitTime = null;
         isRealExactWaitTime = false;
-        WarnMoreParentheses(context._lp, context._rp);
+        AlertIfMoreParentheses(context._lp, context._rp);
 
         if (context.waitTime() != null)
         {

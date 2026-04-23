@@ -83,7 +83,7 @@
     <value>bar time {0:W}({1:F2}s)</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
-    <value>parsing {0}</value>
+    <value>parsing "{0}"</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>ERROR:</value>

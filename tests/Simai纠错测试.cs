@@ -10,11 +10,11 @@ namespace MuConvert.Tests;
 /// 另含带 <c>#</c>、<c>||</c> 行注释的谱面（见 <see cref="Comment_Cases"/> / <see cref="含有注释"/>），与 Preprocess 去注释行为对齐。
 /// 在 <see cref="SimaiParser.Preprocess"/> 尚未接入对应替换逻辑前，本文件中的测试失败或抛错属于预期行为（TDD）。
 /// </summary>
-public class Simai预处理纠错测试
+public class Simai纠错测试
 {
     private readonly ITestOutputHelper _output;
 
-    public Simai预处理纠错测试(ITestOutputHelper output) => _output = output;
+    public Simai纠错测试(ITestOutputHelper output) => _output = output;
 
     /// <summary>规范 simai → 完整 MA2 文本（含头与 BPM）。</summary>
     private string SimaiToMa2(string inote, bool DontTryFix = false)
@@ -109,6 +109,12 @@ public class Simai预处理纠错测试
             "(120){4}1/2,2/3,4,E",
             "(120){4}1//2,2//3,4,E"
         ];
+        yield return
+        [
+            "1/ 后没有音符",
+            "(120){4}1,(90)2,3,",
+            "(120){4}1/,(90)2,3,"
+        ];
     }
     
     public static IEnumerable<object[]> Comment_Cases()
@@ -199,5 +205,72 @@ public class Simai预处理纠错测试
 
         var actual = SimaiToMa2(malformedSimai, true);
         Assert.Equal(expected, actual);
+    }
+
+    /// <summary>
+    /// 仅覆盖 <see cref="Lax_Scratch_Cases"/>（scratch NewFile1..6）；以 Lax 解析 <paramref name="malformedSimai"/>，
+    /// 结果应与规范串在 Strict 下得到的 MA2 一致。
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Lax_Scratch_Cases))]
+    public void Lax模式测试(string description, string canonicalSimai, string malformedSimai)
+    {
+        _output.WriteLine(description);
+
+        string expected;
+        try
+        {
+            expected = SimaiToMa2(canonicalSimai, true);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException($"Canonical simai failed (fix test data): {description}", e);
+        }
+
+        var actual = SimaiToMa2Lax(malformedSimai);
+        Assert.Equal(expected, actual);
+    }
+
+    /// <summary>
+    /// 来自 <c>tests/testset/scratch/NewFile1..6.txt</c> 的片段；规范串由 Lax 解析后 <see cref="SimaiGenerator"/> 反写得到。
+    /// </summary>
+    public static IEnumerable<object[]> Lax_Scratch_Cases()
+    {
+        yield return
+        [
+            "无效 &",
+            "(120){4}1,2,3,",
+            "(120){4}1,2&,3,"
+        ];
+        yield return
+        [
+            "数字与 '(' BPM 缺逗号",
+            "(120){4}1,(120)2,3,",
+            "(120){4}1(120)2,3,"
+        ];
+        yield return
+        [
+            "无法解析的 '-2,'（Lax 丢弃）",
+            "(120){4},3,4,",
+            "(120){4}1-2,3,4,"
+        ];
+        yield return
+        [
+            "1/ 后没有音符",
+            "(120){4}1,(90)2,3,",
+            "(120){4}1/,(90)2,3,"
+        ];
+        yield return
+        [
+            "多余的 '['",
+            "(120){4}1,2,3,",
+            "(120){4}1[,2,3,"
+        ];
+        yield return
+        [
+            "Hold 时长损坏（Lax 丢弃该 Hold）",
+            "(120){4}1,,3,4-5[6:1],7,8,E",
+            "(120){4}1,2h[3:,3,4-5[6:1],7,8,E"
+        ];
     }
 }

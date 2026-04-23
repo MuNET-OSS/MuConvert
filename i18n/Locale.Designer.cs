@@ -339,7 +339,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to parsing {0}.
+        ///   Looks up a localized string similar to parsing &quot;{0}&quot;.
         /// </summary>
         public static string MessageParsing {
             get {
