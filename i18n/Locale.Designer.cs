@@ -429,6 +429,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Extraneous token: {0} (typo?).
+        /// </summary>
+        public static string RecoverInlineExtraneousTokenStrict {
+            get {
+                return ResourceManager.GetString("RecoverInlineExtraneousTokenStrict", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Missing token {1} before {0} (typo?). Inserted automatically..
         /// </summary>
         public static string RecoverInlineMissingToken {

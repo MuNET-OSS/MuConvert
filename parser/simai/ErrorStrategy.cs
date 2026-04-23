@@ -3,8 +3,9 @@ using Antlr4.Runtime.Misc;
 using MuConvert.Antlr;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
+using L = MuConvert.Antlr.SimaiLexer;
 
-namespace MuConvert.parser;
+namespace MuConvert.parser.simai;
 
 public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrErrorListener<int>
 {
@@ -18,14 +19,14 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
             {
                 simaiParser.alerts.Add(new Alert(Warning, 
                     string.Format(Locale.RecoverInlineExtraneousToken, GetTokenErrorDisplay(offendingSymbol)), 
-                    line: line, relevantNote: _contextText(parser.Context)));
+                    line: line, relevantNote: RelevantNote(parser.Context)));
                 return;
             }
             else if (msg.StartsWith("missing"))
             {
                 simaiParser.alerts.Add(new Alert(Warning, 
                     string.Format(Locale.RecoverInlineMissingToken, GetTokenErrorDisplay(offendingSymbol), parser.GetExpectedTokens().ToString(parser.Vocabulary)), 
-                    line: line, relevantNote: _contextText(parser.Context)));
+                    line: line, relevantNote: RelevantNote(parser.Context)));
                 return;
             }
         }
@@ -48,7 +49,7 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
                 message = string.Format(Locale.AntlrUnknownError, msg);
                 break;
         }
-        simaiParser.alerts.Add(new Alert(level, message, line: line, relevantNote: _contextText(parser.Context)));
+        simaiParser.alerts.Add(new Alert(level, message, line: line, relevantNote: RelevantNote(parser.Context)));
     }
 
     // 词法分析的错误报告函数
@@ -73,7 +74,7 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
     }
 
     // 从context获得为适合放进relevantNote里的形式
-    private string? _contextText(RuleContext? context)
+    private static string? RelevantNote(RuleContext? context)
     {
         while (true)
         {
@@ -98,26 +99,29 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
 /**
  * 最宽松的ErrorStrategy，尽全力恢复不让谱面整个垮掉
  */
-public class LaxErrorStrategy : DefaultErrorStrategy
+public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
 {
     protected override IToken SingleTokenDeletion(Parser recognizer)
     {
-        if (recognizer.CurrentToken?.Type == SimaiLexer.COMMA) return null!; // 不准删逗号
+        if (recognizer.CurrentToken?.Type == L.COMMA) return null!; // 不准删逗号
         return base.SingleTokenDeletion(recognizer);
     }
 
     private HashSet<int> insertionForbidden = [
-        SimaiLexer.COMMA, SimaiLexer.KEY, SimaiLexer.SLIDE_TYPE, SimaiLexer.TOUCH_AREA, SimaiLexer.INT,
-        SimaiLexer.CHART_END, SimaiLexer.FALSE_EACH, 
-        SimaiLexer.MODIFIER, SimaiLexer.NO_STAR, SimaiLexer.STAR_TO_TAP, SimaiLexer.TAP_TO_STAR
-    ]; // 逗号，和不确定的可能引起歧义的符号，一律不允许补充
+        L.KEY, L.SLIDE_TYPE, L.TOUCH_AREA, L.INT, L.CHART_END, L.FALSE_EACH, 
+        L.MODIFIER, L.NO_STAR, L.STAR_TO_TAP, L.TAP_TO_STAR
+    ]; // 不确定的可能引起歧义的符号，一律不允许补充
+    private HashSet<int> insertCommaOnlyWhen = [_literals["("], _literals["{"]];
     
     protected override IToken GetMissingSymbol(Parser recognizer)
     {
         IToken currentToken = recognizer.CurrentToken;
         
         // 不准插入insertionForbidden里提到的元素
-        var insertionCandidates = GetExpectedTokens(recognizer).ToList().Where(x => !insertionForbidden.Contains(x)).ToList();
+        var insertionCandidates = GetExpectedTokens(recognizer).ToList()
+            .Where(x => !insertionForbidden.Contains(x)) // 上述黑名单中的不准插入
+            .Where(x => x != L.COMMA || insertCommaOnlyWhen.Contains(recognizer.InputStream.LA(1))) // 逗号，只准在后面跟着的是'('或'{'的情况下才准插入
+            .ToList();
         if (insertionCandidates.Count == 0) throw new InputMismatchException(recognizer); // 等价于SingleTokenInsertion返回false的情况，recoverInline失败、转交给上层recover处理
         int minElement = insertionCandidates[0];
         
@@ -129,10 +133,21 @@ public class LaxErrorStrategy : DefaultErrorStrategy
         return this.ConstructToken(((ITokenStream) recognizer.InputStream).TokenSource, minElement, tokenText, current);
     }
 
+    protected override void ReportMissingToken(Parser recognizer)
+    {
+        try
+        { // 如果稍后GetMissingSymbol时将会被拒绝（抛异常），则跳过警告日志的打印，反正会去打印InputMismatch
+            GetMissingSymbol(recognizer);
+            base.ReportMissingToken(recognizer);
+        } 
+        catch (InputMismatchException) {} // ignored 
+    }
+
     private static Dictionary<string, int> _literals = Enumerable.Range(1, SimaiLexer.ruleNames.Length)
-        .ToDictionary(i => SimaiLexer.DefaultVocabulary.GetLiteralName(i), i => i);
+        .Where(i=>SimaiLexer.DefaultVocabulary.GetLiteralName(i) != null)
+        .ToDictionary(i => SimaiLexer.DefaultVocabulary.GetLiteralName(i)[1..^1], i => i);
     private List<int> recoverySetAllowed = [
-        SimaiLexer.COMMA, SimaiLexer.FALSE_EACH, _literals["'/'"], _literals["'('"], _literals["'{'"]
+        L.COMMA, L.FALSE_EACH, _literals["/"], _literals["("], _literals["{"]
     ]; // recover时，为了确保整个吞掉不合法的音符，而不是出现残缺的东西导致parser报错，只准同步到上面这些字符当中
     
     public override void Recover(Parser recognizer, RecognitionException e)
@@ -155,7 +170,7 @@ public class LaxErrorStrategy : DefaultErrorStrategy
 /**
  * 允许recoverInline，但是禁止大范围recover。
  */
-public class ModerateErrorStrategy : LaxErrorStrategy
+public class ModerateErrorStrategy(SimaiParser simaiParser) : LaxErrorStrategy(simaiParser)
 {
     private BailErrorStrategy _bail = new();
     

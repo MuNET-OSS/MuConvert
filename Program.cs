@@ -26,6 +26,9 @@ internal static class Program
         {
             PrintAlerts(ex.Alerts, "转换失败：");
             Console.Error.WriteLine("转换失败！报错详见如上。您可以通过 https://github.com/MuNet-OSS/MuConvert/issues 反馈问题。");
+#if DEBUG
+            Console.Error.WriteLine(ex);
+#endif
             return 1;
         }
         catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)

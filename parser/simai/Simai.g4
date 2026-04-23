@@ -47,9 +47,9 @@ FALSE_EACH: '`';
 eachSeparators: '/' | FALSE_EACH+;
 eachNote: eachSeparators note;
 
-bpmTag: '(' number ')';
-absulouteStepTag: '{' '#' number '}';
-metTag: '{' int '}';
+bpmTag: (lp+='(')+ number (rp+=')')+;
+absulouteStepTag: (lp+='{')+ '#' number (rp+='}')+;
+metTag: (lp+='{')+ int (rp+='}')+;
 
 note: slide (sharedHeadSlide)* | tap | KEY+ | hold | touch | touchHold; // tap+是因为，simai允许123这种语法、和1/2/3是等价的，但仅限tap之间。
 
@@ -62,16 +62,16 @@ touch: TOUCH_AREA modifiers;
 
 touchHold: TOUCH_AREA modifiers 'h' modifiers (duration modifiers)?;
 
-duration: '[' (beats | '#' number) ']';
+duration: (lp+='[')+ (beats | '#' number) (rp+=']')+;
 beats: int ':' int;
     
-slideDuration: '[' (
+slideDuration: (lp+='[')+ (
         beats
         | '#' number
         | waitTime '##' asBpm '#' (beats | number)
         | waitTime '##' (beats | number)
         | asBpm '#' (beats | number)
-    ) ']';
+    ) (rp+=']')+;
 waitTime: number;
 asBpm: number;
 

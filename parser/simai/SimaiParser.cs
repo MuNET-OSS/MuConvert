@@ -3,6 +3,7 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using MuConvert.Antlr;
 using MuConvert.chart;
+using MuConvert.parser.simai;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -77,12 +78,14 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         try
         { // 词语法分析
             var inputStream = new AntlrInputStream(text);
-            var lexer = new SimaiLexer(inputStream) { ErrorListeners = { new ErrorListener(this) } };
+            var lexer = new SimaiLexer(inputStream);
+            lexer.RemoveErrorListeners();
+            lexer.AddErrorListener(new ErrorListener(this));
             var tokens = new CommonTokenStream(lexer);
-            var parser = new P(tokens) // MuConvert.Antlr.SimaiParser
-            {
-                ErrorHandler = ErrorStrategy(), ErrorListeners = { new ErrorListener(this) }
-            };
+            
+            var parser = new P(tokens) { ErrorHandler = ErrorStrategy() }; // MuConvert.Antlr.SimaiParser
+            parser.RemoveErrorListeners();
+            parser.AddErrorListener(new ErrorListener(this));
             root = parser.chart();
         }
         catch (Antlr4.Runtime.Misc.ParseCanceledException e)
@@ -116,10 +119,10 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             case StrictLevelEnum.Strict:
                 return new BailErrorStrategy();
             case StrictLevelEnum.Lax:
-                return new LaxErrorStrategy();
+                return new LaxErrorStrategy(this);
             case StrictLevelEnum.Normal:
             default:
-                return new ModerateErrorStrategy();
+                return new ModerateErrorStrategy(this);
         }
     }
 
@@ -147,6 +150,16 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         AddAlert(Warning, string.Format(Locale.StartNoBpm, defaultStartBpm));
         Utils.Assert(now == 0, "现在已经不是开头了？？");
         chart.BpmList.Add(new BPM(now, defaultStartBpm));
+    }
+
+    private static bool SubtreeHasException(ParserRuleContext root)
+    {
+        if (root.exception != null) return true;
+        foreach (var child in root.children ?? Array.Empty<IParseTree>())
+        {
+            if (child is ParserRuleContext pr && SubtreeHasException(pr)) return true;
+        }
+        return false;
     }
 
     public sealed override object VisitNotations(P.NotationsContext context)
@@ -178,14 +191,34 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return true;
     }
 
+    private void WarnMoreParentheses(IList<IToken> ps)
+    {
+        if (ps.Count <= 1) return;
+        var extraStr = "'" + string.Join("", ps.Skip(1).Select(x => x.Text)) + "'";
+        if (StrictLevel == StrictLevelEnum.Strict)
+        { // 严格模式，抛异常
+            AddAlert(Error, string.Format(Locale.RecoverInlineExtraneousTokenStrict, extraStr));
+            throw new ConversionException(alerts);
+        }
+        else AddAlert(Warning, string.Format(Locale.RecoverInlineExtraneousToken, extraStr));
+    }
+    
+    private void WarnMoreParentheses(IList<IToken> lp, IList<IToken> rp)
+    {
+        WarnMoreParentheses(lp);
+        WarnMoreParentheses(rp);
+    }
+
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
     {
-        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
+        if (SubtreeHasException(context)) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         if (!absoluteTimeStepWarned)
         {
             AddAlert(Warning, string.Format(Locale.AbsoluteStepUsed, context.GetText()), context);
             absoluteTimeStepWarned = true;
         }
+        currContext = context;
+        WarnMoreParentheses(context._lp, context._rp);
         absoluteTimeStep = (decimal)VisitNumber(context.number());
         var currentBpm = chart.BpmList.Last().Bpm;
         step = (Rational)absoluteTimeStep / (240 / (Rational)currentBpm);
@@ -194,8 +227,9 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitBpmTag(P.BpmTagContext context)
     {
-        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
+        if (SubtreeHasException(context)) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
+        WarnMoreParentheses(context._lp, context._rp);
         var bpm = (decimal)VisitNumber(context.number());
         chart.BpmList.Add(new BPM(now, bpm));
         if (absoluteTimeStep != null)
@@ -207,8 +241,9 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public sealed override object VisitMetTag(P.MetTagContext context)
     { // metTag指的是标记分音的tag，如{4}
-        if (context.exception != null) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
+        if (SubtreeHasException(context)) return false; // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
+        WarnMoreParentheses(context._lp, context._rp);
         var quaver = int.Parse(context.@int().GetText());
         step = new Rational(1, quaver);
         absoluteTimeStep = null;
@@ -266,7 +301,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         // 注：这个函数返回的是List<Note>，因为ANTLR中的NoteContext，虽然大多数时候只对应一个Note，但有时也可能是两个以上！
         // 具体而言，两种情况：1. "1234"这种simai允许的tap多押简略记法（等价于"1/2/3/4"）
         // 2. 同头星星如"1-2[2:1]*-3[2:1]"，它在我们定义的ANTLR语法中是作为一个note节点的！
-        if (context.exception != null) return new List<Note>(); // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
+        if (SubtreeHasException(context)) return new List<Note>(); // 如果本节点下有异常，则直接整个吞掉，（避免具体的规则遇到不完整子树、爆出更不可预测的错误）
         currContext = context;
         List<Note> result = [];
         foreach (var child in context.children)
@@ -326,7 +361,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 if (child is not ITerminalNode modifier) throw Utils.Fail("modifiers里面居然不是ITerminalNode");
                 var token = modifier.Symbol;
                 if (token.Text == "b" && note is not Touch) note.IsBreak = true;
-                else if (token.Text == "x" && note is Tap) note.IsEx = false;
+                else if (token.Text == "x" && note is Tap) note.IsEx = true;
                 else if (token.Text == "f" && note is Touch touch) touch.IsFirework = true;
                 else extraModifiers.Add(token);
             }
@@ -372,6 +407,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             result.InvariantBar = 0;
             return result;
         }
+        WarnMoreParentheses(context._lp, context._rp);
         if (context.beats() != null) result.InvariantBar = (Rational)VisitBeats(context.beats());
         else result.Seconds = (Rational)(decimal)VisitNumber(context.number());        
         return result;
@@ -417,6 +453,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         var result = new Duration(currNote!);
         Duration? waitTime = null;
         isRealExactWaitTime = false;
+        WarnMoreParentheses(context._lp, context._rp);
 
         if (context.waitTime() != null)
         {

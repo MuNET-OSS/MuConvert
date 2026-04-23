@@ -190,6 +190,9 @@
   <data name="RecoverInlineExtraneousToken" xml:space="preserve">
     <value>多余的符号: {0} (是不是手滑按错了？)，已忽略该符号。</value>
   </data>
+  <data name="RecoverInlineExtraneousTokenStrict" xml:space="preserve">
+    <value>多余的符号: {0} (是不是手滑按错了？)</value>
+  </data>
   <data name="RecoverInlineMissingToken" xml:space="preserve">
     <value>在 {0} 前似乎缺失了符号 {1} (是不是漏打了？)，已尝试帮您补全。</value>
   </data>
