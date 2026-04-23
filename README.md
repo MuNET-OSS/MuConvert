@@ -25,7 +25,7 @@ MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 #### 基本用法
 
 ```shell
-MuConvert.exe <path> [-l|--levels N[,N...]] [-o|--output <输出路径或->]
+MuConvert.exe <path> [-l|--levels N[,N...]] [-o|--output <输出路径或->] [--strict|--lax]
 ```
 
 - **`path`**：输入路径（必填），可以是 `.txt` / `.ma2` / 目录（见下文）
@@ -33,6 +33,10 @@ MuConvert.exe <path> [-l|--levels N[,N...]] [-o|--output <输出路径或->]
 - **`-o, --output`**：指定输出位置（可选）；不传入此参数时，文件将保存到“输入文件所在的目录”。
   - 会智能识别你传入的是目录还是文件，做智能的处理，将转谱结果输入到目录下或保存为文件。
   - 此外，还可以传入 `-` ，表示输出到stdout。
+- **`--strict` / `--lax`**：控制 Simai 解析器 `SimaiParser` 的严格程度（`StrictLevel`），**仅在 Simai → MA2**时有效。`--strict` 对应严格模式，`--lax` 对应宽松模式；二者**不可同时**指定；均省略时为普通模式（`Normal`）。
+  - `--strict`（严格模式）：几乎不会自动修复任何错误，遇到解析错误/非标准语法直接报错退出。
+  - 默认模式：会尽力尝试修复一些局部性的错误，并给出警告。但遇到无法修复的错误时则会报错退出。
+  - `--lax`（宽松模式）：同上会尽力修复错误，而对于无法修复的错误，会把错误所在的音符**直接吞掉**（并给出警告），以换取解析可以继续向下进行。一般来说除非遇到很严重的问题，不会报错退出。
 
 #### `path` 支持的输入形式与输出规则
 通过命令行传入的参数，既可以是文件，也可以是目录。
@@ -113,6 +117,7 @@ return maidataText; // maidataText即为转谱结果
   - SimaiParser带有以下选项：
     - bool `bigTouch` (默认为false): 是否将谱面中的Touch和TouchHold生成为大尺寸。
     - int `clockCount` (默认为4): 控制在谱面开头的“哒哒哒哒”的那几声，有几下。
+    - StrictLevelEnum `strictLevel` (默认为 `Normal`): 解析 Simai 时的严格程度（`Strict` / `Normal` / `Lax`），影响语法容错与报错策略。各个严格程度策略的具体含义，请参见上方[CLI文档](#基本用法)中的相关描述。
   - MA2Generator带有以下选项：
     - bool `isUtage` (默认为false): 仅影响生成的MA2的文件头区域的`FES_MODE`的值是1还是0，一般来说是不重要的。
 

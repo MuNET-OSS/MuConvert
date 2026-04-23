@@ -133,7 +133,7 @@
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
     <value>Charts whose MET_DEF is not "4 4" are not supported yet!</value>
   </data>
-  <data name="NoNotesInMA2" xml:space="preserve">
+  <data name="NoNotesInChart" xml:space="preserve">
     <value>The chart has no notes!</value>
   </data>
   <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">

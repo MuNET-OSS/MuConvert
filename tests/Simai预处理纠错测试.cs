@@ -27,6 +27,17 @@ public class Simai预处理纠错测试
         return ma2;
     }
 
+    /// <summary>非规范 simai → 完整 MA2（<see cref="SimaiParser.StrictLevelEnum.Lax"/>）。</summary>
+    private string SimaiToMa2Lax(string inote)
+    {
+        var parser = new SimaiParser(strictLevel: SimaiParser.StrictLevelEnum.Lax);
+        var (chart, alerts) = parser.Parse(inote);
+        var (ma2, alerts2) = new MA2Generator().Generate(chart);
+        _output.WriteLine(string.Join('\n', alerts));
+        _output.WriteLine(string.Join('\n', alerts2));
+        return ma2;
+    }
+
     public static IEnumerable<object[]> TryFix_Cases()
     {
         // SimaiError1: 数字与小节拍号 {n} 之间漏写逗号（时间轴被粘在一起）

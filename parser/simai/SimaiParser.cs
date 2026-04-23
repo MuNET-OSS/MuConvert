@@ -133,6 +133,11 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             parser.RemoveErrorListeners();
             parser.AddErrorListener(new ErrorListener(this));
             root = parser.chart();
+            if (root.children.Count == 1)
+            { // 只有一个EOF
+                alerts.Add(new Alert(Error, Locale.NoNotesInChart)); 
+                throw new ConversionException(alerts);
+            }
         }
         catch (ParseCanceledException e)
         { // ErrorListener里会把alerts加好的，因此这里直接抛异常就可以了。

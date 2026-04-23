@@ -133,7 +133,7 @@
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
     <value>暂不支持MET_DEF不为"4 4"的谱面！</value>
   </data>
-  <data name="NoNotesInMA2" xml:space="preserve">
+  <data name="NoNotesInChart" xml:space="preserve">
     <value>谱面中没有音符！</value>
   </data>
   <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">

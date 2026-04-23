@@ -193,14 +193,14 @@ public class MA2Parser : IParser
             }
         }
 
+        if (chart.Notes.Count == 0)
+        {
+            alerts.Add(new Alert(Error, Locale.NoNotesInChart));
+            throw new ConversionException(alerts);
+        }
         if (!bpmRead)
         {
             alerts.Add(new Alert(Error, Locale.NoBPMInMA2));
-            throw new ConversionException(alerts);
-        }
-        if (chart.Notes.Count == 0)
-        {
-            alerts.Add(new Alert(Error, Locale.NoNotesInMA2));
             throw new ConversionException(alerts);
         }
         

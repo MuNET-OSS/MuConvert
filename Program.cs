@@ -62,6 +62,20 @@ internal static class Program
             HelpName = "path"
         };
 
+        var strictOption = new Option<bool>("--strict")
+        {
+            Description = "Simai转MA2时，解析使用严格模式。不可与 --lax 同时使用。",
+            Arity = ArgumentArity.ZeroOrOne,
+            DefaultValueFactory = _ => false
+        };
+
+        var laxOption = new Option<bool>("--lax")
+        {
+            Description = "Simai转MA2时，解析使用宽松模式。不可与 --strict 同时使用。",
+            Arity = ArgumentArity.ZeroOrOne,
+            DefaultValueFactory = _ => false
+        };
+
         var inputArgument = new Argument<string>("path")
         {
             Description = "可以输入以下几种情况：\n" +
@@ -74,6 +88,8 @@ internal static class Program
 
         root.Options.Add(levelsOption);
         root.Options.Add(outputOption);
+        root.Options.Add(strictOption);
+        root.Options.Add(laxOption);
         root.Arguments.Add(inputArgument);
 
         root.SetAction(parseResult =>
@@ -82,6 +98,13 @@ internal static class Program
                 ?? throw new InvalidOperationException("缺少参数 path。");
             var levelsRaw = parseResult.GetValue(levelsOption);
             _outputSpec = OutputSpec.Parse(parseResult.GetValue(outputOption));
+
+            var cliStrict = parseResult.GetValue(strictOption);
+            var cliLax = parseResult.GetValue(laxOption);
+            if (cliStrict && cliLax) throw new ArgumentException("不能同时指定 --strict 与 --lax。");
+            else if (cliStrict) _simaiStrictLevel = SimaiParser.StrictLevelEnum.Strict;
+            else if (cliLax) _simaiStrictLevel = SimaiParser.StrictLevelEnum.Lax;
+
             RunConvert(inputPath, levelsRaw);
         });
 
@@ -90,6 +113,7 @@ internal static class Program
 
     /// <summary>由 CLI 在每次 <c>SetAction</c> 入口赋值；转换逻辑只读此字段。</summary>
     private static OutputSpec _outputSpec;
+    private static SimaiParser.StrictLevelEnum _simaiStrictLevel = SimaiParser.StrictLevelEnum.Normal;
 
     private enum OutputSinkKind { Default, Stdout, Directory, File }
     
@@ -256,6 +280,8 @@ internal static class Program
     {
         if (ma2FullPaths.Count == 0)
             throw new ArgumentException("未提供任何 .ma2 文件。");
+        if (_simaiStrictLevel != SimaiParser.StrictLevelEnum.Normal)
+            throw new ArgumentException("--strict / --lax 仅适用于 Simai（.txt / maidata）转 MA2，不能用于 MA2 转 Simai。");
 
         var paths = ma2FullPaths.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var levelFilter = string.IsNullOrWhiteSpace(levelsRaw) ? null : ParseLevelList(levelsRaw);
@@ -354,7 +380,7 @@ internal static class Program
             var chartInfo = maidata.Levels[id];
             var bigTouch = id is 2 or 3;
             var isUtage = IsUtageFromLevelString(chartInfo.Level);
-            var ma2 = SimaiToMa2(chartInfo.Inote, maidata.ClockCount, bigTouch, isUtage);
+            var ma2 = SimaiToMa2(chartInfo.Inote, maidata.ClockCount, bigTouch, isUtage, _simaiStrictLevel);
             if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(ma2);
             else File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
@@ -367,7 +393,7 @@ internal static class Program
         var outPath = _outputSpec.Kind == OutputSinkKind.File ? _outputSpec.FsPath! : Path.Combine(baseDir, $"lv_{outputLevel}.ma2");
         var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : outPath;
         Console.Error.WriteLine($"Simai → MA2: {inputPath}(lv{outputLevel}) → {destNote}");
-        var ma2 = SimaiToMa2(text);
+        var ma2 = SimaiToMa2(text, strictLevel: _simaiStrictLevel);
         if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(ma2);
         else File.WriteAllText(outPath, ma2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
@@ -395,9 +421,10 @@ internal static class Program
             throw new ArgumentException($"输出文件扩展名须为「{requiredExt}」，当前为「{(string.IsNullOrEmpty(ext) ? "(无)" : ext)}」。");
     }
 
-    private static string SimaiToMa2(string inote, int clockCount=4, bool bigTouch=false, bool isUtage=false)
+    private static string SimaiToMa2(string inote, int clockCount = 4, bool bigTouch = false, bool isUtage = false,
+        SimaiParser.StrictLevelEnum strictLevel = SimaiParser.StrictLevelEnum.Normal)
     {
-        var (chart, parseAlerts) = new SimaiParser(bigTouch, clockCount).Parse(inote);
+        var (chart, parseAlerts) = new SimaiParser(bigTouch, clockCount, strictLevel).Parse(inote);
         PrintAlerts(parseAlerts);
         var (ma2, genAlerts) = new MA2Generator(isUtage).Generate(chart);
         PrintAlerts(genAlerts);

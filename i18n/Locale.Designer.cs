@@ -377,9 +377,9 @@ namespace MuConvert {
         /// <summary>
         ///   Looks up a localized string similar to The chart has no notes!.
         /// </summary>
-        public static string NoNotesInMA2 {
+        public static string NoNotesInChart {
             get {
-                return ResourceManager.GetString("NoNotesInMA2", resourceCulture);
+                return ResourceManager.GetString("NoNotesInChart", resourceCulture);
             }
         }
         
