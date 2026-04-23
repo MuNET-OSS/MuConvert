@@ -21,8 +21,11 @@ STAR_TO_TAP: '@';
 NO_STAR: '?' | '!';
 
 KEY: [1-8];
-SLIDE_TYPE: '-' | 'v' | '<' | '>' | '^' | 'p' | 'q' | 'pp' | 'qq' | 's' | 'z' | 'w' | 'V' KEY;  // 只有V后面需要多跟一个键位号
 TOUCH_AREA: 'A' [1-8] | 'B' [1-8] | 'C' [1-2]? | 'D' [1-8] | 'E' [1-8];
+
+SLIDE_TYPE: '-' | 'v' | '<' | '>' | '^' | 'p' | 'q' | 'pp' | 'qq' | 's' | 'z' | 'w' | 'V' KEY;  // 只有V后面需要多跟一个键位号
+slideType: SLIDE_TYPE;
+
 INT: [0-9];
 
 int: (KEY | INT)+;
@@ -77,10 +80,8 @@ asBpm: number;
 
 slide: tap slideBody;
 sharedHeadSlide: '*' slideBody;
-    
-slideBody // 根据Simai文档规定，分为两种情况
-    : (slideType KEY)* slideType KEY modifiers slideDuration modifiers // 只有最后一段星星有时间指定
-    | (slideType KEY slideDuration)* slideType KEY modifiers slideDuration modifiers // 每一段星星都有独立的时间指定
-    ;
 
-slideType: SLIDE_TYPE;
+slideBody // 根据Simai文档规定，分为两种情况
+    : slideType KEY (slideType KEY)* modifiers slideDuration modifiers // 只有最后一段星星有时间指定
+    | slideType KEY (slideDuration slideType KEY)* modifiers slideDuration modifiers // 每一段星星都有独立的时间指定
+    ;

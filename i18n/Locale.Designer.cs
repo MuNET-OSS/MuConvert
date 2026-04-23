@@ -150,6 +150,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to . Fixed automatically..
+        /// </summary>
+        public static string Fixed {
+            get {
+                return ResourceManager.GetString("Fixed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to INFO:.
         /// </summary>
         public static string Info {

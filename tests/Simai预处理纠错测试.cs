@@ -91,6 +91,13 @@ public class Simai预处理纠错测试
             "(120){4}1?-3[1:1],E",
             "(120){4}1-?3[1:1],E"
         ];
+        
+        yield return
+        [
+            "多打了一个双押符号",
+            "(120){4}1//2,2//3,4,E",
+            "(120){4}1/2,2//3,4,E"
+        ];
     }
     
     public static IEnumerable<object[]> Comment_Cases()

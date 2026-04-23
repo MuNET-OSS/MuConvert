@@ -205,4 +205,7 @@
   <data name="LaxTryfixReminder" xml:space="preserve">
     <value>。出问题的音符已被丢弃。</value>
   </data>
+  <data name="Fixed" xml:space="preserve">
+    <value>。已自动为您修复。</value>
+  </data>
 </root>

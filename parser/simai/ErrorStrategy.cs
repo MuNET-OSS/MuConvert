@@ -4,6 +4,7 @@ using MuConvert.Antlr;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
 using L = MuConvert.Antlr.SimaiLexer;
+using P = MuConvert.Antlr.SimaiParser;
 
 namespace MuConvert.parser.simai;
 
@@ -152,6 +153,8 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
     
     public override void Recover(Parser recognizer, RecognitionException e)
     {
+        if (SpecificRecover((P)recognizer, e)) return; // 是特定类型的错误、已通过SpecificRecover修复完成
+        
         if (this.lastErrorIndex == recognizer.InputStream.Index && this.lastErrorStates != null && this.lastErrorStates.Contains(recognizer.State))
             recognizer.Consume();
         this.lastErrorIndex = recognizer.InputStream.Index;
@@ -165,6 +168,48 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
         
         this.ConsumeUntil(recognizer, errorRecoverySet);
     }
+
+    /**
+     * 尝试修复一些特定类型的错误。
+     * - beats中，':'误打为'-'
+     */
+    protected virtual bool SpecificRecover(P parser, RecognitionException e)
+    {
+        var ctx = parser.Context;
+        var rule = ctx.RuleIndex;
+        if (rule == P.RULE_beats && e is InputMismatchException && 
+            e.OffendingToken.Text == "-" && e.GetExpectedTokens().Contains(_literals[":"]))
+        { // [4:1]中，错把:打成-了
+            simaiParser.alerts.Last().Level = Warning; // Error改为Warning，因为恢复了
+            simaiParser.alerts.Last().Description += Locale.Fixed;
+            parser.Match(L.SLIDE_TYPE);
+            ctx.exception = null;
+            parser.@int();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 重新执行func对应的解析函数，并把结果合并进oldContext。
+     */
+    protected void Rerun<T>(P parser, Func<T> func, T oldContext) where T : ParserRuleContext
+    {
+        // 缓存全局变量，便于稍后恢复现场
+        var savedState = parser.State;
+        var savedContext = parser.Context;
+        // 设置现场为父级的状态，从而为再次调用解析函数做好准备
+        parser.State = oldContext.invokingState;
+        parser.Context = (ParserRuleContext)oldContext.Parent;
+        // 再次调用解析函数，得到的结果（子节点）合并进oldContext、新节点删除之
+        var newContext = func();
+        parser.Context?.RemoveLastChild(); // func返回时会调用ExitRule，从而context还是oldContext.Parent不变，直接RemoveLastChild()即可移除newContext
+        oldContext.children = oldContext.children.Concat(newContext.children).ToList();
+        oldContext.exception = null;
+        // 恢复现场
+        parser.State = savedState;
+        parser.Context = savedContext;
+    }
 }
 
 /**
@@ -174,5 +219,9 @@ public class ModerateErrorStrategy(SimaiParser simaiParser) : LaxErrorStrategy(s
 {
     private BailErrorStrategy _bail = new();
     
-    public override void Recover(Parser recognizer, RecognitionException e) => _bail.Recover(recognizer, e); // 不准recover，只准recoverInline
+    public override void Recover(Parser recognizer, RecognitionException e)
+    {
+        if (SpecificRecover((P)recognizer, e)) return; // 是特定类型的错误、已通过SpecificRecover修复完成，则ok
+        _bail.Recover(recognizer, e); // 否则，不准recover（通过bail strategy的recover方法来抛异常），只准recoverInline
+    }
 }

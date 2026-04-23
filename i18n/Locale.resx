@@ -205,4 +205,7 @@
   <data name="LaxTryfixReminder" xml:space="preserve">
     <value>. The affected note(s) was discarded.</value>
   </data>
+  <data name="Fixed" xml:space="preserve">
+    <value>. Fixed automatically.</value>
+  </data>
 </root>
