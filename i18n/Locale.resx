@@ -208,4 +208,7 @@
   <data name="Fixed" xml:space="preserve">
     <value>. Fixed automatically.</value>
   </data>
+  <data name="FixModifiersOnHead" xml:space="preserve">
+    <value>For Slide's head, modifiers should appear after the key number and before the slide type notation.</value>
+  </data>
 </root>

@@ -208,4 +208,7 @@
   <data name="Fixed" xml:space="preserve">
     <value>。已自動為您修復。</value>
   </data>
+  <data name="FixModifiersOnHead" xml:space="preserve">
+    <value>對星星頭的修飾符，應該出現在鍵位號後、星星類型標記之前</value>
+  </data>
 </root>

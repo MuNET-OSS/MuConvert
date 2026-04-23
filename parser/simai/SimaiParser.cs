@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Antlr4.Runtime;
+using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using MuConvert.Antlr;
 using MuConvert.chart;
@@ -8,6 +9,8 @@ using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 using P = MuConvert.Antlr.SimaiParser;
+using L = MuConvert.Antlr.SimaiLexer;
+using Utils = MuConvert.utils.Utils;
 
 namespace MuConvert.parser;
 
@@ -68,6 +71,48 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return text;
     }
 
+    /**
+     * 对词法分析得到的token流，在送入parser之前进行一些处理，以尝试修复一些特定类型的错误：
+     * - 对星星头的修饰符，应该出现在键位号后、星星类型标记之前
+     */
+    private CommonTokenStream TokenProcess(CommonTokenStream src)
+    {
+        List<Alert> alertsBuf = [];
+        
+        src.Fill();
+        var tokens = src.GetTokens().Index().Where(x=>x.Item.Channel == TokenConstants.DefaultChannel).ToList();
+        var r = new TokenStreamRewriter(src);
+        bool modified = false;
+        for (int i = 0; i < tokens.Count - 1; i++)
+        {
+            var (idx, token) = tokens[i];
+            if (token.Type == L.SLIDE_TYPE && 
+                (i < tokens.Count - 1 && Utils.IsModifier(tokens[i+1].Item.Type)) && // SlideType后面接了modifier
+                (i >= 2 && tokens[i-1].Item.Type == L.KEY && tokens[i-2].Item.Type != L.SLIDE_TYPE)) // 判断是否是星星的首个slidetype
+            { // 类似1-b2[2:1]这种，星星头的修饰符错误地出现在了首个slidetype后面的情况。
+                // 找到modifier的结束位置
+                int endPos = i+1;
+                while (Utils.IsModifier(tokens[endPos + 1].Item.Type)) endPos++;
+                // 将tokens[i]挪到endPos后面去
+                r.Delete(idx);
+                r.InsertAfter(tokens[endPos].Index, token.Text);
+                alertsBuf.Add(new Alert(Warning, Locale.FixModifiersOnHead + Locale.Fixed, line: token.Line, 
+                    relevantNote: src.GetText(tokens[i-1].Item, tokens[endPos + 1].Item)));
+                modified = true;
+            }
+        }
+
+        if (!modified) return src;  
+        // 做过更改，则要重跑lexer
+        alerts.Clear(); // 清空上次跑lexer时的报错，避免重复报错
+        alerts.AddRange(alertsBuf);
+        var inputStream = new AntlrInputStream(r.GetText());
+        var lexer = new SimaiLexer(inputStream);
+        lexer.RemoveErrorListeners();
+        lexer.AddErrorListener(new ErrorListener(this));
+        return new CommonTokenStream(lexer);
+    }
+
     public (Chart, List<Alert>) Parse(string text)
     {
         if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
@@ -82,13 +127,14 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             lexer.RemoveErrorListeners();
             lexer.AddErrorListener(new ErrorListener(this));
             var tokens = new CommonTokenStream(lexer);
+            if (StrictLevel != StrictLevelEnum.Strict) tokens = TokenProcess(tokens);
             
             var parser = new P(tokens) { ErrorHandler = ErrorStrategy() }; // MuConvert.Antlr.SimaiParser
             parser.RemoveErrorListeners();
             parser.AddErrorListener(new ErrorListener(this));
             root = parser.chart();
         }
-        catch (Antlr4.Runtime.Misc.ParseCanceledException e)
+        catch (ParseCanceledException e)
         { // ErrorListener里会把alerts加好的，因此这里直接抛异常就可以了。
             throw new ConversionException(alerts, e);
         }
@@ -191,7 +237,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return true;
     }
 
-    private void WarnMoreParentheses(IList<IToken> ps)
+    private void WarnMoreThanOneTokens(IList<IToken> ps)
     {
         if (ps.Count <= 1) return;
         var extraStr = "'" + string.Join("", ps.Skip(1).Select(x => x.Text)) + "'";
@@ -205,8 +251,8 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     
     private void WarnMoreParentheses(IList<IToken> lp, IList<IToken> rp)
     {
-        WarnMoreParentheses(lp);
-        WarnMoreParentheses(rp);
+        WarnMoreThanOneTokens(lp);
+        WarnMoreThanOneTokens(rp);
     }
 
     public sealed override object VisitAbsulouteStepTag(P.AbsulouteStepTagContext context)
@@ -263,25 +309,26 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             {
                 noteC = c2.note();
                 
-                var separators = c2.eachSeparators().GetText()!;
-                if (separators[0] == '`')
+                var separators = c2._sep;
+                if (separators.Count >= 2 && separators.All(x=>x.Type == L.FALSE_EACH))
                 {
-                    if (separators.Length >= 2)
-                    { 
-                        // 出现连续多个反引号的情况，如"2``3"。
-                        // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
-                        // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
-                        var length = separators.Length * new Rational(1, 128);
-                        now = (now + length).CanonicalForm;
-                        extendedFalseEach += length;
-                        falseEachIdx = 0;
-                        if (!extendedFalseEachWarned)
-                        {
-                            AddAlert(Warning, Locale.ExtenedFalseEach, context);
-                            extendedFalseEachWarned = true;
-                        }
+                    // 出现连续多个反引号的情况，如"2``3"。
+                    // 这并不是标准的simai语法。但是，MajdataView中对此提供了支持，将每个`实现为128分音。
+                    // 因此，我们也支持这一特性，在遇到大于一个`时，不实现成FalseEachIndex，而是直接给予相同的实现、每个`错后128分音。
+                    var length = separators.Count * new Rational(1, 128);
+                    now = (now + length).CanonicalForm;
+                    extendedFalseEach += length;
+                    falseEachIdx = 0;
+                    if (!extendedFalseEachWarned)
+                    {
+                        AddAlert(Warning, Locale.ExtenedFalseEach, context);
+                        extendedFalseEachWarned = true;
                     }
-                    else falseEachIdx++;
+                }
+                else
+                {
+                    WarnMoreThanOneTokens(separators);
+                    if (separators[0].Type == L.FALSE_EACH) falseEachIdx++;
                 }
             }
             else throw Utils.Fail();
@@ -328,7 +375,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 case P.SharedHeadSlideContext shSlideC:
                     note = (Slide)VisitSharedHeadSlide(shSlideC);
                     break;
-                case ITerminalNode n when n.Symbol.Type == SimaiLexer.KEY:
+                case ITerminalNode n when n.Symbol.Type == L.KEY:
                     note = new Tap(chart, now) { Key = int.Parse(n.GetText())};
                     break;
                 default:
@@ -384,7 +431,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
             Key = int.Parse(context.KEY().GetText())
         };
         ApplyModifiers([context.modifiers()], result);
-        if (context.Parent is not P.SlideContext && GetModifier(SimaiLexer.TAP_TO_STAR)) result = new Star(result); // 发现了”TAP_TO_STAR“的标记，把Tap转换为星星
+        if (context.Parent is not P.SlideContext && GetModifier(L.TAP_TO_STAR)) result = new Star(result); // 发现了”TAP_TO_STAR“的标记，把Tap转换为星星
         return result;
     }
 
@@ -541,12 +588,12 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         
         // 处理星星头
         Tap? head = (Tap)VisitTap(context.tap());
-        if (GetModifier(SimaiLexer.NO_STAR))
+        if (GetModifier(L.NO_STAR))
         { // 标记了NO_STAR的星星，则不要放head、但是需要手动设置Key
             result.Key = head.Key;
             head = null;
         }
-        else if (!GetModifier(SimaiLexer.STAR_TO_TAP)) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
+        else if (!GetModifier(L.STAR_TO_TAP)) head = new Star(head); // 除非标记了STAR_TO_TAP，否则把tap转为star
         result.OwnHead = head;
         
         currNote = result;

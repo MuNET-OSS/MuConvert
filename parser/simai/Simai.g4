@@ -47,8 +47,7 @@ notations: (bpmTag | absulouteStepTag | metTag)* noteGroup?;
 
 noteGroup: note eachNote*;
 FALSE_EACH: '`';
-eachSeparators: '/' | FALSE_EACH+;
-eachNote: eachSeparators note;
+eachNote: (sep+=('/' | FALSE_EACH))+ note;
 
 bpmTag: (lp+='(')+ number (rp+=')')+;
 absulouteStepTag: (lp+='{')+ '#' number (rp+='}')+;

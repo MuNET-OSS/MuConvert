@@ -1,10 +1,10 @@
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
-using MuConvert.Antlr;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
 using L = MuConvert.Antlr.SimaiLexer;
 using P = MuConvert.Antlr.SimaiParser;
+using Utils = MuConvert.utils.Utils;
 
 namespace MuConvert.parser.simai;
 
@@ -112,7 +112,7 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
         L.KEY, L.SLIDE_TYPE, L.TOUCH_AREA, L.INT, L.CHART_END, L.FALSE_EACH, 
         L.MODIFIER, L.NO_STAR, L.STAR_TO_TAP, L.TAP_TO_STAR
     ]; // 不确定的可能引起歧义的符号，一律不允许补充
-    private HashSet<int> insertCommaOnlyWhen = [_literals["("], _literals["{"]];
+    private HashSet<int> insertCommaOnlyWhen = [Utils.TokenType("("), Utils.TokenType("{")];
     
     protected override IToken GetMissingSymbol(Parser recognizer)
     {
@@ -144,11 +144,8 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
         catch (InputMismatchException) {} // ignored 
     }
 
-    private static Dictionary<string, int> _literals = Enumerable.Range(1, SimaiLexer.ruleNames.Length)
-        .Where(i=>SimaiLexer.DefaultVocabulary.GetLiteralName(i) != null)
-        .ToDictionary(i => SimaiLexer.DefaultVocabulary.GetLiteralName(i)[1..^1], i => i);
     private List<int> recoverySetAllowed = [
-        L.COMMA, L.FALSE_EACH, _literals["/"], _literals["("], _literals["{"]
+        L.COMMA, L.FALSE_EACH, Utils.TokenType("/"), Utils.TokenType("("), Utils.TokenType("{")
     ]; // recover时，为了确保整个吞掉不合法的音符，而不是出现残缺的东西导致parser报错，只准同步到上面这些字符当中
     
     public override void Recover(Parser recognizer, RecognitionException e)
@@ -178,7 +175,7 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
         var ctx = parser.Context;
         var rule = ctx.RuleIndex;
         if (rule == P.RULE_beats && e is InputMismatchException && 
-            e.OffendingToken.Text == "-" && e.GetExpectedTokens().Contains(_literals[":"]))
+            e.OffendingToken.Text == "-" && e.GetExpectedTokens().Contains(Utils.TokenType(":")))
         { // [4:1]中，错把:打成-了
             simaiParser.alerts.Last().Level = Warning; // Error改为Warning，因为恢复了
             simaiParser.alerts.Last().Description += Locale.Fixed;

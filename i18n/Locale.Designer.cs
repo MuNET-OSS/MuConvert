@@ -159,6 +159,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to For Slide&apos;s head, modifiers should appear after the key number and before the slide type notation..
+        /// </summary>
+        public static string FixModifiersOnHead {
+            get {
+                return ResourceManager.GetString("FixModifiersOnHead", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to INFO:.
         /// </summary>
         public static string Info {
