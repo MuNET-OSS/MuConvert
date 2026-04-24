@@ -44,6 +44,35 @@ public class Statistics
             _now = note.Time;
             _nowFalseEachIndex = note.FalseEachIdx;
         }
+        
+        // T_JUDGE_HOLD 原理应该是游戏DLL中的Manager.NotesReader.getProgJudgeGrid。
+        // 但是具体的机制研究的也不是太明白，只是尽力实现了下
+        if (note is Hold or TouchHold)
+        {
+            var bpmRanges = note.BpmRanges;
+            for (int i = 0; i < bpmRanges.Count; i++)
+            {
+                var (_, bpm, start, len) = bpmRanges[i];
+                var gridSize = new Rational(getProgJudgeGrid(bpm), 384);
+                T_JUDGE_HLD += (int)(len / gridSize).Ceil();
+                continue;
+                // TODO 当前版本的实现还有一定问题，还有一部分测试（Statistics测试.cs的SkippedKeys注释掉之后）过不了，差个位数数字
+                // 具体什么原因后续还需要调研一下
+                
+                // 数：当前音符落在当前BPM区间内，所跨过的整数格点的个数
+                var startPointF = start / gridSize;
+                var startPoint = (int)startPointF.Ceil();
+                // if (startPointF.FractionPart == 0) startPoint++;
+                var endPointF = (start + len) / gridSize;
+                var endPoint = (int)endPointF.WholePart; // 相当于Floor
+                if (endPointF.FractionPart == 0) endPoint--;
+                var gridCount = endPoint - startPoint + 1;
+                T_JUDGE_HLD += gridCount;
+                
+                // 如果：整个hold的头，不是落在整数格点上。则还要加一个单独的头判
+                if (i == 0 && startPointF.FractionPart != 0) T_JUDGE_HLD++;
+            }
+        }
     }
 
     internal Statistics(Chart chart)

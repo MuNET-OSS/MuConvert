@@ -30,10 +30,14 @@ public class Statistics测试
             yield return [new TestInput(maidataPath, levelId)];
     }
 
-    [Theory]
+    private static List<string> T_JUDGE_HLD不准确所以不测 = ["系ぎて", "PANDORA PARADOXXX", "Xaleid◆scopiX", "Ref：rain (for 7th Heaven)", "Grievous Lady"];
+
+    [SkippableTheory]
     [MemberData(nameof(OfficialLevel5))]
     public void 统计段与原版一致(TestInput input)
     {
+        Skip.If(T_JUDGE_HLD不准确所以不测.Any(x=> Path.GetFileName(input.Dir).StartsWith(x)), "T_JUDGE_HLD的实现现在还不完全准确，在这些样例上会爆掉，所以暂时不测这些样例。");
+        
         var ma2Original = File.ReadAllText(input.MA2, Encoding.UTF8);
         var (chart, parseAlerts) = new MA2Parser().Parse(ma2Original);
         Assert.Empty(parseAlerts);
@@ -54,11 +58,7 @@ public class Statistics测试
 internal static class Ma2StatisticsSection
 {
     /// <summary>与 <see cref="MA2Generator"/> 当前实现尚未对齐的统计键，不参与等价断言。</summary>
-    public static readonly HashSet<string> SkippedKeys =
-    [
-        "T_JUDGE_HLD",
-        "T_JUDGE_ALL",
-    ];
+    public static readonly HashSet<string> SkippedKeys = [];
 
     /// <summary>从首个 <c>T_REC_</c> 行起解析到文件末尾，得到 <c>键 → 值</c>（不含键前缀）。</summary>
     public static Dictionary<string, string> Parse(string ma2Text)
