@@ -32,8 +32,10 @@ public class MA2转Simai测试
         var inote = maidata.Levels[c.LevelId].Inote;
         var ma2Text = File.ReadAllText(c.MA2, Encoding.UTF8);
         
-        var (chart, _) = new MA2Parser().Parse(ma2Text);
-        var (simai, _) = new SimaiGenerator().Generate(chart);
+        var (chart, alerts) = new MA2Parser().Parse(ma2Text);
+        var (simai, alerts2) = new SimaiGenerator().Generate(chart);
+        _output.WriteLine(string.Join('\n', alerts));
+        _output.WriteLine(string.Join('\n', alerts2));
 
         Assert.Equal(TestUtils.TryParseMa2ClkDef(ma2Text), chart.ClockCount * 96);
         var expectedTimeline = SimaiCommaTimeline.Flatten(inote);

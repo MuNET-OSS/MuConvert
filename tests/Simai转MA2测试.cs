@@ -28,8 +28,10 @@ public class Simai转MA2测试
         var chartInfo = maidata.Levels[input.LevelId];
         var expectedMa2 = File.ReadAllText(input.MA2, Encoding.UTF8);
 
-        var (chart, _) = new SimaiParser(bigTouch: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
-        var (ma2, _) = new MA2Generator(isUtage: false).Generate(chart);
+        var (chart, alerts) = new SimaiParser(bigTouch: false, clockCount: maidata.ClockCount).Parse(chartInfo.Inote);
+        var (ma2, alerts2) = new MA2Generator(isUtage: false).Generate(chart);
+        _output.WriteLine(string.Join('\n', alerts));
+        _output.WriteLine(string.Join('\n', alerts2));
         
         Assert.Equal(maidata.ClockCount * 96, TestUtils.TryParseMa2ClkDef(ma2));
         ma2 = KeepNotesOnly(ma2);

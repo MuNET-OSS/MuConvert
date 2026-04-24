@@ -20,14 +20,14 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
             {
                 simaiParser.alerts.Add(new Alert(Warning, 
                     string.Format(Locale.RecoverInlineExtraneousToken, GetTokenErrorDisplay(offendingSymbol)), 
-                    line: line, relevantNote: RelevantNote(parser.Context)));
+                    line: line, relevantNote: RelevantNote(parser.Context, recognizer, offendingSymbol)));
                 return;
             }
             else if (msg.StartsWith("missing"))
             {
                 simaiParser.alerts.Add(new Alert(Warning, 
                     string.Format(Locale.RecoverInlineMissingToken, GetTokenErrorDisplay(offendingSymbol), parser.GetExpectedTokens().ToString(parser.Vocabulary)), 
-                    line: line, relevantNote: RelevantNote(parser.Context)));
+                    line: line, relevantNote: RelevantNote(parser.Context, recognizer, offendingSymbol)));
                 return;
             }
         }
@@ -50,7 +50,7 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
                 message = string.Format(Locale.AntlrUnknownError, msg);
                 break;
         }
-        simaiParser.alerts.Add(new Alert(level, message, line: line, relevantNote: RelevantNote(parser.Context)));
+        simaiParser.alerts.Add(new Alert(level, message, line: line, relevantNote: RelevantNote(parser.Context, recognizer, offendingSymbol)));
     }
 
     // 词法分析的错误报告函数
@@ -75,14 +75,26 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
     }
 
     // 从context获得为适合放进relevantNote里的形式
-    private static string? RelevantNote(RuleContext? context)
+    private static string? RelevantNote(RuleContext? context, IRecognizer? recognizer, IToken? offendingSymbol)
     {
-        while (true)
+        string? result = null;
+        while (context != null)
         {
-            if (context == null) return null;
-            if (context.GetText().Length >= 5) return context.GetText();
+            if (context.GetText().Length >= 5)
+            {
+                result = context.GetText();
+                break;
+            }
             context = context.Parent;
         }
+
+        if (recognizer != null && offendingSymbol is { TokenIndex: >= 0 } && result is { Length: > 35 })
+        { // 根据offendingToken的位置，前截取5个、后截取三个token
+            var i = offendingSymbol.TokenIndex;
+            result = ((ITokenStream)recognizer.InputStream).GetText(
+                new Interval(Math.Max(i - 5, 0), Math.Min(i + 3, recognizer.InputStream.Size - 1)));
+        }
+        return result;
     }
 
     # region 用于暴露DefaultErrorStrategy内部的GetTokenErrorDisplay函数
