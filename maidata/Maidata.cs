@@ -72,7 +72,9 @@ public class Maidata : Dictionary<string, string>
         var value = content.ToString();
         content.Clear();
         if (key == null) return;
-        if (key.StartsWith("inote") || key.StartsWith("lv") || key.StartsWith("first") || key.StartsWith("wholebpm"))
+        value = value.TrimEnd('\n'); // 字符串末尾的连续\n，说明是空白行，要去掉
+        if (key.StartsWith("inote") || key.StartsWith("lv") || key == "first" || key == "wholebpm" || 
+            key == "clock_count" || key.StartsWith("demo_") || key.StartsWith("ChartConvertTool"))
             value = value.Trim(); // 对部分字段，要trim一下；但不能对所有的字段都trim，比如如果对title进行trim，如月车站就寄了。
         this[key] = value;
     }
