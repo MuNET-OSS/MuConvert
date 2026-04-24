@@ -11,6 +11,7 @@ namespace MuConvert.Tests;
 internal static class TestUtils
 {
     private static readonly Regex Ma2ClkDefLineRegex = new(@"^CLK_DEF\t(\d+)\s*$", RegexOptions.Multiline | RegexOptions.CultureInvariant);
+    private static readonly Regex Ma2ClkLineRegex = new(@"^CLK\t(\d+)\s", RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// 从测试运行目录向上查找包含 MuConvert.csproj 的仓库根目录。
@@ -31,6 +32,11 @@ internal static class TestUtils
     {
         var m = Ma2ClkDefLineRegex.Match(ma2Text);
         if (!m.Success || !int.TryParse(m.Groups[1].Value, out var v)) return null;
+        if (v == 0)
+        { // 对CLK_DEF为0的情况，就数一下CLK指令的个数，等效一下
+            var rawClkLines = Ma2ClkLineRegex.Matches(ma2Text);
+            v = rawClkLines.Count * 96;
+        }
         return v;
     }
 

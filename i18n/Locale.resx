@@ -128,7 +128,10 @@
     <value>The chart has no BPM line; parsing cannot continue!</value>
   </data>
   <data name="UnsuppoertedMA2Version" xml:space="preserve">
-    <value>This MA2 version is not supported yet. Currently only MA2 1.03–1.05 are supported.</value>
+    <value>This MA2 version is not supported yet. Currently only MA2 1.02–1.05 are supported.</value>
+  </data>
+  <data name="WarnNonStdMA2Version" xml:space="preserve">
+    <value>Non-standard MA2 version encountered: {0}</value>
   </data>
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
     <value>Charts whose MET_DEF is not "4 4" are not supported yet!</value>

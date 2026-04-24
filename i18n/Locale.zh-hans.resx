@@ -128,7 +128,10 @@
     <value>谱面中没有BPM语句，无法完成解析！</value>
   </data>
   <data name="UnsuppoertedMA2Version" xml:space="preserve">
-    <value>此MA2的版本尚不支持！目前仅支持MA2 1.03~1.05。</value>
+    <value>此MA2的版本尚不支持！目前仅支持MA2 1.02~1.05。</value>
+  </data>
+  <data name="WarnNonStdMA2Version" xml:space="preserve">
+    <value>遇到了非标准的MA2版本号: {0}</value>
   </data>
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
     <value>暂不支持MET_DEF不为"4 4"的谱面！</value>

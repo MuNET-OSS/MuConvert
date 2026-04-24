@@ -128,7 +128,10 @@
     <value>譜面中沒有 BPM 語句，無法完成解析！</value>
   </data>
   <data name="UnsuppoertedMA2Version" xml:space="preserve">
-    <value>此 MA2 的版本尚不支援！目前僅支援 MA2 1.03～1.05。</value>
+    <value>此 MA2 的版本尚不支援！目前僅支援 MA2 1.02～1.05。</value>
+  </data>
+  <data name="WarnNonStdMA2Version" xml:space="preserve">
+    <value>遇到了非標準的 MA2 版本號: {0}</value>
   </data>
   <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
     <value>暫不支援 MET_DEF 不為 "4 4" 的譜面！</value>

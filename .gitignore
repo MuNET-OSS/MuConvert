@@ -6,3 +6,5 @@ riderModule.iml
 /.idea/
 *.DotSettings.user
 .cursor
+/.tmp*
+*scratch*

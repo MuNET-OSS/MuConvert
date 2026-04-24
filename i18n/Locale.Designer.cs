@@ -501,7 +501,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This MA2 version is not supported yet. Currently only MA2 1.03–1.05 are supported..
+        ///   Looks up a localized string similar to This MA2 version is not supported yet. Currently only MA2 1.02–1.05 are supported..
         /// </summary>
         public static string UnsuppoertedMA2Version {
             get {
@@ -524,6 +524,15 @@ namespace MuConvert {
         public static string Warning {
             get {
                 return ResourceManager.GetString("Warning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Non-standard MA2 version encountered: {0}.
+        /// </summary>
+        public static string WarnNonStdMA2Version {
+            get {
+                return ResourceManager.GetString("WarnNonStdMA2Version", resourceCulture);
             }
         }
     }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
@@ -12,6 +13,7 @@ public class MA2Parser : IParser
 
     private bool bpmRead = false;
     private int RSL = 384;
+    public int MA2Version;
     
     private Dictionary<(Rational, int), List<Slide>> _slides = new();
     
@@ -55,17 +57,17 @@ public class MA2Parser : IParser
             // 头字段
             if (cmd == "VERSION" && AssertInHeader(lineNo, line))
             {
-                if (!(values[2] == "1.03.00" || values[2] == "1.04.00" || values[2] == "1.05.00")) Fail(Locale.UnsuppoertedMA2Version, lineNo, line);
-            }
-            else if (cmd == "MET_DEF" && AssertInHeader(lineNo, line))
-            {
-                if (!(values[1] == "4" && values[2] == "4")) Fail(Locale.UnsuppoertedMA2MET_DEF,  lineNo, line);
+                var version = Regex.Match(values[2], @"1\.(0?[2-5])\.(\d+)");
+                MA2Version = 100 + int.Parse(version.Groups[1].Value);
+                if (!version.Success) Fail(Locale.UnsuppoertedMA2Version, lineNo, line);
+                else if (!(MA2Version is 103 or 104 or 105 && int.Parse(version.Groups[2].Value) == 0))
+                    alerts.Add(new Alert(Warning, string.Format(Locale.WarnNonStdMA2Version, values[2]), line: lineNo, relevantNote: line.ToString()));
             }
             else if (cmd == "COMPATIBLE_CODE" && AssertInHeader(lineNo, line))
             {
                 if (values[1] != "MA2") Fail(Locale.UnsuppoertedMA2Version,  lineNo, line);
             }
-            else if (cmd is "FES_MODE" or "BPM_DEF" or "GENERATED_BY" && AssertInHeader(lineNo, line)) {} // 这些不用解析，无事可做
+            else if (cmd is "FES_MODE" or "MET_DEF" or "BPM_DEF" or "GENERATED_BY" && AssertInHeader(lineNo, line)) {} // 这些不用解析，无事可做
             else if (cmd == "RESOLUTION" && AssertInHeader(lineNo, line)) 
                 RSL = int.Parse(values[1]);
             else if (cmd == "CLK_DEF" && AssertInHeader(lineNo, line))
@@ -115,17 +117,21 @@ public class MA2Parser : IParser
                     note.Duration = duration;
                     if (values.Length != 5) WarnParamsCount(lineNo, line, time);
                 }
-                else if (cc == "TTP" && values.Length >= 7)
+                else if (cc == "TTP" && values.Length >= 6)
                 {
-                    note = new Touch(chart, time) { TouchArea = GetTouchArea(values[4], key), IsFirework = values[5] == "1", TouchSize = values[6]};
-                    if (values.Length != 7) WarnParamsCount(lineNo, line, time);
+                    var touch = new Touch(chart, time) { TouchArea = GetTouchArea(values[4], key), IsFirework = values[5] == "1"};
+                    note = touch;
+                    if (values.Length >= 7) touch.TouchSize = values[6];
+                    if (!(values.Length == 7 || (values.Length == 6 && MA2Version == 102))) WarnParamsCount(lineNo, line, time);
                 }
-                else if (cc == "THO" && values.Length >= 8 && int.TryParse(values[4], out len))
+                else if (cc == "THO" && values.Length >= 7 && int.TryParse(values[4], out len))
                 {
-                    note = new TouchHold(chart, time) { TouchArea = GetTouchArea(values[5], key), IsFirework = values[6] == "1", TouchSize = values[7]};
+                    var touchHold = new TouchHold(chart, time) { TouchArea = GetTouchArea(values[5], key), IsFirework = values[6] == "1"};
+                    note = touchHold;
+                    if (values.Length >= 8) touchHold.TouchSize = values[7];
                     var duration = new Duration(note) { Bar = new Rational(len, RSL) };
                     note.Duration = duration;
-                    if (values.Length != 8) WarnParamsCount(lineNo, line, time);
+                    if (!(values.Length == 8 || (values.Length == 7 && MA2Version == 102))) WarnParamsCount(lineNo, line, time);
                 }
                 else if (SlideTypeTool.IsSlide(cc) && values.Length >= 7 && int.TryParse(values[4], out var waitLen)
                          && int.TryParse(values[5], out len) && int.TryParse(values[6], out var endKey))
