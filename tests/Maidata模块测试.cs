@@ -52,6 +52,7 @@ public class Maidata模块测试
 
         var serialized = m.ToString();
         var m2 = new Maidata(serialized);
+        m2.AddToolData();
         AssertMaidataDictionaryEquivalent(m, m2);
 
         Assert.True(m2.ContainsKey(ChartConvertToolKey));

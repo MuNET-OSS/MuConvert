@@ -21,11 +21,21 @@ public class Maidata : Dictionary<string, string>
      */
     public IReadOnlyDictionary<string, string> Infos => _splitLevels().Item2;
 
-    public void AddLevel(int levelId, MaidataChart maidataChart)
+    /**
+     * 向Maidata中添加"&ChartConvertTool=MuConvert"的信息。
+     */
+    public void AddToolData()
+    {
+        this["ChartConvertTool"] = "MuConvert";
+        this["ChartConvertToolVersion"] = Utils.AppVersion;
+    }
+
+    public void AddLevel(int levelId, MaidataChart maidataChart, bool addToolData = true)
     {
         this[$"inote_{levelId}"] = maidataChart.Inote;
         if (maidataChart.Level != null) this[$"lv_{levelId}"] = maidataChart.Level;
         if (maidataChart.NoteDesigner != null) this[$"des_{levelId}"] = maidataChart.NoteDesigner;
+        if (addToolData) AddToolData();
     }
     
     public Maidata() {}
@@ -147,21 +157,23 @@ public class Maidata : Dictionary<string, string>
     public override string ToString()
     {
         var result = new StringBuilder();
+        var (levels, infos) = _splitLevels();
         
-        string[] fixedKeys = ["title", "artist", "first", "des", "wholebpm"]; // 对这些键，优先、按这里指定的顺序输出。
-        foreach (var k in fixedKeys)
+        string[] firstKeys = ["title", "artist", "first", "des", "wholebpm"]; // 对这些键，优先、按这里指定的顺序输出。
+        string[] lastKeys = ["ChartConvertTool", "ChartConvertToolVersion"]; // 对这些键，最后、按这里指定的顺序输出。
+        foreach (var k in firstKeys)
         {
             if (TryGetValue(k, out var v)) result.AppendLine($"&{k}={v}");
         }
-
-        var (levels, infos) = _splitLevels();
         foreach (var (k, v) in infos)
         {
-            if (fixedKeys.Contains(k)) continue; // 刚刚已经输出过了
+            if (firstKeys.Contains(k) || lastKeys.Contains(k)) continue; // 刚刚已经输出过了，或者应该最后输出
             result.AppendLine($"&{k}={v}");
         }
-        result.AppendLine("&ChartConvertTool=MuConvert");
-        result.AppendLine($"&ChartConvertToolVersion={Utils.AppVersion}");
+        foreach (var k in lastKeys)
+        {
+            if (TryGetValue(k, out var v)) result.AppendLine($"&{k}={v}");
+        }
         result.AppendLine();
 
         var levelIds = levels.Keys.ToList();
