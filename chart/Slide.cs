@@ -75,7 +75,7 @@ public class Slide : Note
         }
     }
 
-    private string DebuggerDisplay()
+    internal string DebuggerDisplay()
     {
         string result;
         if (SharedHeadWith != null) result = "*";

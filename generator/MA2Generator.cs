@@ -71,6 +71,8 @@ GENERATED_BY	MuConvert v{8}
         if (offset != 0) result = Math.Max(result + offset, result > 0 ? 1 : 0);
         return result;
     }
+    protected int T(int bar, int tick) => bar * RSL + tick;
+    protected int T(MA2Line ma2Line) => T(ma2Line.Bar, ma2Line.Tick);
 
     protected void Warn(string description, Note note, MA2Line? ma2Line = null)
     {
@@ -94,13 +96,33 @@ GENERATED_BY	MuConvert v{8}
         return new MA2Line(prefix + name, bar, tick, tap.Key - 1, extra);
     }
 
+    private HashSet<string> _broadTap = ["TAP", "HLD", "STR", "BRK", "XTP", "XHO", "BST", "XST"];
+    protected bool hasSameTimeTap(MA2Line ma2Line)
+    {
+        var curT = T(ma2Line);
+        for (int i = lines.Count - 1; i >=0 ; i--)
+        {
+            var l = lines[i];
+            var lT = l.Bar * RSL + l.Tick;
+            if (T(l) < curT) break;
+            if (T(l) == curT && l.Key == ma2Line.Key && // 同一时间、同一键位、都是广义tap
+                _broadTap.Contains(l.Name[^3..]) && _broadTap.Contains(ma2Line.Name[^3..])) return true;
+        }
+        return false;
+    }
+
     protected virtual List<MA2Line> AddSlide(Slide slide, int bar, int tick)
     {
         List<MA2Line> result = [];
         if (slide.OwnHead != null)
         {
             var headTap = AddTap(slide.OwnHead, bar, tick);
-            if (headTap != null) result.Add(headTap);
+            if (headTap != null)
+            {
+                if (hasSameTimeTap(headTap))
+                    alerts.Add(new Alert(Warning, Locale.SimultaneousSlideHead, (chart, slide.OwnHead.Time), null, slide.DebuggerDisplay()));
+                else result.Add(headTap);
+            }
         }
         
         // 首先很重要的一点是，详见 https://github.com/Neskol/MaiLib/issues/46#issuecomment-3301893924 ，

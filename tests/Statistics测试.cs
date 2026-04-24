@@ -27,7 +27,10 @@ public class Statistics测试
 
         foreach (var maidataPath in Directory.EnumerateFiles(testsetRoot, "maidata.txt", SearchOption.AllDirectories)
                      .OrderBy(p => p, StringComparer.Ordinal))
+        {
+            if (!File.Exists(Path.Combine(Path.GetDirectoryName(maidataPath)!, "03.ma2"))) continue;
             yield return [new TestInput(maidataPath, levelId)];
+        }
     }
 
     private static List<string> T_JUDGE_HLD不准确所以不测 = ["系ぎて", "PANDORA PARADOXXX", "Xaleid◆scopiX", "Ref：rain (for 7th Heaven)", "Grievous Lady"];

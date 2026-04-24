@@ -1,4 +1,6 @@
 ﻿using MuConvert.chart;
+using MuConvert.utils;
+using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.generator;
 
@@ -41,7 +43,12 @@ public class MA2_103Generator : MA2Generator
         if (slide.OwnHead != null)
         {
             var headTap = AddTap(slide.OwnHead, bar, tick);
-            if (headTap != null) result.Add(headTap);
+            if (headTap != null)
+            {
+                if (hasSameTimeTap(headTap))
+                    alerts.Add(new Alert(Warning, Locale.SimultaneousSlideHead, (chart, slide.OwnHead.Time), null, slide.DebuggerDisplay()));
+                else result.Add(headTap);
+            }
         }
         
         var seg = slide.segments[0];

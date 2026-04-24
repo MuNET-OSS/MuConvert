@@ -211,4 +211,7 @@
   <data name="FixModifiersOnHead" xml:space="preserve">
     <value>For Slide's head, modifiers should appear after the key number and before the slide type notation.</value>
   </data>
+  <data name="SimultaneousSlideHead" xml:space="preserve">
+    <value>Detected another Slide head/Tap at the same time and position as this Slide head. This would cause judgement issues in-game. Fixed automatically (removed the redundant Slide head(s)). PS: If you intend same-head Slides, use syntax like "1-2*-3" rather than "1-2/1-3"; the latter triggers this issue.</value>
+  </data>
 </root>

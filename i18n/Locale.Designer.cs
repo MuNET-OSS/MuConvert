@@ -474,6 +474,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Detected another Slide head/Tap at the same time and position as this Slide head. This would cause judgement issues in-game. Fixed automatically (removed the redundant Slide head(s)). PS: If you intend same-head Slides, use syntax like &quot;1-2*-3&quot; rather than &quot;1-2/1-3&quot;; the latter triggers this issue..
+        /// </summary>
+        public static string SimultaneousSlideHead {
+            get {
+                return ResourceManager.GetString("SimultaneousSlideHead", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning..
         /// </summary>
         public static string StartNoBpm {
