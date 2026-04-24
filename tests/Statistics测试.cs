@@ -33,14 +33,10 @@ public class Statistics测试
         }
     }
 
-    private static List<string> T_JUDGE_HLD不准确所以不测 = ["系ぎて", "PANDORA PARADOXXX", "Xaleid◆scopiX", "Ref：rain (for 7th Heaven)", "Grievous Lady"];
-
     [SkippableTheory]
     [MemberData(nameof(OfficialLevel5))]
     public void 统计段与原版一致(TestInput input)
     {
-        Skip.If(T_JUDGE_HLD不准确所以不测.Any(x=> Path.GetFileName(input.Dir).StartsWith(x)), "T_JUDGE_HLD的实现现在还不完全准确，在这些样例上会爆掉，所以暂时不测这些样例。");
-        
         var ma2Original = File.ReadAllText(input.MA2, Encoding.UTF8);
         var (chart, parseAlerts) = new MA2Parser().Parse(ma2Original);
         Assert.Empty(parseAlerts);
