@@ -25,6 +25,14 @@
             <DependentUpon>Locale.resx</DependentUpon>
             <WithCulture>true</WithCulture>
         </EmbeddedResource>
+        <EmbeddedResource Update="i18n\Locale.ja.resx">
+            <DependentUpon>Locale.resx</DependentUpon>
+            <WithCulture>true</WithCulture>
+        </EmbeddedResource>
+        <EmbeddedResource Update="i18n\Locale.ko.resx">
+            <DependentUpon>Locale.resx</DependentUpon>
+            <WithCulture>true</WithCulture>
+        </EmbeddedResource>
         <Compile Update="i18n\Locale.Designer.cs">
             <DesignTime>true</DesignTime>
             <AutoGen>true</AutoGen>

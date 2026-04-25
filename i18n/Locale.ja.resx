@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AssertionFailed" xml:space="preserve">
+    <value>MuConvert で内部エラーが発生しました（AssertionFailed）。`https://github.com/MuNet-OSS/MuConvert/issues` に報告してください。（{0}）</value>
+  </data>
+  <data name="InvalidKey" xml:space="preserve">
+    <value>キー番号が不正です（1～8）：{0}</value>
+  </data>
+  <data name="InvalidTouchArea" xml:space="preserve">
+    <value>タッチエリア指定が不正です：{0}</value>
+  </data>
+  <data name="NoDuration" xml:space="preserve">
+    <value>Tap または Touch ノーツに持続時間は設定できません。</value>
+  </data>
+  <data name="InvalidSlide" xml:space="preserve">
+    <value>スライド定義が不正です：{0}</value>
+  </data>
+  <data name="MessageAt" xml:space="preserve">
+    <value>場所</value>
+  </data>
+  <data name="MessageLine" xml:space="preserve">
+    <value>{0} 行目</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>{0:W} 小節（{1:F2} 秒）</value>
+  </data>
+  <data name="MessageParsing" xml:space="preserve">
+    <value>「{0}」の解析中</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>ERROR:</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>WARNING:</value>
+  </data>
+  <data name="Info" xml:space="preserve">
+    <value>INFO:</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>DEBUG:</value>
+  </data>
+  <data name="SimaiGrammarFailed" xml:space="preserve">
+    <value>Simai 構文の解析に失敗しました！</value>
+  </data>
+  <data name="AbsoluteStepUsed" xml:space="preserve">
+    <value>譜面に {0} のような「絶対ステップ」表記が使われています。この機能のサポートは実験的です。問題が発生した場合は `https://github.com/MuNet-OSS/MuConvert/issues` に報告してください。</value>
+  </data>
+  <data name="ExtraModifiersIgnored" xml:space="preserve">
+    <value>想定外または冗長な修飾子：'{0}'。無視しました。</value>
+  </data>
+  <data name="InvalidWaitTime" xml:space="preserve">
+    <value>区間ごとに時間を指定する複数区間スライドでは、待ち時間フラグメント（例：{0.5##...}）は最初の区間にのみ書けます。不正な待ち時間指定は無視しました。</value>
+  </data>
+  <data name="InstanceMultipleUsage" xml:space="preserve">
+    <value>Parser/Generator のインスタンスは使い捨てです。Parse や Generate を繰り返し呼び出さないでください。変換する譜面ごとに新しい Parser/Generator を作成してください。</value>
+  </data>
+  <data name="InvalidMaidataFile" xml:space="preserve">
+    <value>maidata ファイルとして不正です：'&amp;' のフィールド区切りが見つかりませんでした。</value>
+  </data>
+  <data name="InvalidMA2Sentence" xml:space="preserve">
+    <value>認識できない、または不正な MA2 ステートメントです！</value>
+  </data>
+  <data name="InvalidMA2SentenceWarning" xml:space="preserve">
+    <value>認識できない MA2 ステートメントです。この行は無視しました。</value>
+  </data>
+  <data name="InvalidMA2HeaderSentenceAfterHeader" xml:space="preserve">
+    <value>不正な MA2 ステートメントです：ヘッダー部が終了した後に、再度ヘッダー専用行が現れました！</value>
+  </data>
+  <data name="NoBPMInMA2" xml:space="preserve">
+    <value>譜面に BPM 行がありません。解析を続行できません！</value>
+  </data>
+  <data name="UnsuppoertedMA2Version" xml:space="preserve">
+    <value>この MA2 バージョンは未対応です。現在は MA2 1.02～1.05 のみ対応しています。</value>
+  </data>
+  <data name="WarnNonStdMA2Version" xml:space="preserve">
+    <value>非標準の MA2 バージョンが検出されました：{0}</value>
+  </data>
+  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
+    <value>MET_DEF が「4 4」以外の譜面は未対応です！</value>
+  </data>
+  <data name="NoNotesInChart" xml:space="preserve">
+    <value>譜面にノーツがありません！</value>
+  </data>
+  <data name="MA2NoteSentenceTooManyParam" xml:space="preserve">
+    <value>この MA2 行は必要な数より多くのパラメータを持っています。余分なパラメータは無視しました。</value>
+  </data>
+  <data name="MA2CNSlideHasWait" xml:space="preserve">
+    <value>解析エラー：MA2 CN___（接続スライド）に 0 以外の待ち時間があります。</value>
+  </data>
+  <data name="MA2CNSlideNoPrevious" xml:space="preserve">
+    <value>解析エラー：MA2 CN___（接続スライド）に直前のスライド区間がありません！</value>
+  </data>
+  <data name="StartNoBpm" xml:space="preserve">
+    <value>譜面の開始時に BPM が指定されていません。先頭に「({0})」を自動挿入しました。</value>
+  </data>
+  <data name="NoteTooNear" xml:space="preserve">
+    <value>このノーツは直前のノーツと 384 分音符より近い間隔です。MA2 は全音符の 1/384 までしか表現できないため、2 つのノーツを正確に表現できず、黄色の EACH（イーチ）として出力される可能性があります。「擬似 EACH」を意図する場合は「1`2」のような構文を使うか、少なくとも 384 分音符ぶんずらしてください。</value>
+  </data>
+  <data name="PrepFix1" xml:space="preserve">
+    <value>譜面の構文エラー {0} 件の修復を試みました（不足している可能性のあるカンマを挿入）：{1}</value>
+  </data>
+  <data name="PrepFix2" xml:space="preserve">
+    <value>譜面の構文エラー {0} 件の修復を試みました（持続時間マーカーが「:」ではなく「-」になっていた）：{1}</value>
+  </data>
+  <data name="PrepFix3" xml:space="preserve">
+    <value>譜面の構文エラー {0} 件の修復を試みました（スライド頭の修飾子は、レーン番号の後・スライド種別記号の前に置くべき）：{1}</value>
+  </data>
+  <data name="PrepFix4" xml:space="preserve">
+    <value>譜面の構文エラー {0} 件の修復を試みました（冗長な重複括弧。余分に入力した可能性があります）：{1}</value>
+  </data>
+  <data name="VisitFix1" xml:space="preserve">
+    <value>譜面の構文エラーの修復を試みました（重複した EACH「/」または擬似 EACH「`」記号。余分に入力した可能性があります）：{0}</value>
+  </data>
+  <data name="ExtenedFalseEach" xml:space="preserve">
+    <value>擬似 EACH「`」を連続で複数回使用しています。これは Simai の標準構文ではありませんが、他の譜面ツールの挙動に合わせ、ノーツをより離して配置した 2 つのノーツとして解釈されます（「`」1 つにつき 128 分音符ぶん遅らせます）。意図したものでない場合は入力を見直してください。</value>
+  </data>
+  <data name="BreakExIn103" xml:space="preserve">
+    <value>譜面に MA2 1.03 で未対応の要素（ブレイクEX）があります。該当要素は無視し、通常のブレイクとして変換しました。</value>
+  </data>
+  <data name="BreakHoldOrSlideIn103" xml:space="preserve">
+    <value>譜面に MA2 1.03 で未対応の要素（ホールド／スライドのブレイク）があります。該当要素は無視し、通常のものに戻して変換しました。</value>
+  </data>
+  <data name="ConnectingSlideIn103" xml:space="preserve">
+    <value>譜面に MA2 1.03 で未対応の要素（複数区間の接続スライド）があります。最初のスライド区間のみ残しました。</value>
+  </data>
+  <data name="SpecialTouchIn105" xml:space="preserve">
+    <value>譜面に MA2 で未対応の要素（ブレイクまたは EX タッチ）があります。該当修飾子は無視しました。</value>
+  </data>
+  <data name="ExSlideIn105" xml:space="preserve">
+    <value>譜面に MA2 で未対応の要素（EX スライド）があります。該当修飾子は無視しました。</value>
+  </data>
+  <data name="AntlrUnknownError" xml:space="preserve">
+    <value>Simai パーサーエラー：{0}</value>
+  </data>
+  <data name="LexerNoViableAltException" xml:space="preserve">
+    <value>認識できない文字：{0}（入力ミス？）。無視しました。</value>
+  </data>
+  <data name="LexerNoViableAltExceptionStrict" xml:space="preserve">
+    <value>認識できない文字：{0}（入力ミス？）</value>
+  </data>
+  <data name="RecoverInlineExtraneousToken" xml:space="preserve">
+    <value>余分なトークン：{0}（入力ミス？）。無視しました。</value>
+  </data>
+  <data name="RecoverInlineExtraneousTokenStrict" xml:space="preserve">
+    <value>余分なトークン：{0}（入力ミス？）</value>
+  </data>
+  <data name="RecoverInlineMissingToken" xml:space="preserve">
+    <value>{0} の前にトークン {1} が不足しています（入力ミス？）。自動挿入しました。</value>
+  </data>
+  <data name="InputMismatchException" xml:space="preserve">
+    <value>予期しないトークン：{0}。期待：{1}</value>
+  </data>
+  <data name="NoViableAltException" xml:space="preserve">
+    <value>譜面マークアップを解析できませんでした：{0}</value>
+  </data>
+  <data name="LaxTryfixReminder" xml:space="preserve">
+    <value>。該当ノーツは破棄されました。</value>
+  </data>
+  <data name="Fixed" xml:space="preserve">
+    <value>。自動修復しました。</value>
+  </data>
+  <data name="FixModifiersOnHead" xml:space="preserve">
+    <value>スライド頭の修飾子「{0}」は、キー番号の後・スライド種別表記の前に置く必要があります。</value>
+  </data>
+  <data name="SimultaneousSlideHead" xml:space="preserve">
+    <value>同じ時刻・同じ位置に別のスライド頭／タップが検出されました。ゲーム内で判定問題を引き起こすため、自動修復しました（余分なスライド頭を削除）。PS：同頭スライドを意図する場合は「1-2*-3」のように書き、「1-2/1-3」は避けてください（この問題を引き起こします）。</value>
+  </data>
+</root>
