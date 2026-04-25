@@ -104,7 +104,7 @@
     <value>谱面中使用了类似 {0} 这种“绝对时间步长”写法。对该特性的支持是实验性的，如遇问题，请考虑通过 https://github.com/MuNet-OSS/MuConvert/issues 报告给我们。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>不应出现的修饰符: {0}. 已忽略。</value>
+    <value>不应出现或多余的修饰符: '{0}'。 已忽略。</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>对分别指定每段时长的多段星星，类似{0.5##...}的等待时间标记，应仅在第一段星星上出现。不合法的等待时间标记已被忽略。</value>
@@ -113,7 +113,7 @@
     <value>Parser/Generator实例都只能使用一次，不能重复调用Parse和Generate方法！如果您需要转换多个谱面，请在每次转换前new一个新的Parser/Generator实例。</value>
   </data>
   <data name="InvalidMaidataFile" xml:space="preserve">
-    <value>不合法的maidata文件！输入的文件中不含&amp;标记，似乎不是一个maidata文件。</value>
+    <value>不合法的maidata文件！输入的文件中不含 &amp; 标记，似乎不是一个maidata文件。</value>
   </data>
   <data name="InvalidMA2Sentence" xml:space="preserve">
     <value>无法识别或不合法的MA2语句！</value>
@@ -149,7 +149,7 @@
     <value>解析错误：MA2 CN___ 连接星星，未能找到前一段的星星！</value>
   </data>
   <data name="StartNoBpm" xml:space="preserve">
-    <value>谱面开头没有指定BPM！已自动为您添加一个`({0})`在谱面开头。</value>
+    <value>谱面开头没有指定BPM！已自动为您添加一个 ({0}) 在谱面开头。</value>
   </data>
   <data name="NoteTooNear" xml:space="preserve">
     <value>此音符与前一个音符的相距时间小于384分音！受MA2语法限制，MA2所能表示的时间精度仅能达到1/384，因此您的这两个音符无法被精确表示、并且可能被生成为黄色双押。如果您需要的是“伪双押”，请使用"1`2"这种语法来表示伪双押，或确保错开一个384分音的时间。</value>
@@ -167,10 +167,10 @@
     <value>尝试修复了谱面中的{0}处语法错误（重复的括号，可能是多打了一些）: {1}</value>
   </data>
   <data name="VisitFix1" xml:space="preserve">
-    <value>尝试修复了谱面中的语法错误（重复的双押"/"或伪双押"`"符号，可能是多打了一些）: {0}</value>
+    <value>尝试修复了谱面中的语法错误（重复的双押 / 或伪双押 ` 符号，可能是多打了一些）: {0}</value>
   </data>
   <data name="ExtenedFalseEach" xml:space="preserve">
-    <value>您使用了连续多个伪双押'`'的语法。这并非Simai标准语法，但遵循其他制谱软件的行为，解释为错开时间更长的两个音符（每个'`'错开128分音）。如果您并非有意为之，请检查您的输入以防输入错误。</value>
+    <value>您使用了连续多个伪双押 ` 的语法。这并非Simai标准语法，但遵循其他制谱软件的行为，解释为错开时间更长的两个音符（每个 ` 错开128分音）。如果您并非有意为之，请检查您的输入以防输入错误。</value>
   </data>
   <data name="BreakExIn103" xml:space="preserve">
     <value>谱面中含有MA2 1.03所不支持的特性（绝赞+保护套）。相关特性已被忽略、还原回非保护绝赞。</value>
@@ -180,6 +180,12 @@
   </data>
   <data name="ConnectingSlideIn103" xml:space="preserve">
     <value>谱面中含有MA2 1.03所不支持的特性（多段连接的星星）。仅留下第一段星星。</value>
+  </data>
+  <data name="SpecialTouchIn105" xml:space="preserve">
+    <value>谱面中含有MA2所不支持的特性（绝赞或保护Touch）。相关修饰符已被忽略。</value>
+  </data>
+  <data name="ExSlideIn105" xml:space="preserve">
+    <value>谱面中含有MA2所不支持的特性（保护套Slide）。相关修饰符已被忽略。</value>
   </data>
   <data name="AntlrUnknownError" xml:space="preserve">
     <value>Simai解析器发生错误: {0}</value>
@@ -212,7 +218,7 @@
     <value>。已自动为您修复。</value>
   </data>
   <data name="FixModifiersOnHead" xml:space="preserve">
-    <value>对星星头的修饰符，应该出现在键位号后、星星类型标记之前</value>
+    <value>对星星头的修饰符'{0}'，应该出现在键位号后、星星类型标记之前</value>
   </data>
   <data name="SimultaneousSlideHead" xml:space="preserve">
     <value>检测到在星星头所在的时刻和位置，存在着其他星星头/Tap，这会造成游戏内的绝对无理。已自动为您修复（去除多余的星星头）。PS：如果您要编写同头星星，请使用类似"1-2*-3"而非"1-2/1-3"的写法，后者就会造成上面的情况。</value>

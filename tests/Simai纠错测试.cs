@@ -1,6 +1,7 @@
 using MuConvert.generator;
 using MuConvert.parser;
 using Xunit.Abstractions;
+using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.Tests;
 
@@ -272,5 +273,44 @@ public class Simai纠错测试
             "(120){4}1,,3,4-5[6:1],7,8,E",
             "(120){4}1,2h[3:,3,4-5[6:1],7,8,E"
         ];
+    }
+    
+    public static IEnumerable<object[]> 多余修饰符_Cases()
+    {
+        yield return
+        [
+            "多余修饰符大杂烩",
+            "(120){4}1bx/2b,3h[4:1],4-5[4:1]b,6/7,7-8[4:1]/6?-5[4:1],3-4[4:1]/2-1[4:1]b,B3/B4,B5/B6f/B7f,",
+            "(120){4}1bx/2bf,3fh[4:1],4-5[4:1]bx,6@/7?,7$-8[4:1]/6-5?[4:1],3-4$[4:1]/2-1[4:1]bxf,B3b/B4x,B5bx/B6bf/B7@fb,",
+            new[]{9, 7}
+        ];
+    }
+    
+    [Theory]
+    [MemberData(nameof(多余修饰符_Cases))]
+    public void 多余修饰符(string description, string canonicalSimai, string malformedSimai, int[] warningCount)
+    {
+        _output.WriteLine(description);
+
+        string expected;
+        try
+        {
+            expected = SimaiToMa2(canonicalSimai, true);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException($"Canonical simai failed (fix test data): {description}", e);
+        }
+        
+        var (chart, alerts) = new SimaiParser().Parse(malformedSimai);
+        var (actual, alerts2) = new MA2Generator().Generate(chart);
+        _output.WriteLine(string.Join('\n', alerts));
+        _output.WriteLine(string.Join('\n', alerts2));
+        
+        Assert.Equal(expected, actual);
+        Assert.Empty(alerts.Where(x=>x.Level == Error).ToList());
+        Assert.Empty(alerts2.Where(x=>x.Level == Error).ToList());
+        Assert.Equal(alerts.Count(x => x.Level == Warning), warningCount[0]);
+        Assert.Equal(alerts2.Count(x => x.Level == Warning), warningCount[1]);
     }
 }

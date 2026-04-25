@@ -104,7 +104,7 @@
     <value>譜面中使用了類似 {0} 的「絕對時間步長」寫法。對此特性的支援為實驗性質；若遇到問題，請至 https://github.com/MuNet-OSS/MuConvert/issues 向我們回報。</value>
   </data>
   <data name="ExtraModifiersIgnored" xml:space="preserve">
-    <value>不應出現的修飾符：{0}. 已忽略。</value>
+    <value>不應出現或多餘的修飾符：「{0}」。已忽略。</value>
   </data>
   <data name="InvalidWaitTime" xml:space="preserve">
     <value>對分別指定每段時長的多段星星，類似 {0.5##...} 的等待時間標記應僅可在第一段星星上出現。不合法的等待時間標記已忽略。</value>
@@ -149,7 +149,7 @@
     <value>解析錯誤：MA2 CN___ 連接星星，未能找到前一段的星星！</value>
   </data>
   <data name="StartNoBpm" xml:space="preserve">
-    <value>譜面開頭沒有指定 BPM！已自動在譜面開頭加入 `({0})`。</value>
+    <value>譜面開頭沒有指定 BPM！已自動在譜面開頭加入 「({0})」。</value>
   </data>
   <data name="NoteTooNear" xml:space="preserve">
     <value>此音符與前一個音符的時間距離小於 384 分音！受 MA2 語法限制，MA2 所能表示的時間精度僅能達到 1/384，因此這兩個音符無法被精確表示，且可能被生成為黃色雙押。若您需要的是「偽雙押」，請使用「1`2」這類語法表示偽雙押，或將兩個音符至少錯開一個 384 分音的時間。</value>
@@ -173,13 +173,19 @@
     <value>您使用了連續多個偽雙押「`」的語法。這並非 Simai 標準語法，但遵循其他製譜軟體的行為，解釋為錯開時間更長的兩個音符（每個「`」錯開 128 分音）。若您並非有意為之，請檢查您的輸入以防輸入錯誤。</value>
   </data>
   <data name="BreakExIn103" xml:space="preserve">
-    <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 + 保護套）。相關特性已被忽略，並還原回非保護絕贊。</value>
+    <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 + 保護）。相關特性已被忽略，並還原回非保護絕贊。</value>
   </data>
   <data name="BreakHoldOrSlideIn103" xml:space="preserve">
     <value>譜面中含有 MA2 1.03 所不支援的特性（絕贊 Hold 或 Slide）。相關特性已被忽略，並還原回一般版本。</value>
   </data>
   <data name="ConnectingSlideIn103" xml:space="preserve">
     <value>譜面中含有 MA2 1.03 所不支援的特性（多段連接的星星）。僅保留第一段星星。</value>
+  </data>
+  <data name="SpecialTouchIn105" xml:space="preserve">
+    <value>譜面中含有 MA2 所不支援的特性（絕贊或保護 Touch）。相關修飾符已忽略。</value>
+  </data>
+  <data name="ExSlideIn105" xml:space="preserve">
+    <value>譜面中含有 MA2 所不支援的特性（保護 Slide）。相關修飾符已忽略。</value>
   </data>
   <data name="AntlrUnknownError" xml:space="preserve">
     <value>Simai 解析器發生錯誤: {0}</value>
@@ -212,7 +218,7 @@
     <value>。已自動為您修復。</value>
   </data>
   <data name="FixModifiersOnHead" xml:space="preserve">
-    <value>對星星頭的修飾符，應該出現在鍵位號後、星星類型標記之前</value>
+    <value>對星星頭的修飾符「{0}」，應該出現在鍵位號後、星星類型標記之前</value>
   </data>
   <data name="SimultaneousSlideHead" xml:space="preserve">
     <value>檢測到在星星頭所在的時刻與位置，存在其他星星頭/Tap，這會造成遊戲內的絕對無理。已自動為您修復（移除多餘的星星頭）。PS：若您要編寫同頭星星，請使用類似「1-2*-3」而非「1-2/1-3」的寫法；後者會造成上述情況。</value>

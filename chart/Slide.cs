@@ -4,15 +4,11 @@ using Rationals;
 
 namespace MuConvert.chart;
 
-public class Star(Chart chart, Rational time) : Tap(chart, time)
+public class Star : Tap
 {
-    public Star(Tap inTake): this(inTake.Chart, inTake.Time) // 拷贝构造函数
-    {
-        IsBreak = inTake.IsBreak;
-        IsEx = inTake.IsEx;
-        FalseEachIdx = inTake.FalseEachIdx;
-        Key = inTake.Key;
-    }
+    public Star(Chart chart, Rational time): base(chart, time) {}
+    
+    public Star(Tap inTake): base(inTake) {} // 拷贝构造函数
 }
 
 /**
@@ -75,7 +71,7 @@ public class Slide : Note
         }
     }
 
-    internal string DebuggerDisplay()
+    internal override string DebuggerDisplay()
     {
         string result;
         if (SharedHeadWith != null) result = "*";

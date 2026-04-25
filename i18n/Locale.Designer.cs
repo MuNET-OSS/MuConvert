@@ -87,7 +87,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (BreakEx). Those features were ignored and converted back to a pure break..
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (BreakEX). Those features were ignored and converted back to a pure break..
         /// </summary>
         public static string BreakExIn103 {
             get {
@@ -132,7 +132,16 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to You used multiple consecutive fake EACH &apos;`&apos; symbols. This is not standard Simai syntax, but following the behavior of other charting tools, it is interpreted as two notes staggered further apart in time (each &apos;`&apos; offsets timing by a 128th note). If this was not intentional, please review your input to avoid mistakes..
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 (EX Slide). Those modifiers were ignored..
+        /// </summary>
+        public static string ExSlideIn105 {
+            get {
+                return ResourceManager.GetString("ExSlideIn105", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You used multiple consecutive fake EACH ` symbols. This is not standard Simai syntax, but following the behavior of other charting tools, it is interpreted as two notes staggered further apart in time (each ` offsets timing by a 128th note). If this was not intentional, please review your input to avoid mistakes..
         /// </summary>
         public static string ExtenedFalseEach {
             get {
@@ -141,7 +150,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Unexpected modifier(s): {0}. Ignored..
+        ///   Looks up a localized string similar to Unexpected or redundant modifier(s): &apos;{0}&apos;. Ignored..
         /// </summary>
         public static string ExtraModifiersIgnored {
             get {
@@ -159,7 +168,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to For Slide&apos;s head, modifiers should appear after the key number and before the slide type notation..
+        ///   Looks up a localized string similar to For Slide&apos;s head, modifier(s) &apos;{0}&apos; should appear after the key number and before the slide type notation..
         /// </summary>
         public static string FixModifiersOnHead {
             get {
@@ -483,7 +492,16 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No BPM was specified at the start of the chart! A `({0})` has been inserted automatically at the beginning..
+        ///   Looks up a localized string similar to The chart contains features not supported by MA2 (Break or EX Touch). Those modifiers were ignored..
+        /// </summary>
+        public static string SpecialTouchIn105 {
+            get {
+                return ResourceManager.GetString("SpecialTouchIn105", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No BPM was specified at the start of the chart! A ({0}) has been inserted automatically at the beginning..
         /// </summary>
         public static string StartNoBpm {
             get {
@@ -510,7 +528,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix a syntax error in the chart (redundant duplicate EACH &apos;/&apos; or fake EACH &apos;`&apos; symbols, possibly from extra typing): {0}.
+        ///   Looks up a localized string similar to Attempted to fix a syntax error in the chart (redundant duplicate EACH / or fake EACH ` symbols, possibly from extra typing): {0}.
         /// </summary>
         public static string VisitFix1 {
             get {

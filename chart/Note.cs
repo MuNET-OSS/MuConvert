@@ -62,12 +62,22 @@ public abstract class Note
             return result;
         }
     }
+    
+    internal virtual string DebuggerDisplay() => "";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Tap(Chart chart, Rational time) : Note(chart, time)
 {
-    internal string DebuggerDisplay() => $"{Key}{Modifiers}";
+    public Tap(Tap inTake): this(inTake.Chart, inTake.Time) // 拷贝构造函数
+    {
+        IsBreak = inTake.IsBreak;
+        IsEx = inTake.IsEx;
+        FalseEachIdx = inTake.FalseEachIdx;
+        Key = inTake.Key;
+    }
+
+    internal override string DebuggerDisplay() => $"{Key}{Modifiers}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
@@ -77,7 +87,7 @@ public class Hold : Tap
 
     public Hold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
     
-    private new string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
+    internal override string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
@@ -112,7 +122,7 @@ public class Touch(Chart chart, Rational time) : Note(chart, time)
 
     public override string Modifiers => base.Modifiers + (IsFirework ? "f" : "");
     
-    private string DebuggerDisplay() => $"{TouchArea}{Modifiers}";
+    internal override string DebuggerDisplay() => $"{TouchArea}{Modifiers}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
@@ -122,7 +132,7 @@ public class TouchHold : Touch
 
     public TouchHold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
 
-    private string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
+    internal override string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
 // 仅用于内部实现某些trick时使用的“伪音符”。用户在正常的谱面中是不会看到这个的。

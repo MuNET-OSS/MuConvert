@@ -234,3 +234,9 @@ public class ModerateErrorStrategy(SimaiParser simaiParser) : LaxErrorStrategy(s
         _bail.Recover(recognizer, e); // 否则，不准recover（通过bail strategy的recover方法来抛异常），只准recoverInline
     }
 }
+
+// antlr自带的BailErrorStrategy，在RecoverInline时不会调用ErrorListener。本类只是Fix了这一点。
+public class FixedBailErrorStrategy : BailErrorStrategy
+{
+    public override IToken RecoverInline(Parser recognizer) => throw new InputMismatchException(recognizer);
+}

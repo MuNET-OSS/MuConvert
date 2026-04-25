@@ -5,8 +5,7 @@ namespace MuConvert.chart;
 
 public class Statistics
 {
-    private readonly Dictionary<string, int> _data = [];
-    public IReadOnlyDictionary<string, int> Data => _data;
+    public readonly Dictionary<string, int> Data = [];
 
     // 烟花数量
     public int Firework { get; private set; } = 0;
@@ -35,7 +34,7 @@ public class Statistics
         else throw Utils.Fail();
 
         var res = prefix + type;
-        _data[res] = _data.GetValueOrDefault(res) + 1;
+        Data[res] = Data.GetValueOrDefault(res) + 1;
         
         // TTM_EACHPAIRS 双押数量
         if (note is Tap)
@@ -58,26 +57,26 @@ public class Statistics
         }
     }
 
-    internal Statistics(Chart chart)
+    public Statistics(Chart chart)
     {
         foreach (var note in chart.Notes) AddNote(note);
     }
 
     // 音符总数（总物量）
-    public int Total => _data.Values.Sum();
+    public int Total => Data.Values.Sum();
 
     // 返回按音符类型分组的数量。所返回的字典中会包含的key：TAP,STR,HLD,SLD,TTP,THO
-    public Dictionary<string, int> ByNoteType => _data.GroupBy(x => x.Key[2..5])
+    public Dictionary<string, int> ByNoteType => Data.GroupBy(x => x.Key[2..5])
             .ToDictionary(x => x.Key, x => x.Sum(v => v.Value))
             .EnsureKeys(["TAP", "STR", "HLD", "SLD", "TTP", "THO"]);
     
     // 返回按音符的修饰符分组的数量。所返回的字典中会包含的key：NM,BR,EX,BX
-    public Dictionary<string, int> ByModifiers => _data.GroupBy(x => x.Key[..2])
+    public Dictionary<string, int> ByModifiers => Data.GroupBy(x => x.Key[..2])
         .ToDictionary(x => x.Key, x => x.Sum(v => v.Value))
         .EnsureKeys(["NM", "BR", "EX", "BX"]);
     
     // 返回按游戏结算画面上屏判定表分类的数量。所返回的字典中会包含的key：TAP,HOLD,SLIDE,TOUCH,BREAK
-    public Dictionary<string, int> ByScoring => _data.GroupBy(x =>
+    public Dictionary<string, int> ByScoring => Data.GroupBy(x =>
         {
             if (x.Key[0] == 'B') return "BREAK";
             var type = x.Key[2..5];
@@ -91,10 +90,10 @@ public class Statistics
         .EnsureKeys(["TAP","HOLD","SLIDE","TOUCH","BREAK"]);
     
     // 绝赞总数
-    public int Break => _data.Where(x=>x.Key[0] == 'B').Sum(x=>x.Value);
+    public int Break => Data.Where(x=>x.Key[0] == 'B').Sum(x=>x.Value);
     
     // 保护套总数
-    public int EX => _data.Where(x=>x.Key[1] == 'X').Sum(x=>x.Value);
+    public int EX => Data.Where(x=>x.Key[1] == 'X').Sum(x=>x.Value);
     
     // 修正物量（Slide算3个，Hold算2个，Break算5个）
     public int WeightedNoteCount {
@@ -118,7 +117,7 @@ public class Statistics
         List<string> r = [$"Tap: {t["TAP"]}", $"Hold: {t["HLD"]}", $"Star: {t["STR"]}", 
             $"Slide: {t["SLD"]}", $"Touch: {t["TTP"]}", $"Touch Hold: {t["THO"]}",
             $"Total: {Total}", 
-            $"Break: {ByModifiers["BR"] + ByModifiers["BX"]}", $"Ex: {ByModifiers["EX"] + ByModifiers["BX"]}", 
+            $"Break: {m["BR"] + m["BX"]}", $"Ex: {m["EX"] + m["BX"]}", 
             $"Firework: {Firework}"];
         return string.Join(", ", r);
     }

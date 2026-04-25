@@ -62,4 +62,16 @@ internal static class ExtensionUtils
         if (r < 0) throw new ArgumentOutOfRangeException(nameof(r));
         return r.WholePart + (r.FractionPart == 0 ? 0 : 1);
     }
+    
+    internal static Dictionary<K, V> RemoveRange<K, V>(this Dictionary<K, V> dict, IEnumerable<K> keys) where K : notnull
+    {
+        foreach (var key in keys) dict.Remove(key);
+        return dict;
+    }
+    
+    internal static Dictionary<K, V> Concat<K, V>(this Dictionary<K, V> dict, Dictionary<K, V> dict2) where K : notnull
+    {
+        foreach (var (k, v) in dict2) dict[k] = v;
+        return dict;
+    }
 }

@@ -96,8 +96,10 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 // 将tokens[i]挪到endPos后面去
                 r.Delete(idx);
                 r.InsertAfter(tokens[endPos].Index, token.Text);
-                alertsBuf.Add(new Alert(Warning, Locale.FixModifiersOnHead + Locale.Fixed, line: token.Line, 
-                    relevantNote: src.GetText(tokens[i-1].Item, tokens[endPos + 1].Item)));
+                var modifiersText = src.GetText(tokens[i].Item, tokens[endPos].Item);
+                alertsBuf.Add(new Alert(Warning, 
+                    string.Format(Locale.FixModifiersOnHead, modifiersText) + Locale.Fixed, 
+                    line: token.Line, relevantNote: src.GetText(tokens[i-1].Item, tokens[endPos + 1].Item)));
                 modified = true;
             }
         }
@@ -168,7 +170,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         switch (StrictLevel)
         {
             case StrictLevelEnum.Strict:
-                return new BailErrorStrategy();
+                return new FixedBailErrorStrategy();
             case StrictLevelEnum.Lax:
                 return new LaxErrorStrategy(this);
             case StrictLevelEnum.Normal:
@@ -421,21 +423,25 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
                 if (child is IErrorNode) continue;
                 if (child is not ITerminalNode modifier) throw Utils.Fail("modifiers里面居然不是ITerminalNode");
                 var token = modifier.Symbol;
-                if (token.Text == "b" && note is not Touch) note.IsBreak = true;
-                else if (token.Text == "x" && note is Tap) note.IsEx = true;
-                else if (token.Text == "f" && note is Touch touch) touch.IsFirework = true;
+                if (token.Text == "b" && !note.IsBreak) note.IsBreak = true;
+                else if (token.Text == "x" && !note.IsEx) note.IsEx = true;
+                else if (token.Text == "f" && note is Touch { IsFirework: false } touch) touch.IsFirework = true;
                 else extraModifiers.Add(token);
             }
         }
     }
 
-    private bool GetModifier(int tokenType)
+    private bool GetModifier(int tokenType, out string text)
     {
+        text = "";
         var idx = extraModifiers.FindIndex(x => x.Type == tokenType);
         if (idx == -1) return false;
+        text = extraModifiers[idx].Text;
         extraModifiers.RemoveAt(idx);
         return true;
     }
+    
+    private bool GetModifier(int tokenType) => GetModifier(tokenType, out _);
 
     public sealed override object VisitTap(P.TapContext context)
     {
@@ -591,7 +597,23 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         }
         else throw Utils.Fail("duration的个数不对"); // 已经在语法层做过检查了，所以这个分支按说是永远不会命中的。
 
-        ApplyModifiers(context.modifiers(), slide, clearExtraArr: false);
+        ApplyModifiers(context.modifiers(), slide, false);
+        if (StrictLevel != StrictLevelEnum.Strict && slide.OwnHead is Star)
+        { // 在VisitSlide中构造星星头时没有检测到任何特殊修饰符，所以被按常规方法构造了。
+            // 这里我们再检查一次，如果有修饰符的话应用之并给警告
+            if (GetModifier(L.NO_STAR, out var t))
+            { // 标记了NO_STAR的星星，则不要放head、但是需要手动设置Key
+                var key = slide.OwnHead.Key;
+                slide.OwnHead = null;
+                slide.Key = key;
+                AddAlert(Warning, string.Format(Locale.FixModifiersOnHead, t));
+            }
+            else if (GetModifier(L.STAR_TO_TAP, out var t2))
+            {
+                slide.OwnHead = new Tap(slide.OwnHead);
+                AddAlert(Warning, string.Format(Locale.FixModifiersOnHead, t2));
+            }
+        }
         return true;
     }
 

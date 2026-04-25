@@ -1,6 +1,5 @@
 ﻿using MuConvert.chart;
 using MuConvert.utils;
-using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.generator;
 
@@ -19,13 +18,13 @@ public class MA2_103Generator : MA2Generator
         
         if (mod == "BX")
         { // 给个警告，还原为BR
-            Warn(Locale.BreakExIn103, tap, line);
-            mod = tap is not Hold ? "BR" : "NM";
+            Warn(Locale.BreakExIn103, tap);
+            mod = tap is not Hold ? "BR" : "EX";
         }
         if (mod == "BR")
         {
             if (tap is Star) name = "BST";
-            else if (tap is Hold) Warn(Locale.BreakHoldOrSlideIn103, tap, line); // 给个警告。mod不用动，反正等会会忽略
+            else if (tap is Hold) Warn(Locale.BreakHoldOrSlideIn103, tap); // 给个警告。mod不用动，反正等会会忽略
             else name = "BRK";
         }
         else if (mod == "EX")
@@ -45,8 +44,7 @@ public class MA2_103Generator : MA2Generator
             var headTap = AddTap(slide.OwnHead, bar, tick);
             if (headTap != null)
             {
-                if (hasSameTimeTap(headTap))
-                    alerts.Add(new Alert(Warning, Locale.SimultaneousSlideHead, (chart, slide.OwnHead.Time), null, slide.DebuggerDisplay()));
+                if (hasSameTimeTap(headTap)) Warn(Locale.SimultaneousSlideHead, slide);
                 else result.Add(headTap);
             }
         }
@@ -58,8 +56,8 @@ public class MA2_103Generator : MA2Generator
         var r = new MA2Line(name, bar, tick, seg.StartKey - 1, string.Join("\t", [waitTime, len, seg.EndKey - 1]));
         result.Add(r);
 
-        if (slide.IsBreak) Warn(Locale.BreakHoldOrSlideIn103, slide, r);
-        if (slide.segments.Count > 1) Warn(Locale.ConnectingSlideIn103, slide, r);
+        if (slide.IsBreak) Warn(Locale.BreakHoldOrSlideIn103, slide);
+        if (slide.segments.Count > 1) Warn(Locale.ConnectingSlideIn103, slide);
         return result;
     }
 
@@ -70,11 +68,13 @@ public class MA2_103Generator : MA2Generator
         return line with { Name = line.Name[2..5] };
     }
 
-    protected override Dictionary<string, string> statsNameConversion() => new()
+    protected override Dictionary<string, string> statsRewrite() => base.statsRewrite().Concat(new Dictionary<string, string>
     {
-        ["TAP"] = "NMTAP", ["BRK"] = "BRTAP", ["XTP"] = "EXTAP",
-        ["HLD"] = "NMHLD", ["XHO"] = "EXHLD",
-        ["STR"] = "NMSTR", ["BST"] = "BRSTR", ["XST"] = "EXSTR",
-        ["TTP"] = "NMTTP", ["THO"] = "NMTHO", ["SLD"] = "NMSLD",
-    };
+        ["BXTAP"] = "BRTAP", ["BRHLD"] = "NMHLD", ["BXHLD"] = "EXHLD", ["BXSTR"] = "BRSTR", 
+        ["BRSLD"] = "NMSLD", ["BXSLD"] = "NMSLD",
+    });
+
+    protected override Dictionary<string, string> statsNameConversion() => base.statsNameConversion().RemoveRange([
+        "BXX", "BHO", "BXH", "XBS", "BSL"
+    ]);
 }

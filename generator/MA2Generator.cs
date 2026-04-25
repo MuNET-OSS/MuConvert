@@ -74,9 +74,9 @@ GENERATED_BY	MuConvert v{8}
     protected int T(int bar, int tick) => bar * RSL + tick;
     protected int T(MA2Line ma2Line) => T(ma2Line.Bar, ma2Line.Tick);
 
-    protected void Warn(string description, Note note, MA2Line? ma2Line = null)
+    protected void Warn(string description, Note note)
     {
-        alerts.Add(new Alert(Warning, description, (chart, note.Time), lines.Count + 1, ma2Line?.ToString()));
+        alerts.Add(new Alert(Warning, description, (chart, note.Time), null, note.DebuggerDisplay()));
     }
     
     protected virtual MA2Line? AddTap(Tap tap, int bar, int tick)
@@ -103,7 +103,6 @@ GENERATED_BY	MuConvert v{8}
         for (int i = lines.Count - 1; i >=0 ; i--)
         {
             var l = lines[i];
-            var lT = l.Bar * RSL + l.Tick;
             if (T(l) < curT) break;
             if (T(l) == curT && l.Key == ma2Line.Key && // 同一时间、同一键位、都是广义tap
                 _broadTap.Contains(l.Name[^3..]) && _broadTap.Contains(ma2Line.Name[^3..])) return true;
@@ -119,8 +118,7 @@ GENERATED_BY	MuConvert v{8}
             var headTap = AddTap(slide.OwnHead, bar, tick);
             if (headTap != null)
             {
-                if (hasSameTimeTap(headTap))
-                    alerts.Add(new Alert(Warning, Locale.SimultaneousSlideHead, (chart, slide.OwnHead.Time), null, slide.DebuggerDisplay()));
+                if (hasSameTimeTap(headTap)) Warn(Locale.SimultaneousSlideHead, slide);
                 else result.Add(headTap);
             }
         }
@@ -179,6 +177,7 @@ GENERATED_BY	MuConvert v{8}
             while (tick >= RSL) { tick -= RSL; bar++; }
         }
 
+        if (slide.IsEx) Warn(Locale.ExSlideIn105, slide);
         return result;
     }
 
@@ -198,7 +197,8 @@ GENERATED_BY	MuConvert v{8}
         extras.Add(area.ToString());
         extras.Add(touch.IsFirework ? "1" : "0");
         extras.Add(touch.TouchSize);
-                
+        
+        if (touch.IsBreak || touch.IsEx) Warn(Locale.SpecialTouchIn105, touch);
         return new MA2Line(prefix + name, bar, tick, key, string.Join("\t", extras));
     }
 
@@ -261,10 +261,17 @@ GENERATED_BY	MuConvert v{8}
         result.AppendLine();
     }
 
-    protected void GenerateStatistics(StringBuilder result)
+    protected void GenerateStatistics(StringBuilder result, Statistics stats)
     {
+        // 首先，把MA2中不合规的音符进行转写
+        foreach (var (k, v) in statsRewrite())
+        {
+            if (!stats.Data.ContainsKey(k)) continue;
+            stats.Data[v] = stats.Data.GetValueOrDefault(v) + stats.Data.GetValueOrDefault(k);
+            stats.Data.Remove(k);
+        }
+        
         // 统计段
-        var stats = chart.Statistics;
         foreach (var (k, v) in statsNameConversion())
         {
             result.AppendLine($"T_REC_{k}\t{stats.Data.GetValueOrDefault(v)}");
@@ -318,10 +325,17 @@ GENERATED_BY	MuConvert v{8}
         GenerateFileHead(result);
         GenerateBPM(result);
         GenerateNotes(result);
-        GenerateStatistics(result);
+        GenerateStatistics(result, chart.Statistics);
         
         return (result.ToString(), alerts);
     }
+
+    protected virtual Dictionary<string, string> statsRewrite() => new()
+    {
+        ["BRTTP"] = "NMTTP", ["EXTTP"] = "NMTTP", ["BXTTP"] = "NMTTP",
+        ["BRTHO"] = "NMTHO", ["EXTHO"] = "NMTHO", ["BXTHO"] = "NMTHO",
+        ["EXSLD"] = "NMSLD", ["BXSLD"] = "BRSLD",
+    };
 
     protected virtual Dictionary<string, string> statsNameConversion() => new()
     {
