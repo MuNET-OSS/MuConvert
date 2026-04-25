@@ -3,6 +3,8 @@ MuConvert - 支持Simai与MA2谱面互转的新一代转谱器
 
 MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 
+> Kind reminder: In the LLM era, to reduce developers’ workload, this README is maintained only in Chinese. We recommend using an LLM to translate and read this document.
+
 #### 本项目的主要优势
 - 特性支持完善：本项目严格按照[Simai语言文档](https://w.atwiki.jp/simai/pages/1002.html)编写，全面支持Simai官方标准的所有特性；同时也加入了许多官方文档未注明、但在自制谱圈被广泛使用的语法，如`||`行内注释，`&demo_seek`，`&clock_count`等。同时也对一些常见的非标准语法具有兼容性。
 - 无精度损失：内部使用Rational高精度分数类作为时间等相关运算的基础，确保没有精度损失，不会见到大于384分或无法被384整除的分音就无法处理等。

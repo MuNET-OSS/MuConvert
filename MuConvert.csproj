@@ -17,7 +17,7 @@
             <Generator>PublicResXFileCodeGenerator</Generator>
             <LastGenOutput>Locale.Designer.cs</LastGenOutput>
         </EmbeddedResource>
-        <EmbeddedResource Update="i18n\Locale.zh-hans.resx">
+        <EmbeddedResource Update="i18n\Locale.zh.resx">
             <DependentUpon>Locale.resx</DependentUpon>
             <WithCulture>true</WithCulture>
         </EmbeddedResource>
