@@ -411,42 +411,6 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (inserting possibly missing commas): {1}.
-        /// </summary>
-        public static string PrepFix1 {
-            get {
-                return ResourceManager.GetString("PrepFix1", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (duration markers used &quot;-&quot; instead of &quot;:&quot;): {1}.
-        /// </summary>
-        public static string PrepFix2 {
-            get {
-                return ResourceManager.GetString("PrepFix2", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (star-head modifiers should appear after the lane number and before the star type marker): {1}.
-        /// </summary>
-        public static string PrepFix3 {
-            get {
-                return ResourceManager.GetString("PrepFix3", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix {0} syntax error(s) in the chart (redundant duplicate parentheses, possibly from extra typing): {1}.
-        /// </summary>
-        public static string PrepFix4 {
-            get {
-                return ResourceManager.GetString("PrepFix4", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Extraneous token: {0} (typo?). Ignored..
         /// </summary>
         public static string RecoverInlineExtraneousToken {
@@ -510,29 +474,11 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Charts whose MET_DEF is not &quot;4 4&quot; are not supported yet!.
-        /// </summary>
-        public static string UnsuppoertedMA2MET_DEF {
-            get {
-                return ResourceManager.GetString("UnsuppoertedMA2MET_DEF", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to This MA2 version is not supported yet. Currently only MA2 1.02–1.05 are supported..
         /// </summary>
         public static string UnsuppoertedMA2Version {
             get {
                 return ResourceManager.GetString("UnsuppoertedMA2Version", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Attempted to fix a syntax error in the chart (redundant duplicate EACH / or fake EACH ` symbols, possibly from extra typing): {0}.
-        /// </summary>
-        public static string VisitFix1 {
-            get {
-                return ResourceManager.GetString("VisitFix1", resourceCulture);
             }
         }
         

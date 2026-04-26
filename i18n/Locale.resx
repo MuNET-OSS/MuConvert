@@ -133,9 +133,6 @@
   <data name="WarnNonStdMA2Version" xml:space="preserve">
     <value>Non-standard MA2 version encountered: {0}</value>
   </data>
-  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
-    <value>Charts whose MET_DEF is not "4 4" are not supported yet!</value>
-  </data>
   <data name="NoNotesInChart" xml:space="preserve">
     <value>The chart has no notes!</value>
   </data>
@@ -153,21 +150,6 @@
   </data>
   <data name="NoteTooNear" xml:space="preserve">
     <value>This note is closer than a 384th note to the previous note. MA2 can only represent timing down to 1/384 of a whole note, so these two notes cannot be represented exactly and may be emitted as a yellow EACH pair. If you want a "fake EACH", use syntax such as "1`2", or offset the notes by at least one 384th note.</value>
-  </data>
-  <data name="PrepFix1" xml:space="preserve">
-    <value>Attempted to fix {0} syntax error(s) in the chart (inserting possibly missing commas): {1}</value>
-  </data>
-  <data name="PrepFix2" xml:space="preserve">
-    <value>Attempted to fix {0} syntax error(s) in the chart (duration markers used "-" instead of ":"): {1}</value>
-  </data>
-  <data name="PrepFix3" xml:space="preserve">
-    <value>Attempted to fix {0} syntax error(s) in the chart (star-head modifiers should appear after the lane number and before the star type marker): {1}</value>
-  </data>
-  <data name="PrepFix4" xml:space="preserve">
-    <value>Attempted to fix {0} syntax error(s) in the chart (redundant duplicate parentheses, possibly from extra typing): {1}</value>
-  </data>
-  <data name="VisitFix1" xml:space="preserve">
-    <value>Attempted to fix a syntax error in the chart (redundant duplicate EACH / or fake EACH ` symbols, possibly from extra typing): {0}</value>
   </data>
   <data name="ExtenedFalseEach" xml:space="preserve">
     <value>You used multiple consecutive fake EACH ` symbols. This is not standard Simai syntax, but following the behavior of other charting tools, it is interpreted as two notes staggered further apart in time (each ` offsets timing by a 128th note). If this was not intentional, please review your input to avoid mistakes.</value>

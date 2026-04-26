@@ -3,7 +3,7 @@ MuConvert - 支持Simai与MA2谱面互转的新一代转谱器
 
 MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 
-> Kind reminder: In the LLM era, to reduce developers’ workload, this README is maintained only in Chinese. We recommend using an LLM to translate and read this document.
+> Kind reminder: To reduce developers’ workload, this README is maintained only in Chinese. We recommend using an LLM to translate and read this document.
 
 #### 本项目的主要优势
 - 特性支持完善：本项目严格按照[Simai语言文档](https://w.atwiki.jp/simai/pages/1002.html)编写，全面支持Simai官方标准的所有特性；同时也加入了许多官方文档未注明、但在自制谱圈被广泛使用的语法，如`||`行内注释，`&demo_seek`，`&clock_count`等。同时也对一些常见的非标准语法具有兼容性。
@@ -214,3 +214,10 @@ dotnet publish -c Release -r win-x64 -p:SelfContained=false -p UseAppHost=true -
     - 在`MuConvert.csproj`中定义了一个`<Antlr4>`的Item，它就是用来在编译时添加一个从语法文件生成C#解析器代码的编译步骤的。生成的文件会被自动放在`obj`目录下。
     - 具体的原理，请详见`parser/simai/SimaiParser.cs`中，对`MuConvert.antlr`下的各个类的引用。
 - MA2的话，由于其天生就是为了机读设计的、格式相对简单，没有必要上ANTLR；而是直接逐行读取、一行内`Split('\t')`，就足以解析MA2的所有内容了。
+
+### 多语言(i18n)相关
+- 本项目中支持基于`System.Globalization`的多语言，语言文件位于`i18n`目录中。
+- 其中，一级支持语言为三个（即[MaiChartManager](https://github.com/MuNET-OSS/MaiChartManager)支持的语言）：简体中文(`Locale.zh.resx`)、英语(`Locale.resx`)、繁体中文(`Locale.zh-hant.resx`)。
+  - 一般的开发过程，包括有意提交PR的人在实现代码时需要新增/修改i18n key的，只需处理这三种语言文件即可。
+- 其他的为二级支持语言，一般的开发过程可以不必处理和新增这些语言的翻译key；Maintainers会定期的将一级支持语言的翻译内容（通过LLM机器翻译）同步到这些语言中。
+  - 当然，如果你发现翻译有错误，也可以直接提PR修改。

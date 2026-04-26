@@ -133,9 +133,6 @@
   <data name="WarnNonStdMA2Version" xml:space="preserve">
     <value>非標準の MA2 バージョンが検出されました：{0}</value>
   </data>
-  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
-    <value>MET_DEF が「4 4」以外の譜面は未対応です！</value>
-  </data>
   <data name="NoNotesInChart" xml:space="preserve">
     <value>譜面にノーツがありません！</value>
   </data>
@@ -153,21 +150,6 @@
   </data>
   <data name="NoteTooNear" xml:space="preserve">
     <value>このノーツは直前のノーツと 384 分音符より近い間隔です。MA2 は全音符の 1/384 までしか表現できないため、2 つのノーツを正確に表現できず、黄色の EACH（イーチ）として出力される可能性があります。「擬似 EACH」を意図する場合は「1`2」のような構文を使うか、少なくとも 384 分音符ぶんずらしてください。</value>
-  </data>
-  <data name="PrepFix1" xml:space="preserve">
-    <value>譜面の構文エラー {0} 件の修復を試みました（不足している可能性のあるカンマを挿入）：{1}</value>
-  </data>
-  <data name="PrepFix2" xml:space="preserve">
-    <value>譜面の構文エラー {0} 件の修復を試みました（持続時間マーカーが「:」ではなく「-」になっていた）：{1}</value>
-  </data>
-  <data name="PrepFix3" xml:space="preserve">
-    <value>譜面の構文エラー {0} 件の修復を試みました（スライド頭の修飾子は、レーン番号の後・スライド種別記号の前に置くべき）：{1}</value>
-  </data>
-  <data name="PrepFix4" xml:space="preserve">
-    <value>譜面の構文エラー {0} 件の修復を試みました（冗長な重複括弧。余分に入力した可能性があります）：{1}</value>
-  </data>
-  <data name="VisitFix1" xml:space="preserve">
-    <value>譜面の構文エラーの修復を試みました（重複した EACH「/」または擬似 EACH「`」記号。余分に入力した可能性があります）：{0}</value>
   </data>
   <data name="ExtenedFalseEach" xml:space="preserve">
     <value>擬似 EACH「`」を連続で複数回使用しています。これは Simai の標準構文ではありませんが、他の譜面ツールの挙動に合わせ、ノーツをより離して配置した 2 つのノーツとして解釈されます（「`」1 つにつき 128 分音符ぶん遅らせます）。意図したものでない場合は入力を見直してください。</value>

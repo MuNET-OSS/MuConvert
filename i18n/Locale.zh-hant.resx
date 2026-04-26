@@ -133,9 +133,6 @@
   <data name="WarnNonStdMA2Version" xml:space="preserve">
     <value>遇到了非標準的 MA2 版本號: {0}</value>
   </data>
-  <data name="UnsuppoertedMA2MET_DEF" xml:space="preserve">
-    <value>暫不支援 MET_DEF 不為 "4 4" 的譜面！</value>
-  </data>
   <data name="NoNotesInChart" xml:space="preserve">
     <value>譜面中沒有音符！</value>
   </data>
@@ -153,21 +150,6 @@
   </data>
   <data name="NoteTooNear" xml:space="preserve">
     <value>此音符與前一個音符的時間距離小於 384 分音！受 MA2 語法限制，MA2 所能表示的時間精度僅能達到 1/384，因此這兩個音符無法被精確表示，且可能被生成為黃色雙押。若您需要的是「偽雙押」，請使用「1`2」這類語法表示偽雙押，或將兩個音符至少錯開一個 384 分音的時間。</value>
-  </data>
-  <data name="PrepFix1" xml:space="preserve">
-    <value>嘗試修復了譜面中的{0}處語法錯誤（補上了可能缺失的逗號）: {1}</value>
-  </data>
-  <data name="PrepFix2" xml:space="preserve">
-    <value>嘗試修復了譜面中的{0}處語法錯誤（持續時間標記中誤用了「-」，而不是「:」）: {1}</value>
-  </data>
-  <data name="PrepFix3" xml:space="preserve">
-    <value>嘗試修復了譜面中的{0}處語法錯誤（對星星頭的修飾符，應該出現在鍵位號後、星星類型標記之前）: {1}</value>
-  </data>
-  <data name="PrepFix4" xml:space="preserve">
-    <value>嘗試修復了譜面中的{0}處語法錯誤（重複的括號，可能是多打了一些）: {1}</value>
-  </data>
-  <data name="VisitFix1" xml:space="preserve">
-    <value>嘗試修復了譜面中的語法錯誤（重複的雙押「/」或偽雙押「`」符號，可能是多打了一些）: {0}</value>
   </data>
   <data name="ExtenedFalseEach" xml:space="preserve">
     <value>您使用了連續多個偽雙押「`」的語法。這並非 Simai 標準語法，但遵循其他製譜軟體的行為，解釋為錯開時間更長的兩個音符（每個「`」錯開 128 分音）。若您並非有意為之，請檢查您的輸入以防輸入錯誤。</value>
