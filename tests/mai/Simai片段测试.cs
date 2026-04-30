@@ -3,15 +3,15 @@ using System.Text;
 using MuConvert.generator;
 using MuConvert.parser;
 using MuConvert.utils;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 public class Simai片段测试
 {
     public static IEnumerable<object[]> FragmentYamlFiles()
     {
-        var root = Path.Combine(FindRepoRoot().FullName, "tests", "testset", "片段");
+        var root = Path.Combine(FindTestsetRoot().FullName, "片段");
         if (!Directory.Exists(root))
             throw new DirectoryNotFoundException($"片段测例目录不存在: {root}");
 

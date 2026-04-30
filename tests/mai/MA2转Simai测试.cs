@@ -8,7 +8,7 @@ using MuConvert.parser;
 using Rationals;
 using Xunit.Abstractions;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// 官谱 MA2 → Simai 与 maidata 中 inote 的比对：不逐字对比 Simai 文本，而是把双方按「顶层逗号」展开为

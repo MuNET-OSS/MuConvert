@@ -1,8 +1,8 @@
 using System.Text;
 using MuConvert.maidata;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// Maidata 读写与 ToString 往返：testset 中的 maidata.txt 为输入。
@@ -16,8 +16,7 @@ public class Maidata模块测试
 
     public static IEnumerable<object[]> MaidataFiles()
     {
-        var root = FindRepoRoot();
-        var dir = Path.Combine(root.FullName, "tests", "testset", "自制谱");
+        var dir = Path.Combine(FindTestsetRoot().FullName, "自制谱");
         string[] TO_TEST_CHARTS = ["Pre-STAR", "蝴蝶", "流光（Light Me Up）"];
         foreach (var chart in TO_TEST_CHARTS)
         {

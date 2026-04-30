@@ -6,22 +6,20 @@ using MuConvert.parser;
 using MuConvert.utils;
 using YamlDotNet.Serialization;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 internal static class TestUtils
 {
     private static readonly Regex Ma2ClkDefLineRegex = new(@"^CLK_DEF\t(\d+)\s*$", RegexOptions.Multiline | RegexOptions.CultureInvariant);
     private static readonly Regex Ma2ClkLineRegex = new(@"^CLK\t(\d+)\s", RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
-    /// <summary>
-    /// 从测试运行目录向上查找包含 MuConvert.csproj 的仓库根目录。
-    /// </summary>
-    public static DirectoryInfo FindRepoRoot()
+    // 查找到测试数据的根目录(tests/mai/testset)
+    public static DirectoryInfo FindTestsetRoot()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "MuConvert.csproj")))
-            dir = dir.Parent;
-        return dir ?? throw new DirectoryNotFoundException("Could not locate repo root (MuConvert.csproj).");
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !File.Exists(Path.Combine(dir, "MuConvert.Tests.csproj")))
+            dir = Path.GetDirectoryName(dir);
+        return new DirectoryInfo(Path.Combine(dir ?? throw new DirectoryNotFoundException("Could not locate repo root."), "mai", "testset"));
     }
     
     /// <summary>
@@ -109,8 +107,7 @@ internal static class TestUtils
     
     public static Chart LoadOneChart(out List<Alert> alerts)
     {
-        var repo = FindRepoRoot();
-        var maidataPath = Path.Combine(repo.FullName, "tests", "testset", "官谱", "Xaleid◆scopiX [DX]", "maidata.txt");
+        var maidataPath = Path.Combine(FindTestsetRoot().FullName, "官谱", "Xaleid◆scopiX [DX]", "maidata.txt");
         Assert.True(File.Exists(maidataPath), $"Missing test maidata: {maidataPath}");
 
         var maidata = new Maidata(File.ReadAllText(maidataPath, Encoding.UTF8));
@@ -131,8 +128,7 @@ internal static class TestUtils
     
     public static IEnumerable<object[]> GetTestInputs(string dataDir, int? lv = null, string? title = null)
     {
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", dataDir);
+        var testsetRoot = Path.Combine(FindTestsetRoot().FullName, dataDir);
         if (!Directory.Exists(testsetRoot))
             throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
 

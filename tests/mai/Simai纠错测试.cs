@@ -3,7 +3,7 @@ using MuConvert.parser;
 using Xunit.Abstractions;
 using static MuConvert.utils.Alert.LEVEL;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// 针对另一项目中 <c>FixChartSimaiSharp</c> / <c>SimaiParser.Preprocess</c> 计划支持的常见非标准 Simai 写法。

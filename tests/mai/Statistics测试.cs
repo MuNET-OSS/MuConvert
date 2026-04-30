@@ -2,9 +2,9 @@ using System.Text;
 using MuConvert.generator;
 using MuConvert.parser;
 using Xunit.Abstractions;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// 官谱 MA2 → Chart（<see cref="MA2Parser"/>）→ MA2（<see cref="MA2Generator"/> / <see cref="MA2_103Generator"/>）轮回合后，
@@ -20,8 +20,7 @@ public class Statistics测试
     public static IEnumerable<object[]> OfficialLevel5()
     {
         const int levelId = 5;
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", "官谱");
+        var testsetRoot = Path.Combine(FindTestsetRoot().FullName, "官谱");
         if (!Directory.Exists(testsetRoot))
             throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
 

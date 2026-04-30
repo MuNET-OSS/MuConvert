@@ -3,9 +3,9 @@ using MuConvert.generator;
 using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// 官谱中 golden MA2 头为 <c>1.03.00</c> 的谱面：Simai（lv5）→ <see cref="MA2_103Generator"/> 与对应 <c>*03.ma2</c> 音符段一致。
@@ -15,8 +15,7 @@ public class MA2_103测试
     public static IEnumerable<object[]> Official103Lv5()
     {
         const int levelId = 5;
-        var repoRoot = FindRepoRoot();
-        var testsetRoot = Path.Combine(repoRoot.FullName, "tests", "testset", "官谱");
+        var testsetRoot = Path.Combine(FindTestsetRoot().FullName, "官谱");
         if (!Directory.Exists(testsetRoot))
             throw new DirectoryNotFoundException($"Testset root not found: {testsetRoot}");
 

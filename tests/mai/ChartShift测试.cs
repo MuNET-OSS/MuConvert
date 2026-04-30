@@ -1,8 +1,8 @@
 ﻿using MuConvert.chart;
 using Rationals;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /// <summary>
 /// <see cref="Chart.Shift"/>：使用某官谱（SimaiParser 解析）作为真实谱面数据。

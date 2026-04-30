@@ -4,9 +4,9 @@ using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 using Xunit.Abstractions;
-using static MuConvert.Tests.TestUtils;
+using static MuConvert.Tests.mai.TestUtils;
 
-namespace MuConvert.Tests;
+namespace MuConvert.Tests.mai;
 
 /* 都是让AI写的 */
 public class Simai转MA2测试
@@ -16,8 +16,7 @@ public class Simai转MA2测试
     public Simai转MA2测试(ITestOutputHelper output) => _output = output;
 
     public static IEnumerable<object[]> GetTestInputs(string dataDir) => TestUtils.GetTestInputs(dataDir);
-
-    // TODO 再多找一些自制谱加进来吧
+    
     [Theory]
     [MemberData(nameof(GetTestInputs), "自制谱")]
     public void 自制谱转MA2测试(TestInput c) => TestChart(c);
