@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.Text;
 using System.Text.RegularExpressions;
+using MuConvert.collection;
 using MuConvert.generator;
-using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 

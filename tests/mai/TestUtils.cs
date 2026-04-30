@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using MuConvert.chart.mai;
-using MuConvert.maidata;
+using MuConvert.collection;
 using MuConvert.parser;
 using MuConvert.utils;
 using YamlDotNet.Serialization;

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using MuConvert.utils;
 
-namespace MuConvert.maidata;
+namespace MuConvert.collection;
 
 public record MaidataChart(string Inote, string? Level = null, string? NoteDesigner = null);
 

@@ -1,6 +1,6 @@
 using System.Text;
+using MuConvert.collection;
 using MuConvert.generator;
-using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
 using Xunit.Abstractions;
