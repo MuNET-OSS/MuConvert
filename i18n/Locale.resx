@@ -79,8 +79,14 @@
   <data name="MessageLine" xml:space="preserve">
     <value>line {0}</value>
   </data>
-  <data name="MessageTime" xml:space="preserve">
+  <data name="MessageTimeAndBar" xml:space="preserve">
     <value>bar time {0:W}({1:F2}s)</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>{0:F2}s</value>
+  </data>
+  <data name="MessageBar" xml:space="preserve">
+    <value>bar time {0:W}</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
     <value>parsing "{0}"</value>

@@ -26,13 +26,16 @@ public class MA2Parser : IParser
 
     private void Fail(string reason, int lineNo, ReadOnlySpan<char> line)
     {
-        alerts.Add(new Alert(Error, reason, null, lineNo, line.ToString()));
+        alerts.Add(new Alert(Error, reason, lineNo, line.ToString()));
         throw new ConversionException(alerts);
     }
 
     private void WarnParamsCount(int lineNo, ReadOnlySpan<char> line, Rational? time)
     {
-        alerts.Add(new Alert(Warning, Locale.MA2NoteSentenceTooManyParam, time != null ? (chart, time.Value) : null, lineNo, line.ToString()));
+        Alert alert;
+        if (time != null) alert = new Alert(Warning, Locale.MA2NoteSentenceTooManyParam, (chart, time.Value), lineNo, line.ToString());
+        else alert = new Alert(Warning, Locale.MA2NoteSentenceTooManyParam, lineNo, line.ToString());
+        alerts.Add(alert);
     }
 
     private Rational _endTime(Slide slide) => slide.Time + slide.WaitTime.Bar + slide.Duration.Bar;
@@ -171,7 +174,7 @@ public class MA2Parser : IParser
                 else
                 {
                     if (bpmRead) Fail(Locale.InvalidMA2Sentence, lineNo, line); // 在主体部分的不认识语句，直接失败
-                    else alerts.Add(new Alert(Warning, Locale.InvalidMA2SentenceWarning, null, lineNo, line.ToString())); // 在头部分的，只给一个警告
+                    else alerts.Add(new Alert(Warning, Locale.InvalidMA2SentenceWarning, lineNo, line.ToString())); // 在头部分的，只给一个警告
                     continue;
                 }
 
@@ -195,7 +198,7 @@ public class MA2Parser : IParser
             else
             {
                 if (bpmRead) Fail(Locale.InvalidMA2Sentence, lineNo, line); // 在主体部分的不认识语句，直接失败
-                else alerts.Add(new Alert(Warning, Locale.InvalidMA2SentenceWarning, null, lineNo, line.ToString())); // 在头部分的，只给一个警告
+                else alerts.Add(new Alert(Warning, Locale.InvalidMA2SentenceWarning, lineNo, line.ToString())); // 在头部分的，只给一个警告
             }
         }
 

@@ -79,8 +79,14 @@
   <data name="MessageLine" xml:space="preserve">
     <value>第{0}行</value>
   </data>
-  <data name="MessageTime" xml:space="preserve">
+  <data name="MessageTimeAndBar" xml:space="preserve">
     <value>第{0:W}小节({1:F2}秒)</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>第{0:F2}秒</value>
+  </data>
+  <data name="MessageBar" xml:space="preserve">
+    <value>第{0:W}小节</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
     <value>解析 "{0}" 时</value>

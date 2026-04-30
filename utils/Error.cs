@@ -8,31 +8,48 @@ public class Alert
     public enum LEVEL { Error, Warning, Info, Debug }
 
     public LEVEL Level;
-    public (Chart, Rational)? BarTime;
+    public Rational? TimeInBar;
+    public double? TimeInSeconds;
     public int? Line;
 
     public string? RelevantNote;
     public string Description;
     
-    public Alert(LEVEL level, string description, (Chart, Rational)? barTime = null, int? line = null, string? relevantNote = null)
+    public Alert(LEVEL level, string description)
     {
         Level = level;
         Description = description;
-        BarTime = barTime;
+    }
+    
+    public Alert(LEVEL level, string description, int? line = null, string? relevantNote = null)
+        : this(level, description)
+    {
         Line = line;
         RelevantNote = relevantNote;
+    }
+    
+    public Alert(LEVEL level, string description, Rational? timeInBar = null, double? timeInSeconds = null, int? line = null, string? relevantNote = null)
+        : this(level, description, line, relevantNote)
+    {
+        TimeInBar = timeInBar;
+        TimeInSeconds = timeInSeconds;
+    }
+    
+    public Alert(LEVEL level, string description, (Chart, Rational) barTime, int? line = null, string? relevantNote = null)
+        : this(level, description, line, relevantNote)
+    {
+        var (chart, time) = barTime; 
+        TimeInBar = time; 
+        if (chart.BpmList.Count > 0) TimeInSeconds = (double)chart.ToSecond(time);
     }
 
     public override string ToString()
     {
         List<string> tags = [];
         if (Line != null) tags.Add(string.Format(Locale.MessageLine, Line));
-        if (BarTime != null)
-        {
-            var (chart, time) = BarTime.Value;
-            var sec = chart.BpmList.Count > 0 ? (float)chart.ToSecond(time) : float.NaN;
-            tags.Add(string.Format(Locale.MessageTime, time.CanonicalForm, sec));
-        }
+        if (TimeInBar != null && TimeInSeconds != null) tags.Add(string.Format(Locale.MessageTimeAndBar, TimeInBar.Value.CanonicalForm, TimeInSeconds.Value));
+        else if (TimeInBar != null) tags.Add(string.Format(Locale.MessageBar, TimeInBar.Value.CanonicalForm));
+        else if (TimeInSeconds != null) tags.Add(string.Format(Locale.MessageTime, TimeInSeconds.Value));
         if (RelevantNote != null) tags.Add(string.Format(Locale.MessageParsing, RelevantNote));
         var tagString = tags.Count > 0 ? $"({Locale.MessageAt} {string.Join(", ", tags)}) " : "";
         

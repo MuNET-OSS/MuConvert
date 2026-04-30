@@ -79,8 +79,14 @@
   <data name="MessageLine" xml:space="preserve">
     <value>{0}번째 줄</value>
   </data>
-  <data name="MessageTime" xml:space="preserve">
+  <data name="MessageTimeAndBar" xml:space="preserve">
     <value>{0:W}마디({1:F2}초)</value>
+  </data>
+  <data name="MessageTime" xml:space="preserve">
+    <value>{0:F2}초</value>
+  </data>
+  <data name="MessageBar" xml:space="preserve">
+    <value>{0:W}마디</value>
   </data>
   <data name="MessageParsing" xml:space="preserve">
     <value>"{0}" 파싱 중</value>

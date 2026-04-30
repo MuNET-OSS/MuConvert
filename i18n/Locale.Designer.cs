@@ -339,6 +339,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to bar time {0:W}.
+        /// </summary>
+        public static string MessageBar {
+            get {
+                return ResourceManager.GetString("MessageBar", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to line {0}.
         /// </summary>
         public static string MessageLine {
@@ -357,11 +366,20 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to bar time {0:W}({1:F2}s).
+        ///   Looks up a localized string similar to {0:F2}s.
         /// </summary>
         public static string MessageTime {
             get {
                 return ResourceManager.GetString("MessageTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to bar time {0:W}({1:F2}s).
+        /// </summary>
+        public static string MessageTimeAndBar {
+            get {
+                return ResourceManager.GetString("MessageTimeAndBar", resourceCulture);
             }
         }
         
