@@ -1,4 +1,4 @@
-﻿using MuConvert.chart;
+﻿using MuConvert.chart.mai;
 using MuConvert.utils;
 
 namespace MuConvert.generator;

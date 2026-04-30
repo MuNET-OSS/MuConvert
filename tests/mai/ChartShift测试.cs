@@ -1,22 +1,23 @@
 ﻿using MuConvert.chart;
+using MuConvert.chart.mai;
 using Rationals;
 using static MuConvert.Tests.mai.TestUtils;
 
 namespace MuConvert.Tests.mai;
 
 /// <summary>
-/// <see cref="Chart.Shift"/>：使用某官谱（SimaiParser 解析）作为真实谱面数据。
+/// <see cref="MaiChart.Shift"/>：使用某官谱（SimaiParser 解析）作为真实谱面数据。
 /// </summary>
 public class ChartShift测试
 {
     private static readonly Rational QuarterBar = new(1, 4);
 
-    private static List<(Rational Time, int FalseEachIdx)> NotesInStableOrder(Chart c) =>
+    private static List<(Rational Time, int FalseEachIdx)> NotesInStableOrder(MaiChart c) =>
         c.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx).Select(n => (n.Time, n.FalseEachIdx)).ToList();
 
-    private static List<BPM> BpmInOrder(Chart c) => c.BpmList.OrderBy(x => x.Time).ToList();
+    private static List<BPM> BpmInOrder(MaiChart c) => c.BpmList.OrderBy(x => x.Time).ToList();
 
-    private static void AssertShiftResultTimelineValid(Chart c)
+    private static void AssertShiftResultTimelineValid(MaiChart c)
     {
         Assert.True(c.BpmList[0].Time == 0, "BPM 起点应在 0");
         foreach (var b in c.BpmList)

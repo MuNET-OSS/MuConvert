@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.maidata;
 using MuConvert.parser;
 using MuConvert.utils;
@@ -24,7 +24,7 @@ internal static class TestUtils
     
     /// <summary>
     /// 自 MA2 文本中用正则匹配首行 <c>CLK_DEF\t…</c>（官机头字段名；部分资料误写为 CLOCK_DEF），返回其整数值；
-    /// 与 <see cref="Chart.ClockCount"/> 的关系为 <c>CLK_DEF = 96 * ClockCount</c>（<c>RESOLUTION</c> 为 384 时）。
+    /// 与 <see cref="MaiChart.ClockCount"/> 的关系为 <c>CLK_DEF = 96 * ClockCount</c>（<c>RESOLUTION</c> 为 384 时）。
     /// </summary>
     public static int? TryParseMa2ClkDef(string ma2Text)
     {
@@ -105,7 +105,7 @@ internal static class TestUtils
         line.StartsWith("MET\t", StringComparison.Ordinal) ||
         line.StartsWith("CLK\t", StringComparison.Ordinal);
     
-    public static Chart LoadOneChart(out List<Alert> alerts)
+    public static MaiChart LoadOneChart(out List<Alert> alerts)
     {
         var maidataPath = Path.Combine(FindTestsetRoot().FullName, "官谱", "Xaleid◆scopiX [DX]", "maidata.txt");
         Assert.True(File.Exists(maidataPath), $"Missing test maidata: {maidataPath}");

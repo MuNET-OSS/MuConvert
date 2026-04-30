@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -8,7 +9,7 @@ namespace MuConvert.parser;
 
 public class MA2Parser : IParser
 {
-    private readonly Chart chart = new();
+    private readonly MaiChart chart = new();
     private readonly List<Alert> alerts = [];
 
     private bool bpmRead = false;
@@ -45,7 +46,7 @@ public class MA2Parser : IParser
         ["BRK"] = "BRTAP", ["XTP"] = "EXTAP", ["XHO"] = "EXHLD", ["BST"] = "BRSTR", ["XST"] = "EXSTR"
     };
     
-    public (Chart, List<Alert>) Parse(string text)
+    public (MaiChart, List<Alert>) Parse(string text)
     {
         if (bpmRead) throw new Exception(Locale.InstanceMultipleUsage);
 

@@ -1,9 +1,9 @@
 using MuConvert.utils;
 using Rationals;
 
-namespace MuConvert.chart;
+namespace MuConvert.chart.mai;
 
-public class Chart
+public class MaiChart
 {
     public BPMList BpmList = [];
     public List<Note> Notes = [];

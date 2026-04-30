@@ -1,7 +1,7 @@
 using MuConvert.utils;
 using Rationals;
 
-namespace MuConvert.chart;
+namespace MuConvert.chart.mai;
 
 public class Statistics
 {
@@ -57,7 +57,7 @@ public class Statistics
         }
     }
 
-    public Statistics(Chart chart)
+    public Statistics(MaiChart chart)
     {
         foreach (var note in chart.Notes) AddNote(note);
     }

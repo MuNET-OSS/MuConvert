@@ -1,5 +1,4 @@
-﻿using MuConvert.chart;
-using Rationals;
+﻿using Rationals;
 
 namespace MuConvert.utils;
 
@@ -35,7 +34,7 @@ public class Alert
         TimeInSeconds = timeInSeconds;
     }
     
-    public Alert(LEVEL level, string description, (Chart, Rational) barTime, int? line = null, string? relevantNote = null)
+    public Alert(LEVEL level, string description, (chart.mai.MaiChart, Rational) barTime, int? line = null, string? relevantNote = null)
         : this(level, description, line, relevantNote)
     {
         var (chart, time) = barTime; 

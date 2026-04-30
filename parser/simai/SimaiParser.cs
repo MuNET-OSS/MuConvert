@@ -4,6 +4,7 @@ using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using MuConvert.Antlr;
 using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.parser.simai;
 using MuConvert.utils;
 using Rationals;
@@ -26,7 +27,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
     public enum StrictLevelEnum { Strict, Normal, Lax }
     public StrictLevelEnum StrictLevel;
 
-    internal readonly Chart chart;
+    internal readonly MaiChart chart;
     internal readonly List<Alert> alerts = [];
 
     private Rational now = 0;
@@ -44,7 +45,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
 
     public SimaiParser(bool bigTouch = false, int clockCount = 4, StrictLevelEnum strictLevel = StrictLevelEnum.Normal)
     {
-        chart = new Chart { DefaultTouchSize = bigTouch ? "L1" : "M1", ClockCount = clockCount};
+        chart = new MaiChart { DefaultTouchSize = bigTouch ? "L1" : "M1", ClockCount = clockCount};
         StrictLevel = strictLevel;
     }
     
@@ -115,7 +116,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
         return new CommonTokenStream(lexer);
     }
 
-    public (Chart, List<Alert>) Parse(string text)
+    public (MaiChart, List<Alert>) Parse(string text)
     {
         if (now != 0) throw new Exception(Locale.InstanceMultipleUsage);
         P.ChartContext root;

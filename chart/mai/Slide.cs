@@ -2,11 +2,11 @@
 using MuConvert.utils;
 using Rationals;
 
-namespace MuConvert.chart;
+namespace MuConvert.chart.mai;
 
 public class Star : Tap
 {
-    public Star(Chart chart, Rational time): base(chart, time) {}
+    public Star(MaiChart chart, Rational time): base(chart, time) {}
     
     public Star(Tap inTake): base(inTake) {} // 拷贝构造函数
 }
@@ -24,7 +24,7 @@ public class Slide : Note
     public List<SlideSegment> segments = new();
     public Duration WaitTime;
 
-    public Slide(Chart chart, Rational time) : base(chart, time)
+    public Slide(MaiChart chart, Rational time) : base(chart, time)
     {
        WaitTime = new Duration(this) { InvariantBar = new Rational(1, 4) };
     }

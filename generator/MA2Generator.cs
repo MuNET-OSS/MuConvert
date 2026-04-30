@@ -1,5 +1,5 @@
 using System.Text;
-using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -29,7 +29,7 @@ public class MA2Generator : IGenerator
     public int MA2Version = 105;
     public int RSL = 384;
     
-    protected Chart chart;
+    protected MaiChart chart;
     protected List<MA2Line> lines = [];
     protected readonly List<Alert> alerts = [];
     
@@ -315,7 +315,7 @@ GENERATED_BY	MuConvert v{8}
         result.AppendLine();
     }
     
-    public (string, List<Alert>) Generate(Chart _chart)
+    public (string, List<Alert>) Generate(MaiChart _chart)
     {
         if (chart != null) throw new Exception(Locale.InstanceMultipleUsage);
         chart = _chart;

@@ -1,9 +1,9 @@
-﻿using MuConvert.chart;
+﻿using MuConvert.chart.mai;
 using MuConvert.utils;
 
 namespace MuConvert.parser;
 
 public interface IParser
 {
-    public (Chart, List<Alert>) Parse(string text);
+    public (MaiChart, List<Alert>) Parse(string text);
 }

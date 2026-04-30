@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.generator;
 using MuConvert.maidata;
 using MuConvert.parser;
@@ -79,7 +79,7 @@ internal static partial class SimaiCommaTimeline
     public static void AssertTimelineEqual(
         IReadOnlyList<Entry> expected,
         IReadOnlyList<Entry> actual,
-        Chart chart,
+        MaiChart chart,
         ITestOutputHelper? output = null)
     {
         static IEnumerable<Entry> Canon(IReadOnlyList<Entry> e) =>
@@ -111,7 +111,7 @@ internal static partial class SimaiCommaTimeline
     
     private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-3;
     
-    private static void AssertNoteEqual(string expected, string actual, int noteIdx, Rational time, Chart chart)
+    private static void AssertNoteEqual(string expected, string actual, int noteIdx, Rational time, MaiChart chart)
     {
         var expArr = RearrangeNote(expected).Split('/', '`');
         var actArr = RearrangeNote(actual).Split('/', '`');

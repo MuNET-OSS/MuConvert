@@ -2,11 +2,11 @@
 using MuConvert.utils;
 using Rationals;
 
-namespace MuConvert.chart;
+namespace MuConvert.chart.mai;
 
 public abstract class Note
 {
-    public readonly Chart Chart;
+    public readonly MaiChart Chart;
     public Rational Time { get; set => field = value.CanonicalForm; }
     protected int _key;
     
@@ -33,7 +33,7 @@ public abstract class Note
         }
     }
 
-    protected Note(Chart chart, Rational time)
+    protected Note(MaiChart chart, Rational time)
     {
         Chart = chart;
         Time = time;
@@ -67,7 +67,7 @@ public abstract class Note
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
-public class Tap(Chart chart, Rational time) : Note(chart, time)
+public class Tap(MaiChart chart, Rational time) : Note(chart, time)
 {
     public Tap(Tap inTake): this(inTake.Chart, inTake.Time) // 拷贝构造函数
     {
@@ -85,13 +85,13 @@ public class Hold : Tap
 {
     public override Duration Duration { get; set; }
 
-    public Hold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
+    public Hold(MaiChart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
     
     internal override string DebuggerDisplay() => $"{Key}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
-public class Touch(Chart chart, Rational time) : Note(chart, time)
+public class Touch(MaiChart chart, Rational time) : Note(chart, time)
 {
     private TouchSeries _touchSeries;
 
@@ -130,10 +130,10 @@ public class TouchHold : Touch
 {
     public override Duration Duration { get; set; }
 
-    public TouchHold(Chart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
+    public TouchHold(MaiChart chart, Rational time) : base(chart, time) { Duration = new Duration(this); }
 
     internal override string DebuggerDisplay() => $"{TouchArea}h{Modifiers}{Duration.DebuggerDisplay()}";
 }
 
 // 仅用于内部实现某些trick时使用的“伪音符”。用户在正常的谱面中是不会看到这个的。
-internal class PseudoNote(Chart chart) : Note(chart, 0);
+internal class PseudoNote(MaiChart chart) : Note(chart, 0);

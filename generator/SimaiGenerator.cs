@@ -1,5 +1,5 @@
 using System.Numerics;
-using MuConvert.chart;
+using MuConvert.chart.mai;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -36,7 +36,7 @@ public class SimaiGenerator : IGenerator
     private readonly List<Alert> alerts = [];
     private string result = ""; // 不用StringBuilder是因为生成过程不可避免地需要对字符串做一些回溯的操作，需要倒着从字符串中查找字符。这样的场景下，StringBuilder并无性能优势，用string就够了。
 #pragma warning disable CS8618
-    private Chart chart;
+    private MaiChart chart;
 #pragma warning restore CS8618
     
     private int bpmIdx = 0; // 当前遍历到了哪个bpm
@@ -129,7 +129,7 @@ public class SimaiGenerator : IGenerator
 
     private string DurationStr(Note note) => DurationStr(note.Time, note.Duration);
     
-    public (string, List<Alert>) Generate(Chart _chart)
+    public (string, List<Alert>) Generate(MaiChart _chart)
     {
         if (chart != null) throw new Exception(Locale.InstanceMultipleUsage);
         chart = _chart;

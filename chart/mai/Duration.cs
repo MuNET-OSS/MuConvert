@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Rationals;
 
-namespace MuConvert.chart;
+namespace MuConvert.chart.mai;
 
 /**
  * 用于表示持续时间的类，使用于hold和slide的持续时长以及slide的等待时长中。
