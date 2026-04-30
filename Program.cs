@@ -315,7 +315,7 @@ internal static class Program
         maidata["first"] = "0";
         maidata["clock_count"] = clockCount.ToString();
         foreach (var (levelId, inote) in inoteBlocks)
-            maidata.AddLevel(levelId, new MaidataChart(inote));
+            maidata.AddLevel(levelId, new MaidataLevel(inote));
 
         var maidataText = maidata.ToString();
         if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(maidataText);

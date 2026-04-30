@@ -4,7 +4,7 @@ using MuConvert.utils;
 
 namespace MuConvert.mai;
 
-public record MaidataChart(string Inote, string? Level = null, string? NoteDesigner = null);
+public record MaidataLevel(string Inote, string? Level = null, string? NoteDesigner = null);
 
 public class Maidata : Dictionary<string, string>
 {
@@ -13,7 +13,7 @@ public class Maidata : Dictionary<string, string>
      * 除了谱面之外的信息，如title、artist、first等，可通过Infos获取；
      * 而由于，如果用一般的Dict的方法遍历/访问Maidata对象的话，拿到的是整个maidata的、包含inote等在内的所有信息。
      */
-    public IReadOnlyDictionary<int, MaidataChart> Levels => _splitLevels().Item1;
+    public IReadOnlyDictionary<int, MaidataLevel> Levels => _splitLevels().Item1;
     
     /**
      * 便捷的获得一个maidata中，除了谱面相关的所有信息字段的方法。
@@ -30,11 +30,11 @@ public class Maidata : Dictionary<string, string>
         this["ChartConvertToolVersion"] = Utils.AppVersion;
     }
 
-    public void AddLevel(int levelId, MaidataChart maidataChart, bool addToolData = true)
+    public void AddLevel(int levelId, MaidataLevel maidataLevel, bool addToolData = true)
     {
-        this[$"inote_{levelId}"] = maidataChart.Inote;
-        if (maidataChart.Level != null) this[$"lv_{levelId}"] = maidataChart.Level;
-        if (maidataChart.NoteDesigner != null) this[$"des_{levelId}"] = maidataChart.NoteDesigner;
+        this[$"inote_{levelId}"] = maidataLevel.Inote;
+        if (maidataLevel.Level != null) this[$"lv_{levelId}"] = maidataLevel.Level;
+        if (maidataLevel.NoteDesigner != null) this[$"des_{levelId}"] = maidataLevel.NoteDesigner;
         if (addToolData) AddToolData();
     }
     
@@ -79,9 +79,9 @@ public class Maidata : Dictionary<string, string>
         this[key] = value;
     }
 
-    private (Dictionary<int, MaidataChart>, Dictionary<string, string>) _splitLevels()
+    private (Dictionary<int, MaidataLevel>, Dictionary<string, string>) _splitLevels()
     {
-        var levels = new Dictionary<int, MaidataChart>();
+        var levels = new Dictionary<int, MaidataLevel>();
         var infos = new Dictionary<string, string>(this); // 复制一份，稍后删key
         foreach (var k in this.Keys)
         {
@@ -92,7 +92,7 @@ public class Maidata : Dictionary<string, string>
                 infos.Remove(k, out var v);
                 infos.Remove($"lv_{id}", out var level);
                 infos.Remove($"des_{id}", out var noteDesigner);
-                levels.Add(id, new MaidataChart(v!, level, noteDesigner));
+                levels.Add(id, new MaidataLevel(v!, level, noteDesigner));
             }
         }
         return (levels, infos);
