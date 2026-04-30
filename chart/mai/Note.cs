@@ -28,7 +28,7 @@ public abstract class Note
         get => _key;
         set
         {
-            if (value < 1 || value > 8) throw new ArgumentException(string.Format(Locale.InvalidKey, value));
+            if (value is < 1 or > 8) throw new ArgumentException(string.Format(Locale.InvalidKey, value));
             _key = value;
         }
     }

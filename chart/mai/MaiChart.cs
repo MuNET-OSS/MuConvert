@@ -41,7 +41,7 @@ public class MaiChart: BaseChart<Note>
         }
     }
     public override decimal StartTime => (decimal)FirstNoteTime.Seconds;
-    public override decimal EndTime => (decimal)ToSecond(Notes.Select(x=>x.EndTime).Max());
+    public override decimal EndTime => (decimal)ToSecond(Notes.Max(x=>x.EndTime));
     public override int TotalNotes => Statistics.Total;
 
     /**
