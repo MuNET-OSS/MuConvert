@@ -1,10 +1,10 @@
 using System.Text;
-using MuConvert.chart.mai;
+using MuConvert.generator;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
-namespace MuConvert.generator.mai;
+namespace MuConvert.mai;
 
 public class MA2Generator : IGenerator<MaiChart>
 {

@@ -6,7 +6,7 @@ using L = MuConvert.Antlr.SimaiLexer;
 using P = MuConvert.Antlr.SimaiParser;
 using Utils = MuConvert.utils.Utils;
 
-namespace MuConvert.parser.mai;
+namespace MuConvert.mai;
 
 public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrErrorListener<int>
 {

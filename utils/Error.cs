@@ -34,7 +34,7 @@ public class Alert
         TimeInSeconds = timeInSeconds;
     }
     
-    public Alert(LEVEL level, string description, (chart.mai.MaiChart, Rational) barTime, int? line = null, string? relevantNote = null)
+    public Alert(LEVEL level, string description, (mai.MaiChart, Rational) barTime, int? line = null, string? relevantNote = null)
         : this(level, description, line, relevantNote)
     {
         var (chart, time) = barTime; 

@@ -1,5 +1,5 @@
 using System.Text;
-using MuConvert.collection;
+using MuConvert.mai;
 using static MuConvert.Tests.mai.TestUtils;
 
 namespace MuConvert.Tests.mai;

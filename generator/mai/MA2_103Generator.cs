@@ -1,7 +1,6 @@
-﻿using MuConvert.chart.mai;
-using MuConvert.utils;
+﻿using MuConvert.utils;
 
-namespace MuConvert.generator.mai;
+namespace MuConvert.mai;
 
 public class MA2_103Generator : MA2Generator
 {

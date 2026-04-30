@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
 using MuConvert.chart;
-using MuConvert.chart.mai;
+using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
-namespace MuConvert.parser.mai;
+namespace MuConvert.mai;
 
 public class MA2Parser : IParser<MaiChart>
 {

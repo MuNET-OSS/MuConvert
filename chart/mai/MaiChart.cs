@@ -1,7 +1,8 @@
+using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
 
-namespace MuConvert.chart.mai;
+namespace MuConvert.mai;
 
 public class MaiChart: BaseChart<Note>
 {

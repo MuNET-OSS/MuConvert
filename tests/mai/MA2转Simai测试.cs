@@ -1,10 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using MuConvert.chart.mai;
-using MuConvert.collection;
-using MuConvert.generator.mai;
-using MuConvert.parser.mai;
+using MuConvert.mai;
 using Rationals;
 using Xunit.Abstractions;
 

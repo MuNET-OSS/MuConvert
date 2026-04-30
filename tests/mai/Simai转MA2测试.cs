@@ -1,7 +1,5 @@
 using System.Text;
-using MuConvert.collection;
-using MuConvert.generator.mai;
-using MuConvert.parser.mai;
+using MuConvert.mai;
 using MuConvert.utils;
 using Xunit.Abstractions;
 using static MuConvert.Tests.mai.TestUtils;

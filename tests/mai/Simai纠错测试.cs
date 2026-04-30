@@ -1,5 +1,4 @@
-using MuConvert.generator.mai;
-using MuConvert.parser.mai;
+using MuConvert.mai;
 using Xunit.Abstractions;
 using static MuConvert.utils.Alert.LEVEL;
 

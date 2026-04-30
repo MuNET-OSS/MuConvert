@@ -1,5 +1,5 @@
 ﻿using MuConvert.chart;
-using MuConvert.chart.mai;
+using MuConvert.mai;
 using Rationals;
 using static MuConvert.Tests.mai.TestUtils;
 
