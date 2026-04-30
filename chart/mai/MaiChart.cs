@@ -3,10 +3,9 @@ using Rationals;
 
 namespace MuConvert.chart.mai;
 
-public class MaiChart
+public class MaiChart: BaseChart<Note>
 {
     public BPMList BpmList = [];
-    public List<Note> Notes = [];
     
     public string DefaultTouchSize = "M1";
 
@@ -33,13 +32,16 @@ public class MaiChart
     }
     
     // 谱面开头的BPM
-    public decimal StartBpm {
+    public override decimal StartBpm {
         get
         {
             Utils.Assert(BpmList[0].Time == 0, "BPM列表的开头必须为0时刻");
             return BpmList[0].Bpm;
         }
     }
+    public override decimal StartTime => (decimal)FirstNoteTime.Seconds;
+    public override decimal EndTime => (decimal)ToSecond(Notes.Select(x=>x.EndTime).Max());
+    public override int TotalNotes => Statistics.Total;
 
     /**
      * 获得“谱面中第一个音符的时刻”，或者返回的Duration也可以理解成“从谱面开头到出现第一个音符所经过的时长”。
@@ -81,14 +83,11 @@ public class MaiChart
 
     public Statistics Statistics => new(this);
     
-    // 总音符数量（物量）
-    public int TotalNotes => Statistics.Total;
-    
     /**
      * 这是MA2语句中，通过CLK指令所显式指定的哒哒哒哒的时刻。
      * 一般来说极少会用到，这里只是忠实地记录一下；一方面符合我们“0信息损失”的原则、忠实地记录铺面中的信息；
      * 另一方面，可以用作ClockCount自动推导的来源之一。
      * 普通用户理论上极少会用到这个东西。
      */
-    public List<Rational>? ExplicitClocks = null;
+    public List<Rational>? ExplicitClocks;
 }

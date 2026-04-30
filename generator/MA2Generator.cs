@@ -6,7 +6,7 @@ using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.generator;
 
-public class MA2Generator : IGenerator
+public class MA2Generator : IGenerator<MaiChart>
 {
     protected record MA2Line(string Name, int Bar, int Tick, int Key, string Extra = "")
     {

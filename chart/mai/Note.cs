@@ -64,6 +64,8 @@ public abstract class Note
     }
     
     internal virtual string DebuggerDisplay() => "";
+
+    public virtual Rational EndTime => Time + Duration.Bar;
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

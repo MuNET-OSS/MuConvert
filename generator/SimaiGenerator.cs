@@ -22,7 +22,7 @@ class SimaiNote
     }
 };
 
-public class SimaiGenerator : IGenerator
+public class SimaiGenerator : IGenerator<MaiChart>
 {
     /**
      * 这是一个Workaround的选项。

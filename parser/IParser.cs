@@ -1,9 +1,9 @@
-﻿using MuConvert.chart.mai;
+﻿using MuConvert.chart;
 using MuConvert.utils;
 
 namespace MuConvert.parser;
 
-public interface IParser
+public interface IParser<TChart> where TChart : IBaseChart
 {
-    public (MaiChart, List<Alert>) Parse(string text);
+    public (TChart, List<Alert>) Parse(string text);
 }

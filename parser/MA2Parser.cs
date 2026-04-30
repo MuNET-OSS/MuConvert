@@ -7,7 +7,7 @@ using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.parser;
 
-public class MA2Parser : IParser
+public class MA2Parser : IParser<MaiChart>
 {
     private readonly MaiChart chart = new();
     private readonly List<Alert> alerts = [];
@@ -38,8 +38,6 @@ public class MA2Parser : IParser
         else alert = new Alert(Warning, Locale.MA2NoteSentenceTooManyParam, lineNo, line.ToString());
         alerts.Add(alert);
     }
-
-    private Rational _endTime(Slide slide) => slide.Time + slide.WaitTime.Bar + slide.Duration.Bar;
 
     private Dictionary<string, string> Cmd103 = new()
     {
@@ -168,7 +166,7 @@ public class MA2Parser : IParser
                     slide.segments.Add(segment);
                     
                     // 根据最新的segment结果，更新缓存里的值，以便万一有CN星星接在这后面的话，可以找到
-                    _slides.Add((_endTime(slide), slide.EndKey), slide);
+                    _slides.Add((slide.EndTime, slide.EndKey), slide);
                     
                     if (values.Length != 7) WarnParamsCount(lineNo, line, time);
                 }

@@ -15,7 +15,7 @@ using Utils = MuConvert.utils.Utils;
 
 namespace MuConvert.parser;
 
-public partial class SimaiParser : SimaiBaseVisitor<object>, IParser
+public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
 {
     /**
      * 表示parser工作的严格程度的枚举。默认为Normal。

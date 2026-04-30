@@ -93,6 +93,8 @@ public class Slide : Note
         result += Modifiers;
         return result;
     }
+
+    public override Rational EndTime => base.EndTime + WaitTime.Bar;
 }
 
 public class SlideSegment(Slide slide)
