@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MuConvert.chart.mai;
 using MuConvert.collection;
-using MuConvert.parser;
+using MuConvert.parser.mai;
 using MuConvert.utils;
 using YamlDotNet.Serialization;
 

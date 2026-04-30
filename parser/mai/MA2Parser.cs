@@ -5,7 +5,7 @@ using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
-namespace MuConvert.parser;
+namespace MuConvert.parser.mai;
 
 public class MA2Parser : IParser<MaiChart>
 {

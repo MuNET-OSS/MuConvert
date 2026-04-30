@@ -5,7 +5,6 @@ using Antlr4.Runtime.Tree;
 using MuConvert.Antlr;
 using MuConvert.chart;
 using MuConvert.chart.mai;
-using MuConvert.parser.simai;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
@@ -13,7 +12,7 @@ using P = MuConvert.Antlr.SimaiParser;
 using L = MuConvert.Antlr.SimaiLexer;
 using Utils = MuConvert.utils.Utils;
 
-namespace MuConvert.parser;
+namespace MuConvert.parser.mai;
 
 public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
 {

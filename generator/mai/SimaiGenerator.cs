@@ -4,7 +4,7 @@ using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
-namespace MuConvert.generator;
+namespace MuConvert.generator.mai;
 
 class SimaiNote
 {

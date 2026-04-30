@@ -52,7 +52,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Antlr4 Include="parser\\simai\\Simai.g4">
+      <Antlr4 Include="parser\\mai\\Simai.g4">
         <Generator>MSBuild:Compile</Generator>
         <Listener>false</Listener>
         <Visitor>true</Visitor>

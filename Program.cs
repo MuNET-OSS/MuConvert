@@ -2,8 +2,8 @@ using System.CommandLine;
 using System.Text;
 using System.Text.RegularExpressions;
 using MuConvert.collection;
-using MuConvert.generator;
-using MuConvert.parser;
+using MuConvert.generator.mai;
+using MuConvert.parser.mai;
 using MuConvert.utils;
 
 namespace MuConvert;
