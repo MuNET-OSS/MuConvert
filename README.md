@@ -215,9 +215,86 @@ dotnet publish -c Release -r win-x64 -p:SelfContained=false -p UseAppHost=true -
     - 具体的原理，请详见`parser/simai/SimaiParser.cs`中，对`MuConvert.antlr`下的各个类的引用。
 - MA2的话，由于其天生就是为了机读设计的、格式相对简单，没有必要上ANTLR；而是直接逐行读取、一行内`Split('\t')`，就足以解析MA2的所有内容了。
 
+### 目录与命名空间约定（贡献代码必读）
+- 在目录上，本项目按**功能类型**划分一级子目录，如`parser`、`generator`、`chart`、`collection`等。
+  - 在各个一级子目录中，如有必要的情况下，可再以**游戏名**创建二级子目录加以整理，如`parser/mai`、`generator/mai`、`chart/mai`等。
+  - 这样可以使相同功能类型的代码相对集中，减少了重构时可能需要的工作量、防止重构漏掉东西等。
+- 在命名空间上，本项目采用**按游戏划分**的逻辑命名空间，这样可以方便用户的使用。
+  - **同一游戏下的谱面 IR、各语法格式的 Parser/Generator、以及其他直接相关的类型等**，一律放在统一的命名空间`MuConvert.<游戏简写>`下。
+    - 例如，对maimai来说，尽管相关文件分散在`parser/mai`、`generator/mai`、`chart/mai`、`collection`等多个子目录中，但命名空间均为`MuConvert.mai`。
+  - 多个游戏会共用的、**与具体游戏无关的基础设施**（例如谱面基类 `BaseChart<TNote>`、`IBaseChart`、`BPMList`、`IParser`等），则保留在 `MuConvert.chart`、`MuConvert.parser` 等目录级公共命名空间中。
+  - 将来若接入其他游戏，应为其单独使用一个顶层命名空间（例如`MuConvert.chu`、`MuConvert.ogk`）。
+
 ### 多语言(i18n)相关
 - 本项目中支持基于`System.Globalization`的多语言，语言文件位于`i18n`目录中。
 - 其中，一级支持语言为三个（即[MaiChartManager](https://github.com/MuNET-OSS/MaiChartManager)支持的语言）：简体中文(`Locale.zh.resx`)、英语(`Locale.resx`)、繁体中文(`Locale.zh-hant.resx`)。
   - 一般的开发过程，包括有意提交PR的人在实现代码时需要新增/修改i18n key的，只需处理这三种语言文件即可。
 - 其他的为二级支持语言，一般的开发过程可以不必处理和新增这些语言的翻译key；Maintainers会定期的将一级支持语言的翻译内容（通过LLM机器翻译）同步到这些语言中。
   - 当然，如果你发现翻译有错误，也可以直接提PR修改。
+
+### 如何在已支持的游戏中新增一种语法格式
+对于已经支持了的游戏，想要增加一种支持的源语法格式或目标语法格式时：  
+**只需要编写Parser和Generator即可**。注意应当实现对应的接口(`IParser` / `IGenerator`)，详见下文。
+
+1. **文件放置位置**：仿照现有的目录结构即可。以 maimai 为例，在 `parser/mai` 下新增 `FooParser`，在 `generator/mai` 下新增 `FooGenerator`。但是，如[目录与命名空间约定](#目录与命名空间约定贡献代码必读)部分所述，文件的命名空间应统一为`MuConvert.mai`。
+2. **实现的接口**：应实现泛型参数为该游戏谱面类型的接口。继续以 maimai 为例，应实现的接口为 `IParser<MaiChart>`、`IGenerator<MaiChart>`。详见下方代码段的示例。
+3. **Alerts**：所有的Parser和Generator，应当使用`utils/Error.cs`中定义的`Alert`类来实现转谱的信息的log，而不要往控制台上输出信息。
+   - IParser和IGenerator的定义中都要求函数要返回List<Alert>，因此在你的解析/生成过程中，应当根据情况生成不同等级的Alert对象，并返回出来。而不是打印到控制台。
+   - 如果遇到无法修复的错误、希望中止转谱过程的话，则应当（在记录好最后引发错误的Alert后），抛出`ConversionException`。
+   - 具体写法，请参照现有的maimai的Parser和Generator等。
+
+```csharp
+using MuConvert.parser;
+using MuConvert.utils;
+
+namespace MuConvert.mai; // 注意命名空间应该是MuConvert.<游戏名>，不要使用默认的基于目录的命名空间
+
+public sealed class FooParser : IParser<MaiChart>
+{
+    public (MaiChart, List<Alert>) Parse(string text)
+    {
+        var chart = new MaiChart();
+        var alerts = new List<Alert>();
+        if (text == "")
+        { // 这是一个抛异常中止转谱的示例
+            alerts.Add(new Alert(Alert.Level.Error, "输入的文本为空！")); // 要把最后的错误记录成Alert
+            throw new ConversionException(alerts); // 然后抛出ConversionException，把alerts作为参数传入。
+        }
+        // TODO: 填充 chart，记录 Alert，必要时抛出 ConversionException
+        return (chart, alerts);
+    }
+}
+```
+
+```csharp
+using MuConvert.generator;
+using MuConvert.utils;
+
+namespace MuConvert.mai;
+
+public sealed class FooGenerator : IGenerator<MaiChart>
+{
+    public (string, List<Alert>) Generate(MaiChart chart)
+    {
+        var alerts = new List<Alert>();
+        // TODO: 由 chart 生成目标文本，记录 Alert
+        return ("", alerts);
+    }
+}
+```
+
+### 如何新增对另一种游戏的支持（注意事项）
+1. **命名空间**：命名空间使用 `MuConvert.<游戏简写>`（如中二可用`MuConvert.chu`、音击可用`MuConvert.ogk`），
+2. **代码目录**：模仿现有maimai的写法，在各个功能分类的一级子目录中新建二级子目录，例如 `chart/ogk`、`parser/ogk`、`generator/ogk`等，把代码放到这些目录下。
+   - 特殊地，如果该游戏的某个功能类型非常简单，如只有一个文件，那么也可以不单独创建二级子目录，而是直接放在一级子目录下。例子见现有的`collection/maidata.cs`，因为与maimai相关的collection只有这一个文件（MuConvert本身不对Sinmai的`Music.xml`做处理，这太复杂了、而且是MCM该干的事），所以`maidata.cs`直接放在了`collection`一级目录下，没有区分二级子目录。 
+3. **中间表示（IR）**：为该游戏定义音符类型与谱面类型。 
+   - 音符类型无需继承任何类，自己定义即可。
+   - 谱面类型，应继承`BaseChart`，并实现其中的相关getter，同时添加上自己特定于自己这个游戏的属性。
+4. **Parser & Generator**：详见上文[如何在已支持的游戏中新增一种语法格式](#如何在已支持的游戏中新增一种语法格式)部分的说明，编写Parser和Generator，并实现对应的接口。
+5. **测试**：在`test`中新建你游戏的子目录如`ogk`，在其中放置测试文件。直接放置即可，xUnit会自动找到，无需修改csproj等。
+   - 如需放置测试数据，测试数据放在如`test/ogk/testset`中；读取测试数据时，可参见`test/mai/TestUtils.cs`中`FindTestsetRoot()`函数的写法。
+6. **多语言（i18n）**（可选）：如果有i18n的必要的话，直接在`i18n`目录中的对应的语言文件`.resx`中，新增对应的key即可。
+   - 无需创建单独文件，也不用管命名空间之类的问题，但建议key在命名的时候遵循一定的规律以防冲突。
+   - 详见上文[多语言(i18n)相关](#多语言i18n相关)部分的说明。
+7. **CLI**（可选）：如需实现CLI，可在`Program.cs`中增加相应的功能。
+
