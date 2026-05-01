@@ -58,7 +58,7 @@ public class UgcGenerator : IGenerator<IChuChart>
             Cell = n.Cell, Width = n.Width,
             HoldDuration = s(n.HoldDuration), SlideDuration = s(n.SlideDuration),
             EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Extra = n.Extra, TargetNote = IsAir(n.Type) ? "N" : n.TargetNote,
+            Extra = n.Extra, TargetNote = IsAir(n.Type) && string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote,
             AirHoldDuration = s(n.AirHoldDuration),
             StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
         };

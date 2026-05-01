@@ -22,7 +22,7 @@ public class SusParser : IParser<SusChart>
         [0x07] = "AIR",
         [0x08] = "AHD",
         [0x09] = "ADW",
-        [0x0A] = "MNE",
+        [0x10] = "MNE",
     };
 
     public (SusChart, List<Alert>) Parse(string text)
@@ -110,14 +110,14 @@ public class SusParser : IParser<SusChart>
         var timingStr = content[..colonIdx];
         var dataStr = content[(colonIdx + 1)..];
 
-        if (timingStr.Length < 4)
+        if (timingStr.Length < 5)
         {
             alerts.Add(new Alert(Warning, $"音符行时序部分过短: {content}") { Line = lineNum });
             return;
         }
 
         var measure = HexToInt(timingStr[..2]);
-        var tick = HexToInt(timingStr[2..4]);
+        var tick = HexToInt(timingStr[2..5]);
 
         if (dataStr.Length < 6)
         {

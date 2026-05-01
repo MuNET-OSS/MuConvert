@@ -42,7 +42,7 @@ public class SusGenerator : IGenerator<IChuChart>
         {
             bpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0;
             var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
-            foreach (var n in ugc.Notes) result.Notes.Add(ScaleUp(n));
+            foreach (var n in ugc.Notes) result.Notes.Add(MapLaneOnly(n));
             return result;
         }
 
@@ -62,6 +62,15 @@ public class SusGenerator : IGenerator<IChuChart>
             Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = s(n.AirHoldDuration),
         };
     }
+
+    private static ChuNote MapLaneOnly(ChuNote n) => new()
+    {
+        Type = n.Type, Measure = n.Measure, Offset = n.Offset,
+        Cell = n.Cell * 2, Width = n.Width * 2,
+        HoldDuration = n.HoldDuration, SlideDuration = n.SlideDuration,
+        EndCell = n.EndCell * 2, EndWidth = n.EndWidth * 2,
+        Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = n.AirHoldDuration,
+    };
 
     private static string Serialize(SusChart sus)
     {

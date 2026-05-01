@@ -115,6 +115,7 @@ public class C2sGenerator : IGenerator<IChuChart>
         "FLK" => $"FLK\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Extra}",
         "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}",
         "AHD" => $"AHD\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.AirHoldDuration}",
+        "ALD" or "ASD" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.StartHeight}\t{n.SlideDuration}\t{n.EndCell}\t{n.EndWidth}\t{n.TargetHeight}\t{n.NoteColor}",
         "MNE" => $"MNE\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}",
         _ => $"TAP\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}"
     };

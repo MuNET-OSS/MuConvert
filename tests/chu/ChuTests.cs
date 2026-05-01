@@ -53,17 +53,27 @@ public class ChuTests
     [Fact]
     public void DumpOutputFiles()
     {
-        if (!File.Exists(UgcPath)) throw new SkipException($"Missing: {UgcPath}");
-        var (ugc, _) = new UgcParser().Parse(File.ReadAllText(UgcPath));
-        var (c2sText, _) = new C2sGenerator().Generate(ugc);
-        File.WriteAllText(Path.Combine(OfficialDir, "basic_output.c2s"), c2sText);
+        var tempDir = Path.Combine(Path.GetTempPath(), "ChuTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
 
-        if (!File.Exists(C2sPath)) throw new SkipException($"Missing: {C2sPath}");
-        var (c2s, _) = new C2sParser().Parse(File.ReadAllText(C2sPath));
-        var (ugcText, _) = new UgcGenerator().Generate(c2s);
-        File.WriteAllText(Path.Combine(OfficialDir, "0003_output.ugc"), ugcText);
+        try
+        {
+            if (!File.Exists(UgcPath)) throw new SkipException($"Missing: {UgcPath}");
+            var (ugc, _) = new UgcParser().Parse(File.ReadAllText(UgcPath));
+            var (c2sText, _) = new C2sGenerator().Generate(ugc);
+            File.WriteAllText(Path.Combine(tempDir, "basic_output.c2s"), c2sText);
 
-        Assert.True(File.Exists(Path.Combine(OfficialDir, "basic_output.c2s")));
-        Assert.True(File.Exists(Path.Combine(OfficialDir, "0003_output.ugc")));
+            if (!File.Exists(C2sPath)) throw new SkipException($"Missing: {C2sPath}");
+            var (c2s, _) = new C2sParser().Parse(File.ReadAllText(C2sPath));
+            var (ugcText, _) = new UgcGenerator().Generate(c2s);
+            File.WriteAllText(Path.Combine(tempDir, "0003_output.ugc"), ugcText);
+
+            Assert.True(File.Exists(Path.Combine(tempDir, "basic_output.c2s")));
+            Assert.True(File.Exists(Path.Combine(tempDir, "0003_output.ugc")));
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
     }
 }

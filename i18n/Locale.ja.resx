@@ -271,10 +271,10 @@
     <value>同じ時刻・同じ位置に別のスライド頭／タップが検出されました。ゲーム内で判定問題を引き起こすため、自動修復しました（余分なスライド頭を削除）。PS：同頭スライドを意図する場合は「1-2*-3」のように書き、「1-2/1-3」は避けてください（この問題を引き起こします）。</value>
   </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="C2SUnknownNoteType" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="C2SUnknownNoteType" xml:space="preserve">
+    <value>不明なC2Sノートタイプ: {0}</value>
   </data>
-  <data name="ChuGeneratorUnsupported" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="ChuGeneratorUnsupported" xml:space="preserve">
+    <value>チャートを変換できません: {0}</value>
   </data>
 </root>

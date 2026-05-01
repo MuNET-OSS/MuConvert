@@ -271,10 +271,10 @@
     <value>이 슬라이드 헤드와 동일한 시간/위치에 다른 슬라이드 헤드/탭이 감지되었습니다. 게임 내 판정 문제를 유발할 수 있어 자동으로 수정했습니다(중복 슬라이드 헤드 제거). PS: 같은 헤드의 슬라이드를 의도했다면 "1-2*-3" 같은 문법을 사용하세요. "1-2/1-3"는 이 문제를 유발합니다.</value>
   </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="C2SUnknownNoteType" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="C2SUnknownNoteType" xml:space="preserve">
+    <value>Unknown C2S note type: {0}</value>
   </data>
-  <data name="ChuGeneratorUnsupported" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="ChuGeneratorUnsupported" xml:space="preserve">
+    <value>Cannot convert chart to target format: {0}</value>
   </data>
 </root>

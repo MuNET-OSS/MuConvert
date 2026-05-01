@@ -135,7 +135,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             case "@BEAT":
-                var beatParts = value.Split(' ');
+                var beatParts = value.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
                 if (beatParts.Length >= 3
                     && int.TryParse(beatParts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatMeasure)
                     && int.TryParse(beatParts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatNum)
@@ -151,7 +151,7 @@ public class UgcParser : IParser<UgcChart>
 
             case "@BPM":
                 var bpmPart = value;
-                var bpmSpaceIdx = bpmPart.IndexOf(' ');
+                var bpmSpaceIdx = bpmPart.IndexOfAny(['\t', ' ']);
                 if (bpmSpaceIdx > 0)
                 {
                     var measureOffset = bpmPart[..bpmSpaceIdx];
