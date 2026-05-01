@@ -40,47 +40,40 @@ internal static class Program
     {
         var root = new RootCommand
         {
-            Description = $"MuConvert {Utils.AppVersion} — 新一代Simai与MA2互转转谱器\n"
+            Description = $"MuConvert {Utils.AppVersion} — 新一代多功能音游转谱器\n" +
+                          $"使用文档详见：https://github.com/MuNET-OSS/MuConvert/blob/master/README.md"
         };
 
         var levelsOption = new Option<string?>("--levels", "-l")
         {
-            Description = "仅转换指定难度（以maidata中的&inote_编号为准），多个难度用逗号分隔；省略则转换全部难度。",
+            Description = "仅转换指定难度，多个难度用逗号分隔；省略则转换全部难度。",
             HelpName = "N[,N...]"
         };
 
         var outputOption = new Option<string?>("--output", "-o")
         {
-            Description =
-                "输出位置：\n" +
-                "· 省略：写入输入文件同目录，文件名按默认规则（maidata.txt、lv_N.ma2 等）。\n" +
-                "· 目录：写入该目录，文件名同上按默认规则。\n" +
-                "· 文件：仅当本次转换只会生成一个输出文件时可用；扩展名须为 .txt（输出 maidata）或 .ma2（输出 MA2）。\n" +
-                "· \"-\"：仅当本次转换只会生成一个输出文件时可用；将输出内容写到stdout。",
+            Description = "指定输出位置。可指定文件或目录，或\"-\"(stdout)；不指定则默认为输入文件所在目录。",
             HelpName = "path"
         };
 
         var strictOption = new Option<bool>("--strict")
         {
-            Description = "Simai转MA2时，解析使用严格模式。不可与 --lax 同时使用。",
+            Description = "解析使用严格模式（仅在Simai转MA2模式下有效）",
             Arity = ArgumentArity.ZeroOrOne,
             DefaultValueFactory = _ => false
         };
 
         var laxOption = new Option<bool>("--lax")
         {
-            Description = "Simai转MA2时，解析使用宽松模式。不可与 --strict 同时使用。",
+            Description = "解析使用宽松模式（仅在Simai转MA2模式下有效）",
             Arity = ArgumentArity.ZeroOrOne,
             DefaultValueFactory = _ => false
         };
 
         var inputArgument = new Argument<string>("path")
         {
-            Description = "可以输入以下几种情况：\n" +
-                          "1.单个.txt文件（标准maidata.txt，或是不含maidata的头信息、直接是Simai的Notes的文件，都可以）。会把它转为MA2。请通过-l指定要转换的谱面难度，不指定则默认转换全部难度。\n" +
-                          "2.单个.ma2文件。会把它转为Simai，输出maidata.txt。如果想要转换多个难度，请传入目录，详见第4条。\n" +
-                          "3.一个包含有maidata.txt的目录。行为同第一条。\n" +
-                          "4.一个包含有一个或多个.ma2文件的目录。会把它们转为一个maidata.txt。请通过-l指定要转换的谱面难度，不指定则默认转换全部难度。",
+            Description = "可以输入文件或目录。会自动根据输入的类型，智能执行相应的转换程序。\n" +
+                          "例如，输入一个包含多个.ma2文件的目录，则会把各个难度合并转为一个maidata.txt。",
             Arity = ArgumentArity.ExactlyOne
         };
 
