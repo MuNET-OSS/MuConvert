@@ -299,11 +299,17 @@ public class UgcParser : IParser<UgcChart>
         if (idx + 1 < lines.Length)
         {
             var nextLine = lines[idx + 1].Trim();
-            if (TryParseFollowerLine(nextLine, out var duration, out var endCell, out var endWidth))
+            if (TryParseFollowerLine(nextLine, out var duration, out var endCell, out var endWidth, requireEndCellWidth: true))
             {
                 note.SlideDuration = duration;
                 note.EndCell = endCell;
                 note.EndWidth = endWidth;
+                return idx + 1;
+            }
+            if (TryParseFollowerLine(nextLine, out duration, out _, out _, requireEndCellWidth: false))
+            {
+                note.SlideDuration = duration;
+                alerts.Add(new Alert(Warning, $"SLD 跟随行缺少结束位置（cell 与 width）: {nextLine}") { Line = idx + 2, RelevantNote = FormatNoteRef(note) });
                 return idx + 1;
             }
         }
@@ -311,7 +317,7 @@ public class UgcParser : IParser<UgcChart>
         return idx;
     }
 
-    private static bool TryParseFollowerLine(string line, out int duration, out int endCell, out int endWidth)
+    private static bool TryParseFollowerLine(string line, out int duration, out int endCell, out int endWidth, bool requireEndCellWidth = false)
     {
         duration = 0;
         endCell = 0;
@@ -331,6 +337,7 @@ public class UgcParser : IParser<UgcChart>
             endCell = HexCharToInt(afterMarker[0]);
             endWidth = WidthHexCharToInt(afterMarker[1]);
         }
+        else if (requireEndCellWidth) return false;
 
         return true;
     }
