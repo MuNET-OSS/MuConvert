@@ -10,7 +10,9 @@ MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 - 无精度损失：内部使用Rational高精度分数类作为时间等相关运算的基础，确保没有精度损失，不会见到大于384分或无法被384整除的分音就无法处理等。
 - 创新采用ANTLR作为Simai的解析器，减少手写解析可能导致的错误等问题，同时保持良好的代码可读、可维护性。
 - 工具+基础库：既可以直接当作命令行工具使用，也可以把它作为一个C#依赖库嵌入到你的工程里。
-- 可扩展的架构设计：本项目以中间表示(Chart类)为核心，通过为每种语言编写parser、将语言解析为统一的Chart对象的中间表示，再为每种语言编写generator，实现任意两个语言间的互转。尽管目前只支持了Simai和MA2，但项目设计具有良好的可扩展性，您可轻松按照自己的需求定制自己的语言格式，或直接把Chart的解析结果拿来服务于您自己的下游项目如谱面播放器等。
+- 可扩展的架构设计：本项目以中间表示(Chart类)为核心，通过为每种语言编写parser、将语言解析为统一的中间表示对象，再为每种语言编写generator，实现任意两个语言间的互转。
+  - 项目设计具有良好的可扩展性，您可轻松按照自己的需求定制自己的语言格式，也可直接把解析得到的Chart对象拿来服务于您自己的下游项目如谱面播放器等。
+- 多游戏支持：基于上述良好的可扩展性，本项目一套代码可提供对maimai、chunithm两款游戏共五种格式的支持，未来还可能加入ongeki等更多游戏。
 
 ## 使用文档
 本项目具有两种使用方式：
@@ -20,7 +22,7 @@ MuConvert 是一个支持**Simai与MA2互转**的转谱器。
 ### 1) 直接使用本程序进行转谱（CLI）
 
 #### 如何下载
-- 请到 GitHub Actions 的 [`Build` 工作流页面](https://github.com/MuNET-OSS/MuConvert/actions/workflows/build.yml)，打开最新一次分支的构建，在 Artifacts 中下载 `MuConvert.exe即可`。
+- 请到 GitHub Actions 的 [`Build` 工作流页面](https://github.com/MuNET-OSS/MuConvert/actions/workflows/build.yml)，打开最新一次分支的构建，在 Artifacts 中下载 `MuConvert.exe` 即可。
   - 下载到的`MuConvert.exe`，按照下文所述的用法，从命令行中直接运行即可。
   > 如果你希望自己编译，也可以参考后面“开发者指南”部分的[编译为单文件exe模式](#编译为单文件exe模式)。
 
@@ -83,22 +85,24 @@ dotnet sln .\YourSolution.sln add .\MuConvert\MuConvert.csproj # 将项目加入
 ```
 
 #### 使用方法（TLDR）：
+> 以下 C# 示例中的 `Maidata`、`MaiChart`、`SimaiParser`、`MA2Parser`、`SimaiGenerator`、`MA2Generator` 等均位于命名空间 `MuConvert.mai`中，使用时需添加 `using MuConvert.mai;`。
+
 **Simai → MA2**：
 ```csharp
 string maidataText = File.ReadAllText(@"D:\charts\MyChart\maidata.txt", Encoding.UTF8); // maidata.txt 作为字符串
 var maidata = new Maidata(maidataText); // 通过 Maidata 模块解析 maidata，得到整张谱的元信息，和每个难度的谱面
 var inote = maidata.Levels[5].Inote; // 以紫谱为例，取出该难度的谱面内容（&inote_5）
 
-var (chart, alerts) = new SimaiParser().Parse(inote); // 将 simai 解析为 Chart（中间表示）
-var (ma2Text, alerts) = new MA2Generator().Generate(chart); // 将Chart对象导出为MA2的字符串
+var (chart, alerts) = new SimaiParser().Parse(inote); // 将 simai 解析为 MaiChart（谱面的表示对象）
+var (ma2Text, alerts2) = new MA2Generator().Generate(chart); // 将 MaiChart 对象导出为 MA2 字符串
 return ma2Text; // ma2Text即为转谱结果
 ```
 
 **MA2 → Simai**：
 ```csharp
 string ma2Text = File.ReadAllText(@"D:\charts\MyChart\000000_00.ma2", Encoding.UTF8); // MA2文件，整体读取为字符串
-var (chart, alerts) = new MA2Parser().Parse(ma2Text); // 将MA2解析为Chart类的对象（谱面解析结果，中间表示）。alerts是解析时可能产生的警告信息等，建议打印出来。
-var (simaiText, alerts) = new SimaiGenerator().Generate(chart); // 将Chart对象导出为Simai语言的字符串
+var (chart, alerts) = new MA2Parser().Parse(ma2Text); // 将 MA2 解析为 MaiChart（谱面的表示对象）。alerts 是解析时可能产生的警告信息等，建议打印出来。
+var (simaiText, alerts2) = new SimaiGenerator().Generate(chart); // 将 MaiChart 导出为 Simai 文本
 
 // 注意simaiText这时只是一个纯simai的inotes序列，而不是maidata；需要通过下面的方式构造maidata。
 var maidata = new Maidata();
@@ -128,8 +132,7 @@ return maidataText; // maidataText即为转谱结果
 因此，建议您采用try-catch的写法，捕获可能出现的异常，并无论转谱成功失败、总是打印出Alert信息：（下面例子以Simai → MA2为例，如果反过来转则直接更换Parser和Generator即可）
 ```csharp
 using System.Text;
-using MuConvert.generator;
-using MuConvert.parser;
+using MuConvert.mai;
 using MuConvert.utils;
 
 var maidata = new Maidata(File.ReadAllText(@"D:\charts\MyChart\maidata.txt", Encoding.UTF8));
@@ -158,17 +161,17 @@ finally
 #### 核心概念（parser / IR / generator）
 
 - **parser（解析器）**：把“源格式文本”解析成中间表示
-  - `SimaiParser.Parse(string)` → `Chart`
-  - `MA2Parser.Parse(string)` → `Chart`
+  - `SimaiParser.Parse(string)` → `MaiChart`
+  - `MA2Parser.Parse(string)` → `MaiChart`
   - 返回值同时带有 `List<Alert>`；如果遇到致命错误会抛出 `ConversionException`
 
-- **中间表示 IR（`Chart`）**：MuConvert 内部统一的数据结构
-  - 入口类型是 `MuConvert.chart.Chart`
+- **中间表示 IR（Chart）**：MuConvert 内部统一的谱面数据结构
+  - 对maimai，类型为 `MuConvert.mai.MaiChart`
   - 关键字段包括 `Chart.BpmList` 与 `Chart.Notes`，以及 `Touch/Hold/Slide` 等具体 `Note` 子类
 
-- **generator（生成器）**：把 `Chart` 转回“目标格式文本”
-  - `SimaiGenerator.Generate(Chart)` → simai 文本（可写入 `maidata.txt` 的 `&inote_*`）
-  - `MA2Generator.Generate(Chart)` → `.ma2` 文本
+- **generator（生成器）**：把中间表示转回“目标格式文本”
+  - `SimaiGenerator.Generate(MaiChart)` → simai 文本（可写入 `maidata.txt` 的 `&inote_*`）
+  - `MA2Generator.Generate(MaiChart)` → `.ma2` 文本
 
 
 ## 开发者指南
@@ -178,18 +181,18 @@ finally
 
 ### MuConvert的设计理念
 - 转谱的本质就是transpiler。MuConvert严格遵循`源语言 ---parser--> 中间表示(IR) ---generator--> 目标语言`的transpiler通用设计模式，以确保代码的清晰和可维护性、减少冗余代码。
-  - IR在代码中就是`Chart`类，以及它所引用的`Note`、`BPMList`等子类。
+  - 以maimai为例，IR 在代码中就是`MaiChart`类，以及它所引用的`Note`、`BPMList`等类型。
 - 然而，对MA2和Simai稍有了解的朋友们都知道，**它们二者的表达能力是不等价的**。（严格说来Simai的表达能力更强，但MA2也有一些独特的、没法简单的等价到Simai语法中的设计）
   - 最简单的一点是，MA2的所有音符都是对齐到Tick，即1/384小节的。你无法把类似`{36}1,1,1,1,`这样的、使用了无法被384整除的分音的Simai，转化为完全等价、不丢失任何信息的MA2格式，它在MA2中只能被近似到最接近的1/384分音上。
   - 此外还有一个重要的区别是，对于持续了一段时间的Hold或Slide、在其持续过程中BPM发生了变化的情况，MA2和Simai的定义也是完全不一样的。MA2在把“小节时间”计算为绝对时间时，会严格按照BPM表的声明、考虑BPM的变化；而Simai则被规定为仅按照音符开始时刻的BPM为基准，不考虑BPM的变化。详见下文[关于时间格式](#关于时间格式)部分所述。
 - 因此，MuConvert的另一个设计目标是：在中间表示(IR)中不丢失任何信息。
   - 从源语言到IR的过程，即parser，确保是**无损**的、可以记录下来关于这个谱面的所有信息。这样可以有利于维护，也为将来的发展提供了更大的可扩展性。
-  - 而在从IR到目标语言的过程，即genertaor，则会根据目标语言的表达能力，进行必要的**近似**，所有的信息丢失都发生在generator中。
+  - 而在从IR到目标语言的过程，即 generator，则会根据目标语言的表达能力，进行必要的**近似**，所有的信息丢失都发生在generator中。
 
 ### 编译为单文件exe模式
 > 这样就不用带着一堆依赖一起发给别人了，只发一个exe就行。
 ```shell
-dotnet publish -c Release -r win-x64 -p:SelfContained=false -p UseAppHost=true -p:PublishSingleFile=true
+dotnet publish -c Release -r win-x64 -p:SelfContained=false -p:UseAppHost=true -p:PublishSingleFile=true
 ```
 注意：以上命令以Release模式编译，且设置了`SelfContained=false`，即不会把.NET运行时打包进来，这样出来的exe只有几M大，但要求用户电脑上必须有.NET 10 Runtime才能运行。  
 如果有必要，可自行将`SelfContained`改为true，这样就会打包一个完整的.NET运行时进去（出来的exe有大几十M），但是确保用户可以运行。
@@ -205,14 +208,14 @@ dotnet publish -c Release -r win-x64 -p:SelfContained=false -p UseAppHost=true -
     - 举一个具体的例子：对下述的总长为一小节、但横跨120BPM和60BPM区间的星星，
       - 对`(120){2}1h[1:1],(60){2},`在`simai`中这个hold的时长是120BPM下的1小节即2s；
       - 然而对看似等价的表述`BPM 0 0 120; BPM 0 192 60; NMHLD 0 0 0 384`，这个hold的持续时长是它落在120BPM的那半小节(1s)+落在60BPM的那半小节(2s)，总共是3s。
-    - 因此，在`Duration`中会进一步的把底层的数据存储类型分为`Bar`和`InvarientBar`，对应于以上的两种情况。
+    - 因此，在`Duration`中会进一步地把底层的数据存储类型分为`Bar`和`InvariantBar`，对应于以上的两种情况。
 
 ### 关于parser的技术选型
 - SimaiParser，考虑到Simai是一个相对复杂的格式化语法、本质是一种DSL，所以采用了[ANTLR](https://github.com/antlr/antlr4/blob/master/doc/index.md)进行解析。
   - ANTLR的核心是`g4`语法文件，因此在我们的代码里编写了针对Simai语言的语法定义文件：`Simai.g4`。如需修改，请自行学习ANTLR的文档。
   - ANTLR本身是不特定于编程语言的（它提供了各种编程语言的SDK），而语法文件的作用是，会被用于生成目标编程语言的“解析器代码”，以供调用。
     - 在`MuConvert.csproj`中定义了一个`<Antlr4>`的Item，它就是用来在编译时添加一个从语法文件生成C#解析器代码的编译步骤的。生成的文件会被自动放在`obj`目录下。
-    - 具体的原理，请详见`parser/simai/SimaiParser.cs`中，对`MuConvert.antlr`下的各个类的引用。
+    - 具体的原理，请详见`parser/mai/SimaiParser.cs`中对`MuConvert.Antlr`下各生成类的引用。
 - MA2的话，由于其天生就是为了机读设计的、格式相对简单，没有必要上ANTLR；而是直接逐行读取、一行内`Split('\t')`，就足以解析MA2的所有内容了。
 
 ### 目录与命名空间约定（贡献代码必读）
@@ -257,10 +260,10 @@ public sealed class FooParser : IParser<MaiChart>
         var alerts = new List<Alert>();
         if (text == "")
         { // 这是一个抛异常中止转谱的示例
-            alerts.Add(new Alert(Alert.Level.Error, "输入的文本为空！")); // 要把最后的错误记录成Alert
-            throw new ConversionException(alerts); // 然后抛出ConversionException，把alerts作为参数传入。
+            alerts.Add(new Alert(Alert.LEVEL.Error, "输入的文本为空！")); // 要把最后的错误记录成 Alert
+            throw new ConversionException(alerts); // 然后抛出 ConversionException，把 alerts 传入。
         }
-        // TODO: 填充 chart，记录 Alert，必要时抛出 ConversionException
+        // ……在此解析 text、写入 chart，并按需向 alerts 追加信息；遇不可恢复错误时同上抛出 ConversionException。
         return (chart, alerts);
     }
 }
@@ -277,22 +280,22 @@ public sealed class FooGenerator : IGenerator<MaiChart>
     public (string, List<Alert>) Generate(MaiChart chart)
     {
         var alerts = new List<Alert>();
-        // TODO: 由 chart 生成目标文本，记录 Alert
+        // ……在此由 chart 生成目标文本，并按需向 alerts 追加信息。
         return ("", alerts);
     }
 }
 ```
 
 ### 如何新增对另一种游戏的支持（注意事项）
-1. **命名空间**：命名空间使用 `MuConvert.<游戏简写>`（如中二可用`MuConvert.chu`、音击可用`MuConvert.ogk`），
+1. **命名空间**：命名空间使用 `MuConvert.<游戏简写>`（如中二可用 `MuConvert.chu` 、音击可用 `MuConvert.ogk` ），
 2. **代码目录**：模仿现有maimai的写法，在各个功能分类的一级子目录中新建二级子目录，例如 `chart/ogk`、`parser/ogk`、`generator/ogk`等，把代码放到这些目录下。
-   - 特殊地，如果该游戏的某个功能类型非常简单，如只有一个文件，那么也可以不单独创建二级子目录，而是直接放在一级子目录下。例子见现有的`collection/maidata.cs`，因为与maimai相关的collection只有这一个文件（MuConvert本身不对Sinmai的`Music.xml`做处理，这太复杂了、而且是MCM该干的事），所以`maidata.cs`直接放在了`collection`一级目录下，没有区分二级子目录。 
-3. **中间表示（IR）**：为该游戏定义音符类型与谱面类型。 
-   - 音符类型无需继承任何类，自己定义即可。
-   - 谱面类型，应继承`BaseChart`，并实现其中的相关getter，同时添加上自己特定于自己这个游戏的属性。
+   - 特殊地，如果该游戏的某个功能类型非常简单，如只有一个文件，那么也可以不单独创建二级子目录，而是直接放在一级子目录下。例子见现有的`collection/Maidata.cs`，因为与maimai相关的collection只有这一个文件（MuConvert本身不对Sinmai的`Music.xml`做处理，这太复杂了、而且是MCM该干的事），所以`Maidata.cs`直接放在了`collection`一级目录下，没有区分二级子目录。
+3. **中间表示（IR）**：为该游戏定义音符类型与谱面类型。
+   - 音符类型，没有全局公共的基类，各个游戏自己定义即可。
+   - 谱面类型，应继承`BaseChart`，并实现其中的抽象getter，同时添加上自己特定于自己这个游戏的属性和方法等。
 4. **Parser & Generator**：详见上文[如何在已支持的游戏中新增一种语法格式](#如何在已支持的游戏中新增一种语法格式)部分的说明，编写Parser和Generator，并实现对应的接口。
-5. **测试**：在`test`中新建你游戏的子目录如`ogk`，在其中放置测试文件。直接放置即可，xUnit会自动找到，无需修改csproj等。
-   - 如需放置测试数据，测试数据放在如`test/ogk/testset`中；读取测试数据时，可参见`test/mai/TestUtils.cs`中`FindTestsetRoot()`函数的写法。
+5. **测试**：在`tests/`下新建你游戏的子目录（如`tests/ogk/`），在其中放置测试文件。直接放置即可，xUnit会自动找到，无需修改csproj等。
+   - 谱面等测试数据可放在如`tests/ogk/testset/`中；读取路径时可参考`tests/mai/TestUtils.cs`中的`FindTestsetRoot()`函数的写法。
 6. **多语言（i18n）**（可选）：如果有i18n的必要的话，直接在`i18n`目录中的对应的语言文件`.resx`中，新增对应的key即可。
    - 无需创建单独文件，也不用管命名空间之类的问题，但建议key在命名的时候遵循一定的规律以防冲突。
    - 详见上文[多语言(i18n)相关](#多语言i18n相关)部分的说明。
