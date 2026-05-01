@@ -86,19 +86,25 @@ public class C2sParser : IParser<C2sChart>
     private static void ParseNote(string[] p, C2sChart chart, List<Alert> alerts, int lineNum)
     {
         var tag = p[0].ToUpperInvariant();
-        var note = new ChuNote { Type = tag, Measure = Int(p, 1), Offset = Int(p, 2), Cell = Int(p, 3), Width = Math.Max(1, Int(p, 4, 1)) };
+        var note = new ChuNote { Type = tag, Measure = Int(p, 1), Offset = Int(p, 2) };
 
         switch (tag)
         {
-            case "TAP": case "MNE": break;
-            case "CHR": note.Extra = Str(p, 5); break;
-            case "HLD": case "HXD": note.HoldDuration = Int(p, 5); break;
+            case "TAP": case "MNE":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); break;
+            case "CHR":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Extra = Str(p, 5); break;
+            case "HLD": case "HXD":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.HoldDuration = Int(p, 5); break;
             case "SLD": case "SLC": case "SXD": case "SXC":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
                 note.SlideDuration = Int(p, 5); note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1)); break;
-            case "FLK": note.Extra = Str(p, 5); break;
+            case "FLK":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Extra = Str(p, 5); break;
             case "AIR": case "AUR": case "AUL": case "ADW": case "ADR": case "ADL":
-                note.TargetNote = Str(p, 5); break;
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.TargetNote = Str(p, 5); break;
             case "AHD":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
                 note.TargetNote = Str(p, 5); note.AirHoldDuration = Int(p, 6); break;
             case "ALD": case "ASD":
                 note.StartHeight = Int(p, 3); note.SlideDuration = Int(p, 4);
