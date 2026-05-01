@@ -112,8 +112,9 @@ public class UgcGenerator : IGenerator<IChuChart>
         {
             "TAP" => $"t{c}{w}",
             "CHR" => $"x{c}{w}{n.Extra}",
-            "HLD" => $"h{c}{w}",
-            "SLD" => $"s{c}{w}",
+            "HLD" or "HXD" => $"h{c}{w}",
+            "SLD" or "SXD" => $"s{c}{w}",
+            "SLC" or "SXC" => $"s{c}{w}",
             "FLK" => $"f{c}{w}A",
             "MNE" => $"d{c}{w}",
             "AIR" => $"a{c}{w}UC{n.TargetNote}",
