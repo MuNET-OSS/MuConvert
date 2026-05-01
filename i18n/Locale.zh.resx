@@ -211,4 +211,10 @@
   <data name="SimultaneousSlideHead" xml:space="preserve">
     <value>检测到在星星头所在的时刻和位置，存在着其他星星头/Tap，这会造成游戏内的绝对无理。已自动为您修复（去除多余的星星头）。PS：如果您要编写同头星星，请使用类似"1-2*-3"而非"1-2/1-3"的写法，后者就会造成上面的情况。</value>
   </data>
+  <data name="C2SUnknownNoteType" xml:space="preserve">
+    <value>C2S 中存在无法识别的音符类型: {0}</value>
+  </data>
+  <data name="ChuGeneratorUnsupported" xml:space="preserve">
+    <value>无法将谱面转换为目标格式: {0}</value>
+  </data>
 </root>

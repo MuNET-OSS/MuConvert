@@ -517,5 +517,17 @@ namespace MuConvert {
                 return ResourceManager.GetString("WarnNonStdMA2Version", resourceCulture);
             }
         }
+        
+        public static string C2SUnknownNoteType {
+            get {
+                return ResourceManager.GetString("C2SUnknownNoteType", resourceCulture);
+            }
+        }
+        
+        public static string ChuGeneratorUnsupported {
+            get {
+                return ResourceManager.GetString("ChuGeneratorUnsupported", resourceCulture);
+            }
+        }
     }
 }
