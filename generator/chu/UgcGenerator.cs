@@ -45,8 +45,8 @@ public class UgcGenerator : IGenerator<IChuChart>
             return result;
         }
 
-        alerts.Add(new Alert(Warning, string.Format(Locale.ChuGeneratorUnsupported, "→ UGC")));
-        return new UgcChart();
+        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ UGC")));
+        throw new ConversionException(alerts);
     }
 
     private static ChuNote ScaleUpNote(ChuNote n)

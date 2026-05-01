@@ -9,7 +9,3 @@ riderModule.iml
 /.tmp*
 *scratch*
 *.lscache
-
-# 测试 dump 输出
-*_output.*
-placeholder.txt

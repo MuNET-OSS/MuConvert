@@ -53,8 +53,8 @@ public class C2sGenerator : IGenerator<IChuChart>
             return result;
         }
 
-        alerts.Add(new Alert(Warning, string.Format(Locale.ChuGeneratorUnsupported, "→ C2S")));
-        return new C2sChart();
+        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ C2S")));
+        throw new ConversionException(alerts);
     }
 
     private static ChuNote ScaleNote(ChuNote n, int tpb)

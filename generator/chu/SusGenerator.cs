@@ -13,7 +13,6 @@ namespace MuConvert.chu;
 public class SusGenerator : IGenerator<IChuChart>
 {
     private const int SusTpb = 480;
-    private const int C2sRsl = 384;
 
     public (string, List<Alert>) Generate(IChuChart chart)
     {
@@ -33,8 +32,9 @@ public class SusGenerator : IGenerator<IChuChart>
         if (chart is C2sChart c2s)
         {
             bpm = c2s.BpmEvents.Count > 0 ? c2s.BpmEvents[0].Bpm : c2s.DefBpm;
+            int c2sTpb = c2s.Resolution / 4;
             var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = title, Artist = artist };
-            foreach (var n in c2s.Notes) result.Notes.Add(ScaleUp(n));
+            foreach (var n in c2s.Notes) result.Notes.Add(ScaleUp(n, c2sTpb));
             return result;
         }
 
@@ -42,17 +42,17 @@ public class SusGenerator : IGenerator<IChuChart>
         {
             bpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0;
             var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
-            foreach (var n in ugc.Notes) result.Notes.Add(MapLaneOnly(n));
+            foreach (var n in ugc.Notes) result.Notes.Add(ScaleUp(n, ugc.TicksPerBeat));
             return result;
         }
 
-        alerts.Add(new Alert(Warning, string.Format(Locale.ChuGeneratorUnsupported, "→ SUS")));
-        return new SusChart();
+        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ SUS")));
+        throw new ConversionException(alerts);
     }
 
-    private static ChuNote ScaleUp(ChuNote n)
+    private static ChuNote ScaleUp(ChuNote n, int sourceTicksPerBeat)
     {
-        int s(int v) => (int)((long)v * SusTpb / (C2sRsl / 4));
+        int s(int v) => (int)((long)v * SusTpb / sourceTicksPerBeat);
         return new ChuNote
         {
             Type = n.Type, Measure = n.Measure, Offset = s(n.Offset),
@@ -62,15 +62,6 @@ public class SusGenerator : IGenerator<IChuChart>
             Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = s(n.AirHoldDuration),
         };
     }
-
-    private static ChuNote MapLaneOnly(ChuNote n) => new()
-    {
-        Type = n.Type, Measure = n.Measure, Offset = n.Offset,
-        Cell = n.Cell * 2, Width = n.Width * 2,
-        HoldDuration = n.HoldDuration, SlideDuration = n.SlideDuration,
-        EndCell = n.EndCell * 2, EndWidth = n.EndWidth * 2,
-        Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = n.AirHoldDuration,
-    };
 
     private static string Serialize(SusChart sus)
     {
