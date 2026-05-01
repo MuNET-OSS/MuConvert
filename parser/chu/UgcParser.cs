@@ -1,3 +1,4 @@
+using System.Globalization;
 using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
@@ -90,7 +91,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             case "@DIFF":
-                if (int.TryParse(value, out var diff))
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var diff))
                 {
                     chart.Difficulty = diff switch
                     {
@@ -109,14 +110,14 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             case "@LEVEL":
-                if (int.TryParse(value, out var level))
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var level))
                     chart.Level = level;
                 else
                     alerts.Add(new Alert(Warning, $"@LEVEL 格式错误: {line}") { Line = lineNum });
                 break;
 
             case "@CONST":
-                if (double.TryParse(value, out var constant))
+                if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var constant))
                     chart.Constant = constant;
                 else
                     alerts.Add(new Alert(Warning, $"@CONST 格式错误: {line}") { Line = lineNum });
@@ -127,7 +128,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             case "@TICKS":
-                if (int.TryParse(value, out var ticks))
+                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ticks))
                     chart.TicksPerBeat = ticks;
                 else
                     alerts.Add(new Alert(Warning, $"@TICKS 格式错误: {line}") { Line = lineNum });
@@ -136,9 +137,9 @@ public class UgcParser : IParser<UgcChart>
             case "@BEAT":
                 var beatParts = value.Split(' ');
                 if (beatParts.Length >= 3
-                    && int.TryParse(beatParts[0], out var beatMeasure)
-                    && int.TryParse(beatParts[1], out var beatNum)
-                    && int.TryParse(beatParts[2], out var beatDen))
+                    && int.TryParse(beatParts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatMeasure)
+                    && int.TryParse(beatParts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatNum)
+                    && int.TryParse(beatParts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatDen))
                 {
                     chart.BeatEvents.Add((beatMeasure, beatNum, beatDen));
                 }
@@ -157,9 +158,9 @@ public class UgcParser : IParser<UgcChart>
                     var bpmValueStr = bpmPart[(bpmSpaceIdx + 1)..];
                     var apostropheIdx = measureOffset.IndexOf('\'');
                     if (apostropheIdx > 0
-                        && int.TryParse(measureOffset[..apostropheIdx], out var bpmMeasure)
-                        && int.TryParse(measureOffset[(apostropheIdx + 1)..], out var bpmOffset)
-                        && double.TryParse(bpmValueStr, out var bpmValue))
+                        && int.TryParse(measureOffset[..apostropheIdx], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmMeasure)
+                        && int.TryParse(measureOffset[(apostropheIdx + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmOffset)
+                        && double.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
                     {
                         chart.BpmEvents.Add((bpmMeasure, bpmOffset, bpmValue));
                     }
@@ -202,12 +203,12 @@ public class UgcParser : IParser<UgcChart>
             return idx;
         }
 
-        if (!int.TryParse(prefix[(hashIdx + 1)..apostropheIdx], out var measure))
+        if (!int.TryParse(prefix[(hashIdx + 1)..apostropheIdx], NumberStyles.Integer, CultureInfo.InvariantCulture, out var measure))
         {
             alerts.Add(new Alert(Warning, $"无法解析 measure: {line}") { Line = lineNum });
             return idx;
         }
-        if (!int.TryParse(prefix[(apostropheIdx + 1)..], out var tick))
+        if (!int.TryParse(prefix[(apostropheIdx + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tick))
         {
             alerts.Add(new Alert(Warning, $"无法解析 tick: {line}") { Line = lineNum });
             return idx;
@@ -322,7 +323,7 @@ public class UgcParser : IParser<UgcChart>
         if (gtSIdx < 1) return false;
 
         var durationStr = line[1..gtSIdx];
-        if (!int.TryParse(durationStr, out duration)) return false;
+        if (!int.TryParse(durationStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out duration)) return false;
 
         var afterMarker = line[(gtSIdx + 2)..];
         if (afterMarker.Length >= 2)
@@ -386,7 +387,7 @@ public class UgcParser : IParser<UgcChart>
         if (underscoreIdx >= 0 && note.Type == "AHD")
         {
             var durStr = remaining[(underscoreIdx + 1)..];
-            if (int.TryParse(durStr, out var ahdDuration))
+            if (int.TryParse(durStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ahdDuration))
                 note.AirHoldDuration = ahdDuration;
         }
     }
@@ -428,3 +429,4 @@ public class UgcParser : IParser<UgcChart>
         return $"#{note.Measure}'{note.Offset}:{note.Type}";
     }
 }
+

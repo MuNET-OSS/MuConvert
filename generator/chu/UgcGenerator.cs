@@ -51,7 +51,7 @@ public class UgcGenerator : IGenerator<IChuChart>
 
     private static ChuNote ScaleUpNote(ChuNote n)
     {
-        int s(int v) => v * UgcTicksPerBeat / (C2sResolution / 4);
+        int s(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
         return new ChuNote
         {
             Type = n.Type, Measure = n.Measure, Offset = s(n.Offset),
@@ -64,7 +64,7 @@ public class UgcGenerator : IGenerator<IChuChart>
         };
     }
 
-    private static int ScaleUp(int v) => v * UgcTicksPerBeat / (C2sResolution / 4);
+    private static int ScaleUp(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
 
     private static bool IsAir(string t) => t is "AIR" or "AUR" or "AUL" or "AHD" or "ADW" or "ADR" or "ADL";
 

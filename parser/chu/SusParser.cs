@@ -1,3 +1,4 @@
+using System.Globalization;
 using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
@@ -82,7 +83,7 @@ public class SusParser : IParser<SusChart>
         else if (content.StartsWith("BPM_DEF "))
         {
             var bpmStr = content[8..].Trim().Trim('"');
-            if (double.TryParse(bpmStr, out var bpm))
+            if (double.TryParse(bpmStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpm))
                 chart.Bpm = bpm;
             else
                 alerts.Add(new Alert(Warning, $"BPM_DEF 格式错误: {content}") { Line = lineNum });
@@ -90,7 +91,7 @@ public class SusParser : IParser<SusChart>
         else if (content.StartsWith("REQUEST "))
         {
             var reqStr = content[8..].Trim().Trim('"');
-            if (int.TryParse(reqStr, out var ticks))
+            if (int.TryParse(reqStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ticks))
                 chart.TicksPerBeat = ticks;
             else
                 alerts.Add(new Alert(Warning, $"REQUEST 格式错误: {content}") { Line = lineNum });

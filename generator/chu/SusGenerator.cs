@@ -52,7 +52,7 @@ public class SusGenerator : IGenerator<IChuChart>
 
     private static ChuNote ScaleUp(ChuNote n)
     {
-        int s(int v) => v * SusTpb / (C2sRsl / 4);
+        int s(int v) => (int)((long)v * SusTpb / (C2sRsl / 4));
         return new ChuNote
         {
             Type = n.Type, Measure = n.Measure, Offset = s(n.Offset),
