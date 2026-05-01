@@ -252,10 +252,14 @@ public class UgcParser : IParser<UgcChart>
 
             case 'f':
                 note.Type = "FLK";
+                ParseCellWidth(code, 1, note, alerts, lineNum);
+                if (code.Length > 3)
+                    note.Extra = code[3..];
                 break;
 
             case 'd':
                 note.Type = "MNE";
+                ParseCellWidth(code, 1, note, alerts, lineNum);
                 break;
 
             default:
@@ -360,9 +364,18 @@ public class UgcParser : IParser<UgcChart>
 
     private static void ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum)
     {
-        var remaining = code[1..];
-        var underscoreIdx = remaining.IndexOf('_');
-        var mainPart = underscoreIdx >= 0 ? remaining[..underscoreIdx] : remaining;
+        // Matches UgcGenerator: "a" + cell + width + two-letter direction + targetNote [ + "_" + airHoldDuration for AHD ]
+        if (code.Length < 5)
+        {
+            alerts.Add(new Alert(Warning, $"AIR 音符代码过短: {code}") { Line = lineNum });
+            note.Type = "AIR";
+            return;
+        }
+
+        ParseCellWidth(code, 1, note, alerts, lineNum);
+        var afterCellWidth = code[3..];
+        var underscoreIdx = afterCellWidth.IndexOf('_');
+        var mainPart = underscoreIdx >= 0 ? afterCellWidth[..underscoreIdx] : afterCellWidth;
 
         if (mainPart.Length < 2)
         {
@@ -382,18 +395,11 @@ public class UgcParser : IParser<UgcChart>
             alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {dir}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
         }
 
-        if (mainPart.Length > 2)
-        {
-            note.TargetNote = mainPart[2].ToString();
-        }
-        else
-        {
-            note.TargetNote = "N";
-        }
+        note.TargetNote = mainPart.Length > 2 ? mainPart[2..] : "N";
 
         if (underscoreIdx >= 0 && note.Type == "AHD")
         {
-            var durStr = remaining[(underscoreIdx + 1)..];
+            var durStr = afterCellWidth[(underscoreIdx + 1)..];
             if (int.TryParse(durStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ahdDuration))
                 note.AirHoldDuration = ahdDuration;
         }
@@ -402,11 +408,18 @@ public class UgcParser : IParser<UgcChart>
     private static void ParseChrNote(string code, ChuNote note, List<Alert> alerts, int lineNum)
     {
         note.Type = "CHR";
-        var extra = code[1..];
-        if (ChrExtras.TryGetValue(extra, out var chrDir))
+        if (code.Length < 3)
+        {
+            alerts.Add(new Alert(Warning, $"CHR 音符代码过短: {code}") { Line = lineNum });
+            return;
+        }
+
+        ParseCellWidth(code, 1, note, alerts, lineNum);
+        var extraRaw = code.Length > 3 ? code[3..] : "";
+        if (ChrExtras.TryGetValue(extraRaw, out var chrDir))
             note.Extra = chrDir;
         else
-            note.Extra = extra;
+            note.Extra = extraRaw;
     }
 
     private static int HexCharToInt(char c)
