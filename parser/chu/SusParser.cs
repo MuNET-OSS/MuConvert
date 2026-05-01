@@ -228,12 +228,8 @@ public class SusParser : IParser<SusChart>
         }
     }
 
-    private static int HexToInt(string hex)
-    {
-        if (hex.All(c => c is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f'))
-            return Convert.ToInt32(hex, 16);
-        return 0;
-    }
+    private static int HexToInt(string hex) =>
+        int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var result) ? result : 0;
 
     private static string Unquote(string s)
     {
