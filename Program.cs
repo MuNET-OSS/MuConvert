@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Text;
 using System.Text.RegularExpressions;
+using MuConvert.chu;
 using MuConvert.mai;
 using MuConvert.utils;
 
@@ -50,6 +51,12 @@ internal static class Program
             HelpName = "N[,N...]"
         };
 
+        var targetOption = new Option<string?>("--target", "-t")
+        {
+            Description = "强制指定输出格式。目前仅有C2S->SUS必须指定本参数，其他情况省略使用默认值即可。",
+            HelpName = "format"
+        };
+
         var outputOption = new Option<string?>("--output", "-o")
         {
             Description = "指定输出位置。可指定文件或目录，或\"-\"(stdout)；不指定则默认为输入文件所在目录。",
@@ -78,6 +85,7 @@ internal static class Program
         };
 
         root.Options.Add(levelsOption);
+        root.Options.Add(targetOption);
         root.Options.Add(outputOption);
         root.Options.Add(strictOption);
         root.Options.Add(laxOption);
@@ -88,6 +96,8 @@ internal static class Program
             var inputPath = parseResult.GetValue(inputArgument)
                 ?? throw new InvalidOperationException("缺少参数 path。");
             var levelsRaw = parseResult.GetValue(levelsOption);
+            var targetRaw = parseResult.GetValue(targetOption);
+            _cliTargetNormalized = string.IsNullOrWhiteSpace(targetRaw) ? null : targetRaw.Trim().ToLowerInvariant();
             _outputSpec = OutputSpec.Parse(parseResult.GetValue(outputOption));
 
             var cliStrict = parseResult.GetValue(strictOption);
@@ -105,6 +115,9 @@ internal static class Program
     /// <summary>由 CLI 在每次 <c>SetAction</c> 入口赋值；转换逻辑只读此字段。</summary>
     private static OutputSpec _outputSpec;
     private static SimaiParser.StrictLevelEnum _simaiStrictLevel = SimaiParser.StrictLevelEnum.Normal;
+    
+    /// <summary>由 CLI 赋值；为 null 表示按输入类型使用默认输出格式，否则为小写的目标格式名（如 sus、ma2）。</summary>
+    private static string? _cliTargetNormalized;
 
     private enum OutputSinkKind { Default, Stdout, Directory, File }
     
@@ -142,6 +155,8 @@ internal static class Program
         else
             throw new ArgumentException($"找不到路径: {inputPath}");
     }
+    
+    private static readonly string[] chuExtentions = new[] { ".c2s", ".ugc", ".sus" };
 
     private static void RunConvertDirectory(string dir, string? levelsRaw)
     {
@@ -154,25 +169,39 @@ internal static class Program
 
         var maidataPaths = Directory.GetFiles(dir, "maidata.txt", enumOpts);
         var ma2Paths = Directory.GetFiles(dir, "*.ma2", enumOpts);
+        var chuPaths = Directory.EnumerateFiles(dir, "*", enumOpts)
+            .Where(file => chuExtentions.Contains(Path.GetExtension(file).ToLower())).ToArray();
 
         var hasMaidata = maidataPaths.Length > 0;
         var hasMa2 = ma2Paths.Length > 0;
+        var hasChu = chuPaths.Length > 0;
 
         if (hasMaidata && hasMa2)
             throw new ArgumentException("目录中同时存在 maidata.txt 与 .ma2，请只保留其中一种输入。");
-        if (!hasMaidata && !hasMa2)
-            throw new ArgumentException("目录中未找到 maidata.txt 或 .ma2 文件。");
+        if ((hasMaidata || hasMa2) && hasChu)
+            throw new ArgumentException("目录中不能同时存在 maimai 谱（maidata.txt / .ma2）与中二谱（.c2s / .ugc / .sus），请分开转换。");
+        if (!hasMaidata && !hasMa2 && !hasChu)
+            throw new ArgumentException("目录中未找到任何支持的谱面文件");
 
+        string filename = "";
         if (hasMaidata)
         {
-            if (maidataPaths.Length > 1)
-                throw new ArgumentException("目录中存在多个 maidata.txt，请只保留一个。");
-            RunConvertTxtFile(maidataPaths[0], levelsRaw);
-            return;
+            if (maidataPaths.Length > 1) throw new ArgumentException("目录中存在多个 maidata.txt，请只保留一个。");
+            filename = maidataPaths[0];
         }
-
-        var title = new DirectoryInfo(dir).Name;
-        ConvertMa2PathsToMaidata(dir, title, ma2Paths, levelsRaw);
+        else if (hasMa2)
+        {
+            if (ma2Paths.Length > 1)
+            { // 多个文件，无法直接转发给RunConvertFile，故自行调用ConvertMa2PathsToMaidata
+                var title = new DirectoryInfo(dir).Name;
+                ConvertMa2PathsToMaidata(dir, title, ma2Paths, levelsRaw);
+                return;
+            }
+            else filename = ma2Paths[0];
+        }
+        else filename = chuPaths[0];
+        
+        RunConvertFile(filename, levelsRaw);
     }
 
     private static void RunConvertFile(string filePath, string? levelsRaw)
@@ -192,7 +221,18 @@ internal static class Program
             return;
         }
 
-        throw new ArgumentException($"不支持的输入扩展名「{ext}」。支持 .txt、.ma2，或目录。");
+        if (string.Equals(ext, ".c2s", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(ext, ".ugc", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(ext, ".sus", StringComparison.OrdinalIgnoreCase))
+        {
+            if (levelsRaw != null) throw new ArgumentException("-l / --levels 仅适用于 maimai 的 maidata 或目录中的 .ma2，不适用于中二谱（.c2s / .ugc / .sus）。");
+            AssertStrictLaxOnlyForSimaiToMa2(" 中二谱（.c2s / .ugc / .sus）");
+            var kind = ext.TrimStart('.').ToLowerInvariant();
+            RunConvertChuSingleFile(filePath, kind);
+            return;
+        }
+
+        throw new ArgumentException($"不支持的输入扩展名「{ext}」。支持 .txt、.ma2、.c2s、.ugc、.sus，或目录。");
     }
 
     private static void RunConvertTxtFile(string inputPath, string? levelsRaw)
@@ -201,6 +241,9 @@ internal static class Program
 
         var inputDir = Path.GetDirectoryName(Path.GetFullPath(inputPath))!;
         var text = File.ReadAllText(inputPath, Encoding.UTF8);
+
+        var targetFormat = _cliTargetNormalized ?? "ma2";
+        if (targetFormat != "ma2") throw new ArgumentException($"不支持的输出类型「{targetFormat}」。输入文件为simai时，输出格式仅支持ma2。");
 
         if (LooksLikeMaidata(text))
         {
@@ -271,8 +314,10 @@ internal static class Program
     {
         if (ma2FullPaths.Count == 0)
             throw new ArgumentException("未提供任何 .ma2 文件。");
-        if (_simaiStrictLevel != SimaiParser.StrictLevelEnum.Normal)
-            throw new ArgumentException("--strict / --lax 仅适用于 Simai（.txt / maidata）转 MA2，不能用于 MA2 转 Simai。");
+        AssertStrictLaxOnlyForSimaiToMa2(" MA2 转 Simai");
+        
+        var targetFormat = _cliTargetNormalized ?? "simai";
+        if (targetFormat != "simai") throw new ArgumentException($"不支持的输出类型「{targetFormat}」。输入文件为ma2时，输出格式仅支持simai。");
 
         var paths = ma2FullPaths.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var levelFilter = string.IsNullOrWhiteSpace(levelsRaw) ? null : ParseLevelList(levelsRaw);
@@ -293,7 +338,7 @@ internal static class Program
 
         foreach (var (fullPath, levelId) in assignments)
         {
-            Console.Error.WriteLine($"Simai → MA2: {fullPath}(lv{levelId}) → {destNote}");
+            Console.Error.WriteLine($"MA2 → Simai: {fullPath}(lv{levelId}) → {destNote}");
             var ma2Text = File.ReadAllText(fullPath, Encoding.UTF8);
             var (chart, parseAlerts) = new MA2Parser().Parse(ma2Text);
             PrintAlerts(parseAlerts);
@@ -410,6 +455,83 @@ internal static class Program
         var ext = Path.GetExtension(filePath);
         if (!string.Equals(ext, requiredExt, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"输出文件扩展名须为「{requiredExt}」，当前为「{(string.IsNullOrEmpty(ext) ? "(无)" : ext)}」。");
+    }
+
+    private static void AssertStrictLaxOnlyForSimaiToMa2(string contextSuffix)
+    {
+        if (_simaiStrictLevel != SimaiParser.StrictLevelEnum.Normal)
+            throw new ArgumentException($"--strict / --lax 仅适用于 Simai（.txt / maidata 或纯 inote）转 MA2，不能用于{contextSuffix}。");
+    }
+
+    private static readonly Dictionary<string, string[]> chuTargetsDict = new()
+    {
+        ["c2s"] = ["ugc", "sus"],
+        ["ugc"] = ["c2s", "sus"],
+        ["sus"] = ["c2s"],
+    };
+    
+    private static void ValidateOutputForSingleChuText(string inputFormat, string targetFormat)
+    {
+        var validTargets = chuTargetsDict.GetValueOrDefault(inputFormat) ?? [];
+        if (!validTargets.Contains(targetFormat)) throw new ArgumentException($"不支持的输出类型「{targetFormat}」。输入文件为{inputFormat}时，输出格式仅支持{validTargets}。");
+
+        if (_outputSpec.Kind == OutputSinkKind.Stdout) return;
+        if (_outputSpec.Kind == OutputSinkKind.File)
+            ValidateOutputFileExtension(_outputSpec.FsPath!, "." + targetFormat);
+    }
+
+    private static void RunConvertChuSingleFile(string filePath, string inputKind)
+    {
+        var targetFormat = _cliTargetNormalized ?? chuTargetsDict[inputKind][0];
+        ValidateOutputForSingleChuText(inputKind, targetFormat);
+
+        var full = Path.GetFullPath(filePath);
+        var inputDir = Path.GetDirectoryName(full)!;
+        var text = File.ReadAllText(full, Encoding.UTF8);
+        
+        var baseDir = _outputSpec.ResolveOutputDir(inputDir);
+        var outPath = _outputSpec.Kind == OutputSinkKind.File ? _outputSpec.FsPath! : Path.Combine(baseDir, Path.GetFileNameWithoutExtension(full) + "." + targetFormat);
+        var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : outPath;
+        Console.Error.WriteLine($"{inputKind.ToUpperInvariant()} → {targetFormat.ToUpperInvariant()}: {full} → {destNote}");
+        
+        IChuChart chart;
+        List<Alert> parseAlerts;
+        switch (inputKind)
+        {
+            case "c2s":
+                (chart, parseAlerts) = new C2sParser().Parse(text);
+                break;
+            case "ugc":
+                (chart, parseAlerts) = new UgcParser().Parse(text);
+                break;
+            case "sus":
+                (chart, parseAlerts) = new SusParser().Parse(text);
+                break;
+            default:
+                throw new ArgumentException($"内部错误：未知中二输入种类「{inputKind}」。");
+        }
+        PrintAlerts(parseAlerts);
+
+        string outText;
+        List<Alert> genAlerts;
+        switch (targetFormat)
+        {
+            case "ugc":
+                (outText, genAlerts) = new UgcGenerator().Generate(chart);
+                break;
+            case "sus":
+                (outText, genAlerts) = new SusGenerator().Generate(chart);
+                break;
+            case "c2s":
+                (outText, genAlerts) = new C2sGenerator().Generate(chart);
+                break;
+            default:
+                throw new ArgumentException($"内部错误：未实现的中二输出类型「{targetFormat}」。");
+        }
+        PrintAlerts(genAlerts);
+        
+        if (_outputSpec.Kind == OutputSinkKind.Stdout) Console.Out.Write(outText);
+        else File.WriteAllText(outPath, outText, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static string SimaiToMa2(string inote, int clockCount = 4, bool bigTouch = false, bool isUtage = false,
