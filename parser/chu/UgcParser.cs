@@ -312,19 +312,23 @@ public class UgcParser : IParser<UgcChart>
         note.Type = "HLD";
         ParseCellWidth(code, 1, note, alerts, idx + 1);
 
-        if (idx + 1 < lines.Length)
+        bool foundFirst = false;
+        while (idx + 1 < lines.Length)
         {
             var nextLine = lines[idx + 1].Trim();
-            if (TryParseFollowerLine(nextLine, out var duration, out _, out _))
+            if (!TryParseFollowerLine(nextLine, out var duration, out _, out _))
             {
-                note.HoldDuration = duration;
-                return idx + 1;
+                if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
+                break;
             }
-            // next line might be a comment or directive, not a warning
-            if (nextLine.StartsWith('\'') || nextLine.StartsWith('@'))
-                return idx;
+
+            note.HoldDuration += duration;
+            idx++;
+            foundFirst = true;
         }
-        alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
+
+        if (!foundFirst)
+            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
         return idx;
     }
 
