@@ -156,7 +156,7 @@ internal static class Program
             throw new ArgumentException($"找不到路径: {inputPath}");
     }
     
-    private static readonly string[] chuExtentions = new[] { ".c2s", ".ugc", ".sus" };
+    private static readonly string[] supportedPostfixs = new[] { "maidata.txt", ".ma2", ".c2s", ".ugc", ".sus" };
 
     private static void RunConvertDirectory(string dir, string? levelsRaw)
     {
@@ -166,42 +166,22 @@ internal static class Program
             MatchCasing = MatchCasing.CaseInsensitive,
             RecurseSubdirectories = false
         };
+        var inputPaths = Directory.EnumerateFiles(dir, "*", enumOpts)
+            .Where(file => supportedPostfixs.Any(file.EndsWith)).ToArray();
 
-        var maidataPaths = Directory.GetFiles(dir, "maidata.txt", enumOpts);
-        var ma2Paths = Directory.GetFiles(dir, "*.ma2", enumOpts);
-        var chuPaths = Directory.EnumerateFiles(dir, "*", enumOpts)
-            .Where(file => chuExtentions.Contains(Path.GetExtension(file).ToLower())).ToArray();
-
-        var hasMaidata = maidataPaths.Length > 0;
-        var hasMa2 = ma2Paths.Length > 0;
-        var hasChu = chuPaths.Length > 0;
-
-        if (hasMaidata && hasMa2)
-            throw new ArgumentException("目录中同时存在 maidata.txt 与 .ma2，请只保留其中一种输入。");
-        if ((hasMaidata || hasMa2) && hasChu)
-            throw new ArgumentException("目录中不能同时存在 maimai 谱（maidata.txt / .ma2）与中二谱（.c2s / .ugc / .sus），请分开转换。");
-        if (!hasMaidata && !hasMa2 && !hasChu)
-            throw new ArgumentException("目录中未找到任何支持的谱面文件");
-
-        string filename = "";
-        if (hasMaidata)
+        if (inputPaths.Length > 1)
         {
-            if (maidataPaths.Length > 1) throw new ArgumentException("目录中存在多个 maidata.txt，请只保留一个。");
-            filename = maidataPaths[0];
-        }
-        else if (hasMa2)
-        {
-            if (ma2Paths.Length > 1)
-            { // 多个文件，无法直接转发给RunConvertFile，故自行调用ConvertMa2PathsToMaidata
+            if (inputPaths.All(file=>file.EndsWith(".ma2")))
+            { // 只有多个MA2这种情况是允许的，直接调用ConvertMa2PathsToMaidata
                 var title = new DirectoryInfo(dir).Name;
-                ConvertMa2PathsToMaidata(dir, title, ma2Paths, levelsRaw);
-                return;
+                ConvertMa2PathsToMaidata(dir, title, inputPaths, levelsRaw);
             }
-            else filename = ma2Paths[0];
+            else
+            {
+                throw new ArgumentException($"目录中存在多种/多个谱面文件：{string.Join(", ", inputPaths)}。请直接指定到具体的文件路径，或者删除多余的文件。");
+            }
         }
-        else filename = chuPaths[0];
-        
-        RunConvertFile(filename, levelsRaw);
+        else RunConvertFile(inputPaths[0], levelsRaw);
     }
 
     private static void RunConvertFile(string filePath, string? levelsRaw)
