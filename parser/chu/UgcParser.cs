@@ -226,7 +226,7 @@ public class UgcParser : IParser<UgcChart>
             Offset = tick,
         };
 
-        var typeChar = code[0];
+        var typeChar = char.ToLowerInvariant(code[0]);
 
         switch (typeChar)
         {
@@ -329,13 +329,17 @@ public class UgcParser : IParser<UgcChart>
 
         if (!line.StartsWith('#')) return false;
 
-        var gtSIdx = line.IndexOf(">s");
-        if (gtSIdx < 1) return false;
+        // support both >s (SLD) and >c (SLC) follower lines
+        int gtIdx = -1;
+        int markerLen = 0;
+        if (line.Contains(">s")) { gtIdx = line.IndexOf(">s"); markerLen = 2; }
+        else if (line.Contains(">c")) { gtIdx = line.IndexOf(">c"); markerLen = 2; }
+        if (gtIdx < 1) return false;
 
-        var durationStr = line[1..gtSIdx];
+        var durationStr = line[1..gtIdx];
         if (!int.TryParse(durationStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out duration)) return false;
 
-        var afterMarker = line[(gtSIdx + 2)..];
+        var afterMarker = line[(gtIdx + markerLen)..];
         if (afterMarker.Length >= 2)
         {
             endCell = HexCharToInt(afterMarker[0]);
