@@ -74,7 +74,7 @@
     <value>Invalid slide definition: {0}</value>
   </data>
   <data name="MessageAt" xml:space="preserve">
-    <value>At</value>
+    <value>At </value>
   </data>
   <data name="MessageLine" xml:space="preserve">
     <value>line {0}</value>

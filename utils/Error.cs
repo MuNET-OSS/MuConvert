@@ -50,7 +50,7 @@ public class Alert
         else if (TimeInBar != null) tags.Add(string.Format(Locale.MessageBar, TimeInBar.Value.CanonicalForm));
         else if (TimeInSeconds != null) tags.Add(string.Format(Locale.MessageTime, TimeInSeconds.Value));
         if (RelevantNote != null) tags.Add(string.Format(Locale.MessageParsing, RelevantNote));
-        var tagString = tags.Count > 0 ? $"({Locale.MessageAt} {string.Join(", ", tags)}) " : "";
+        var tagString = tags.Count > 0 ? $"({Locale.MessageAt}{string.Join(", ", tags)}) " : "";
         
         string head = "";
         switch (Level)

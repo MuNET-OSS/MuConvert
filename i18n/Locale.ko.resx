@@ -74,7 +74,7 @@
     <value>잘못된 슬라이드 정의: {0}</value>
   </data>
   <data name="MessageAt" xml:space="preserve">
-    <value>위치</value>
+    <value>위치 </value>
   </data>
   <data name="MessageLine" xml:space="preserve">
     <value>{0}번째 줄</value>
