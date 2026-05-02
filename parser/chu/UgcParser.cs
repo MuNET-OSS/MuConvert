@@ -42,6 +42,9 @@ public class UgcParser : IParser<UgcChart>
             var line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
 
+            // UGC comment lines (starting with ')
+            if (line.StartsWith('\'')) continue;
+
             if (inHeader)
             {
                 if (line == "@ENDHEAD")
@@ -175,6 +178,22 @@ public class UgcParser : IParser<UgcChart>
                 }
                 break;
 
+            // silently ignored metadata tags
+            case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
+            case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
+            case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
+            case "@MAINTIL":
+                break;
+
+            case "@TIL": case "@SPDMOD":
+                {
+                    var parts = value.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tilMeasure)
+                        && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var tilMult))
+                        chart.SpeedEvents.Add((tilMeasure, 0, tilMult));
+                }
+                break;
+
             default:
                 alerts.Add(new Alert(Info, $"未知头部标签: {tag}") { Line = lineNum });
                 break;
@@ -185,6 +204,14 @@ public class UgcParser : IParser<UgcChart>
     {
         var line = lines[idx];
         var lineNum = idx + 1;
+
+        // skip comment lines and inline directives
+        if (line.StartsWith('\'') || line.StartsWith('@'))
+            return idx;
+
+        // standalone follower line: silently skip (will be attached by parent or ignored)
+        if (line.StartsWith('#') && !line.Contains(':') && (line.Contains(">s") || line.Contains(">c")))
+            return idx;
 
         var colonIdx = line.IndexOf(':');
         if (colonIdx < 0)
@@ -257,6 +284,9 @@ public class UgcParser : IParser<UgcChart>
                     note.Extra = code[3..];
                 break;
 
+            case 'c':
+                return idx; // Margrete Air Crush, silently skip
+
             case 'd':
                 note.Type = "MNE";
                 ParseCellWidth(code, 1, note, alerts, lineNum);
@@ -290,6 +320,9 @@ public class UgcParser : IParser<UgcChart>
                 note.HoldDuration = duration;
                 return idx + 1;
             }
+            // next line might be a comment or directive, not a warning
+            if (nextLine.StartsWith('\'') || nextLine.StartsWith('@'))
+                return idx;
         }
         alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
         return idx;
@@ -300,25 +333,48 @@ public class UgcParser : IParser<UgcChart>
         note.Type = "SLD";
         ParseCellWidth(code, 1, note, alerts, idx + 1);
 
-        if (idx + 1 < lines.Length)
+        bool foundFirst = false;
+        while (idx + 1 < lines.Length)
         {
             var nextLine = lines[idx + 1].Trim();
-            if (TryParseFollowerLine(nextLine, out var duration, out var endCell, out var endWidth, requireEndCellWidth: true))
+            if (!TryParseFollowerLine(nextLine, out var duration, out var endCell, out var endWidth))
             {
-                note.SlideDuration = duration;
-                note.EndCell = endCell;
-                note.EndWidth = endWidth;
-                return idx + 1;
+                if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
+                break;
             }
-            if (TryParseFollowerLine(nextLine, out duration, out _, out _, requireEndCellWidth: false))
+
+            note.SlideDuration += duration;
+            note.EndCell = endCell;
+            note.EndWidth = endWidth;
+            idx++;
+            foundFirst = true;
+        }
+
+        if (!foundFirst)
+            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
+
+        return idx;
+    }
+
+    private static bool TryParseStandaloneFollower(string[] lines, int idx, UgcChart chart, List<Alert> alerts)
+    {
+        var line = lines[idx];
+        if (!line.StartsWith('#') || !line.Contains(">s") && !line.Contains(">c")) return false;
+
+        if (!TryParseFollowerLine(line, out var duration, out var endCell, out var endWidth)) return false;
+
+        // find the last SLD or HLD note and attach duration
+        for (int i = chart.Notes.Count - 1; i >= 0; i--)
+        {
+            var n = chart.Notes[i];
+            if (n.Type is "SLD" or "HLD")
             {
-                note.SlideDuration = duration;
-                alerts.Add(new Alert(Warning, $"SLD 跟随行缺少结束位置（cell 与 width）: {nextLine}") { Line = idx + 2, RelevantNote = FormatNoteRef(note) });
-                return idx + 1;
+                if (n.Type == "SLD") { n.SlideDuration = duration; n.EndCell = endCell; n.EndWidth = endWidth; }
+                else { n.HoldDuration = duration; }
+                return true;
             }
         }
-        alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
-        return idx;
+        return false;
     }
 
     private static bool TryParseFollowerLine(string line, out int duration, out int endCell, out int endWidth, bool requireEndCellWidth = false)
