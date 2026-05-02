@@ -105,6 +105,24 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Unknown C2S note type: {0}.
+        /// </summary>
+        public static string C2SUnknownNoteType {
+            get {
+                return ResourceManager.GetString("C2SUnknownNoteType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot convert chart to target format: {0}.
+        /// </summary>
+        public static string ChuGeneratorUnsupported {
+            get {
+                return ResourceManager.GetString("ChuGeneratorUnsupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The chart contains features not supported by MA2 1.03 (multi-segment connecting slides). Only the first slide segment was kept..
         /// </summary>
         public static string ConnectingSlideIn103 {
@@ -330,7 +348,7 @@ namespace MuConvert {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to At.
+        ///   Looks up a localized string similar to At .
         /// </summary>
         public static string MessageAt {
             get {
@@ -515,18 +533,6 @@ namespace MuConvert {
         public static string WarnNonStdMA2Version {
             get {
                 return ResourceManager.GetString("WarnNonStdMA2Version", resourceCulture);
-            }
-        }
-        
-        public static string C2SUnknownNoteType {
-            get {
-                return ResourceManager.GetString("C2SUnknownNoteType", resourceCulture);
-            }
-        }
-        
-        public static string ChuGeneratorUnsupported {
-            get {
-                return ResourceManager.GetString("ChuGeneratorUnsupported", resourceCulture);
             }
         }
     }
