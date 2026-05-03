@@ -474,7 +474,7 @@ internal static class Program
         var destNote = _outputSpec.Kind == OutputSinkKind.Stdout ? "（标准输出）" : outPath;
         Console.Error.WriteLine($"{inputKind.ToUpperInvariant()} → {targetFormat.ToUpperInvariant()}: {full} → {destNote}");
         
-        IChuChart chart;
+        ChuChart chart;
         List<Alert> parseAlerts;
         switch (inputKind)
         {

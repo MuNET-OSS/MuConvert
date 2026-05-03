@@ -215,13 +215,7 @@ finally
 - **parser（解析器）**：把“源格式文本”解析成中间表示
   - `SimaiParser.Parse(string)` → `MaiChart`
   - `MA2Parser.Parse(string)` → `MaiChart`
-  - CHUNITHM的三种Parser(`C2sParser`、`UgcParser`、`SusParser`)：`Parse(string)` → `IChuChart`
-    > <details>
-    > <summary>关于IChuChart</summary>
-    > 当前实现IChuChart是一个通用的接口而非具体的类型，这是因为目前不同Parser解析出的谱面的IR尚未能够完全统一，所以只能都各自继承自IChuChart。  
-    > 不过不用担心，任意的Generator都接受任意IChuChart对象，因此你可以不在意它们之间的差异，直接拿来用就行了。  
-    > 未来如果有机会的话，我们会把它们进一步统一成同一个具体类型的IR，以进一步提升代码的可维护性和可读性。
-    > </details>
+  - CHUNITHM的三种Parser(`C2sParser`、`UgcParser`、`SusParser`)：`Parse(string)` → `ChuChart`
   - 解析成功时，**返回值会同时带有 `List<Alert>`**，这是转谱过程中可能遇到的警告等信息，建议打印出来（直接对`Alert`对象`ToString()`即可）。
   - 如果解析失败，会抛出 `ConversionException`；该异常对象中同样含有一个 `List<Alert>`，是导致转谱失败的错误信息，可以同上打印出来。
 
@@ -232,7 +226,7 @@ finally
 - **generator（生成器）**：把中间表示转回“目标格式文本”
   - `SimaiGenerator.Generate(MaiChart)` → Simai 单谱文本（可写入 `maidata.txt` 的 `&inote_*`）
   - `MA2Generator.Generate(MaiChart)` → MA2 文本
-  - CHUNITHM的三种Generator(`C2sGenerator`、`UgcGenerator`、`SusGenerator`)：`Generate(IChuChart)` → 目标格式的谱面文本
+  - CHUNITHM的三种Generator(`C2sGenerator`、`UgcGenerator`、`SusGenerator`)：`Generate(ChuChart)` → 目标格式的谱面文本
   - 与parser类似，成功生成时，**返回值会同时带有 `List<Alert>`**，这是转谱过程中可能遇到的警告等信息，建议打印出来（直接对`Alert`对象`ToString()`即可）。
   - 如果生成失败，会抛出 `ConversionException`；该异常对象中同样含有一个 `List<Alert>`，是导致转谱失败的错误信息，可以同上打印出来。
 

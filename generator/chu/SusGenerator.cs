@@ -1,57 +1,21 @@
 using System.Text;
-using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
-using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
 
-/**
- * SUS 格式生成器。
- * 输入 IChuChart，内部自动转换后输出 SUS 文本。
- */
-public class SusGenerator : IGenerator<IChuChart>
+public class SusGenerator : IGenerator<ChuChart>
 {
     private static int RSL = 480 * 4;
 
-    public (string, List<Alert>) Generate(IChuChart chart)
+    public (string, List<Alert>) Generate(ChuChart chart)
     {
         var alerts = new List<Alert>();
-        var sus = ConvertToSus(chart, alerts);
-        var text = Serialize(sus);
+        var text = Serialize(chart);
         return (text, alerts);
     }
 
-    private static SusChart ConvertToSus(IChuChart chart, List<Alert> alerts)
-    {
-        if (chart is SusChart sus) return sus;
-
-        double bpm = 120.0;
-        string title = "", artist = "";
-
-        if (chart is C2sChart c2s)
-        {
-            bpm = c2s.BpmList.Count > 0 ? (double)c2s.BpmList[0].Bpm : 120.0;
-            var result = new SusChart { Title = title, Artist = artist };
-            result.BpmList.Add(new BPM(0, (decimal)bpm));
-            result.Notes = c2s.Notes;
-            return result;
-        }
-
-        if (chart is UgcChart ugc)
-        {
-            bpm = ugc.BpmList.Count > 0 ? (double)ugc.BpmList[0].Bpm : 120.0;
-            var result = new SusChart { Title = ugc.Title, Artist = ugc.Artist };
-            result.BpmList.Add(new BPM(0, (decimal)bpm));
-            result.Notes = ugc.Notes;
-            return result;
-        }
-
-        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ SUS")));
-        throw new ConversionException(alerts);
-    }
-
-    private static string Serialize(SusChart sus)
+    private static string Serialize(ChuChart sus)
     {
         sus.Sort();
         

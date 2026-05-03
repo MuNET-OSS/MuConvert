@@ -1,61 +1,21 @@
-using System.Globalization;
 using System.Text;
-using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
-using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
 
-/**
- * C2S 格式生成器。
- * 输入 IChuChart，内部自动转换后输出 C2S 文本。
- */
-public class C2sGenerator : IGenerator<IChuChart>
+public class C2sGenerator : IGenerator<ChuChart>
 {
     private const int RSL = 384;
     
-    public (string, List<Alert>) Generate(IChuChart chart)
+    public (string, List<Alert>) Generate(ChuChart chart)
     {
         var alerts = new List<Alert>();
-        var c2s = ConvertToC2s(chart, alerts);
-        var text = Serialize(c2s);
+        var text = Serialize(chart);
         return (text, alerts);
     }
 
-    private static C2sChart ConvertToC2s(IChuChart chart, List<Alert> alerts)
-    {
-        if (chart is C2sChart c2s) return c2s;
-
-        if (chart is UgcChart ugc)
-        {
-            var result = new C2sChart
-            {
-                Designer = ugc.Designer,
-            };
-            result.BpmList.AddRange(ugc.BpmList);
-            result.MetList.AddRange(ugc.MetList);
-            result.SflList.AddRange(ugc.SflList);
-            result.Notes = ugc.Notes;
-            return result;
-        }
-
-        if (chart is SusChart sus)
-        {
-            var result = new C2sChart();
-            if (sus.BpmList.Count > 0)
-                result.BpmList.AddRange(sus.BpmList);
-            else
-                result.BpmList.Add(new BPM(0, 120m));
-            result.Notes = sus.Notes;
-            return result;
-        }
-
-        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ C2S")));
-        throw new ConversionException(alerts);
-    }
-
-    private static string Serialize(C2sChart chart)
+    private static string Serialize(ChuChart chart)
     {
         chart.Sort();
         

@@ -73,10 +73,10 @@ public class ChuTests
     private static ChuNote UgcNoteScaledToC2sTicks(ChuNote n, int ugcTicksPerBeat, int c2sResolution)
     {
         var tpmUgc = ugcTicksPerBeat * 4;
-        var (m, oU) = Utils.BarAndTick(n.Time, tpmUgc, 0);
+        var (m, oU) = Utils.BarAndTick(n.Time, tpmUgc);
         var oC = (int)((long)oU * c2sResolution / tpmUgc);
         var time = m + new Rational(oC, c2sResolution);
-        var dur = new Rational(Utils.Tick(n.Duration, c2sResolution, 0), c2sResolution);
+        var dur = new Rational(Utils.Tick(n.Duration, c2sResolution), c2sResolution);
         return CloneChuNoteWithTiming(n, time, dur);
     }
 
@@ -86,10 +86,10 @@ public class ChuTests
     private static ChuNote C2sNoteScaledToUgcTicks(ChuNote n, int ugcTicksPerBeat, int c2sResolution)
     {
         var tpmUgc = ugcTicksPerBeat * 4;
-        var (m, oC) = Utils.BarAndTick(n.Time, c2sResolution, 0);
+        var (m, oC) = Utils.BarAndTick(n.Time, c2sResolution);
         var oU = (int)((long)oC * tpmUgc / c2sResolution);
         var time = m + new Rational(oU, tpmUgc);
-        var dur = new Rational(Utils.Tick(n.Duration, tpmUgc, 0), tpmUgc);
+        var dur = new Rational(Utils.Tick(n.Duration, tpmUgc), tpmUgc);
         return CloneChuNoteWithTiming(n, time, dur);
     }
 
@@ -110,7 +110,7 @@ public class ChuTests
     /// <summary>
     /// 比较 UGC 与 C2S 的音符 IR：因 tick 网格不同，在各自「经对方格式写回再解析」的量化意义下比较快照。
     /// </summary>
-    private static void AssertUgcNotesEquivalentToReparsedC2s(UgcChart ugc, C2sChart c2s, bool isUgcReference)
+    private static void AssertUgcNotesEquivalentToReparsedC2s(ChuChart ugc, ChuChart c2s, bool isUgcReference)
     {
         if (isUgcReference)
         {

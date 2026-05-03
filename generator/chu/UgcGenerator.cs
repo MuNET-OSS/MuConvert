@@ -1,50 +1,21 @@
 using System.Text;
 using MuConvert.generator;
 using MuConvert.utils;
-using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
 
-/**
- * UGC 格式生成器。
- * 输入 IChuChart，内部自动转换后输出 UGC 文本。
- */
-public class UgcGenerator : IGenerator<IChuChart>
+public class UgcGenerator : IGenerator<ChuChart>
 {
     private static int RSL = 480 * 4;
 
-    public (string, List<Alert>) Generate(IChuChart chart)
+    public (string, List<Alert>) Generate(ChuChart chart)
     {
         var alerts = new List<Alert>();
-        var ugc = ConvertToUgc(chart, alerts);
-        var text = Serialize(ugc);
+        var text = Serialize(chart);
         return (text, alerts);
     }
 
-    private static UgcChart ConvertToUgc(IChuChart chart, List<Alert> alerts)
-    {
-        if (chart is UgcChart ugc) return ugc;
-
-        if (chart is C2sChart c2s)
-        {
-            var result = new UgcChart
-            {
-                Designer = c2s.Designer,
-                Difficulty = c2s.Difficulty,
-                MusicId = c2s.MusicId,
-            };
-            result.BpmList.AddRange(c2s.BpmList);
-            result.MetList.AddRange(c2s.MetList);
-            result.SflList.AddRange(c2s.SflList);
-            result.Notes = c2s.Notes;
-            return result;
-        }
-
-        alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ UGC")));
-        throw new ConversionException(alerts);
-    }
-
-    private static string Serialize(UgcChart ugc)
+    private static string Serialize(ChuChart ugc)
     {
         ugc.Sort();
         

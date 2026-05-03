@@ -3,10 +3,7 @@ using Rationals;
 
 namespace MuConvert.chu;
 
-/**
- * C2S 格式谱面 IR（官方格式，RESOLUTION=384 tick/小节）。
- */
-public class C2sChart : BaseChart<ChuNote>, IChuChart
+public class ChuChart : BaseChart<ChuNote>
 {
     public string Title { get; set; } = "";
     public string Artist { get; set; } = "";

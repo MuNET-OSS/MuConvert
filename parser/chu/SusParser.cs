@@ -11,7 +11,7 @@ namespace MuConvert.chu;
  * SUS 格式解析器（社区工具格式，REQUEST=480 tick/拍，lane 0–31）。
  * #MMTT:data 十六进制编码音符。
  */
-public class SusParser : IParser<SusChart>
+public class SusParser : IParser<ChuChart>
 {
     private static int RSL = 480 * 4;
     
@@ -28,9 +28,9 @@ public class SusParser : IParser<SusChart>
         [0x10] = "MNE",
     };
 
-    public (SusChart, List<Alert>) Parse(string text)
+    public (ChuChart, List<Alert>) Parse(string text)
     {
-        var chart = new SusChart();
+        var chart = new ChuChart();
         var alerts = new List<Alert>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
 
@@ -69,7 +69,7 @@ public class SusParser : IParser<SusChart>
                || content.StartsWith("REQUEST ");
     }
 
-    private static void ParseHeaderLine(string content, SusChart chart, List<Alert> alerts, int lineNum)
+    private static void ParseHeaderLine(string content, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         if (content.StartsWith("TITLE "))
         {
@@ -101,7 +101,7 @@ public class SusParser : IParser<SusChart>
         }
     }
 
-    private static void ParseNoteLine(string content, SusChart chart, List<Alert> alerts, int lineNum)
+    private static void ParseNoteLine(string content, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         var colonIdx = content.IndexOf(':');
         if (colonIdx < 0)
@@ -243,7 +243,7 @@ public class SusParser : IParser<SusChart>
 
     private static string FormatNoteRef(ChuNote note, int tpm)
     {
-        var (m, o) = Utils.BarAndTick(note.Time, tpm, 0);
+        var (m, o) = Utils.BarAndTick(note.Time, tpm);
         return $"#{m:X2}{o:X3}:{note.Type}";
     }
 }

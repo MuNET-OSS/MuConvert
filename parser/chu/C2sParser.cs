@@ -11,7 +11,7 @@ namespace MuConvert.chu;
  * C2S 格式解析器（官方格式，RESOLUTION=384 tick/小节）。
  * Tab 分隔文本，识别 HEADER / TIMING / NOTES 区段。
  */
-public class C2sParser : IParser<C2sChart>
+public class C2sParser : IParser<ChuChart>
 {
     private static int RSL = 384;
     private static readonly HashSet<string> HeadTags = new(StringComparer.OrdinalIgnoreCase)
@@ -19,9 +19,9 @@ public class C2sParser : IParser<C2sChart>
     private static readonly HashSet<string> TimingTags = new(StringComparer.OrdinalIgnoreCase)
         { "BPM", "MET", "SFL" };
 
-    public (C2sChart, List<Alert>) Parse(string text)
+    public (ChuChart, List<Alert>) Parse(string text)
     {
-        var chart = new C2sChart();
+        var chart = new ChuChart();
         var alerts = new List<Alert>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
         bool inNotes = false;
@@ -54,7 +54,7 @@ public class C2sParser : IParser<C2sChart>
         return (chart, alerts);
     }
 
-    private static void ParseHeader(string[] p, C2sChart chart)
+    private static void ParseHeader(string[] p, ChuChart chart)
     {
         var tag = p[0].ToUpperInvariant();
         switch (tag)
@@ -66,7 +66,7 @@ public class C2sParser : IParser<C2sChart>
         }
     }
 
-    private static void ParseTiming(string[] p, C2sChart chart)
+    private static void ParseTiming(string[] p, ChuChart chart)
     {
         var tag = p[0].ToUpperInvariant();
         switch (tag)
@@ -86,7 +86,7 @@ public class C2sParser : IParser<C2sChart>
         }
     }
 
-    private static void ParseNote(string[] p, C2sChart chart, List<Alert> alerts, int lineNum)
+    private static void ParseNote(string[] p, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         var tag = p[0].ToUpperInvariant();
         var note = new ChuNote { Type = tag, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
