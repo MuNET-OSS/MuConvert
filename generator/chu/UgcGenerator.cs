@@ -1,5 +1,4 @@
 using System.Text;
-using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -40,8 +39,7 @@ public class UgcGenerator : IGenerator<IChuChart>
                 result.BpmEvents.Add((b.Measure, ScaleUp(b.Offset), b.Bpm));
             foreach (var m in c2s.MetEvents)
                 result.BeatEvents.Add((m.Measure, m.Num, m.Denom));
-            foreach (var n in c2s.Notes)
-                result.Notes.Add(ScaleUpNote(n));
+            result.Notes = c2s.Notes;
             return result;
         }
 
@@ -49,24 +47,7 @@ public class UgcGenerator : IGenerator<IChuChart>
         throw new ConversionException(alerts);
     }
 
-    private static ChuNote ScaleUpNote(ChuNote n)
-    {
-        int s(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
-        return new ChuNote
-        {
-            Type = n.Type, Measure = n.Measure, Offset = s(n.Offset),
-            Cell = n.Cell, Width = n.Width,
-            HoldDuration = s(n.HoldDuration), SlideDuration = s(n.SlideDuration),
-            EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Tag = n.Tag, TargetNote = IsAir(n.Type) && string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote,
-            AirHoldDuration = s(n.AirHoldDuration),
-            StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
-        };
-    }
-
     private static int ScaleUp(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
-
-    private static bool IsAir(string t) => t is "AIR" or "AUR" or "AUL" or "AHD" or "ADW" or "ADR" or "ADL";
 
     private static string MapDiffId(int id) => id switch
     {
@@ -75,6 +56,8 @@ public class UgcGenerator : IGenerator<IChuChart>
 
     private static string Serialize(UgcChart ugc)
     {
+        ugc.Sort();
+        
         var sb = new StringBuilder();
         sb.AppendLine("@VER\t6");
         if (!string.IsNullOrEmpty(ugc.Title)) sb.AppendLine($"@TITLE\t{ugc.Title}");
@@ -92,22 +75,26 @@ public class UgcGenerator : IGenerator<IChuChart>
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
 
-        var notes = ugc.Notes.OrderBy(n => n.Measure).ThenBy(n => n.Offset).ToList();
-        foreach (var n in notes)
+        var tpm = ugc.TicksPerBeat * 4;
+        foreach (var n in ugc.Notes)
         {
-            sb.Append($"#{n.Measure}'{n.Offset}:{UCode(n)}");
+            var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
+            sb.Append($"#{m}'{o}:{UCode(n, tpm)}");
             sb.AppendLine();
-            if (n.Type == "HLD" && n.HoldDuration > 0)
-                sb.AppendLine($"#{n.HoldDuration}>s");
-            else if (n.Type == "SLD" && n.SlideDuration > 0)
-                sb.AppendLine($"#{n.SlideDuration}>s{Hx(n.EndCell)}{Hw(n.EndWidth)}");
+            var durTicks = Utils.Tick(n.Duration, tpm, 0);
+            if (n.Type == "HLD" && durTicks > 0)
+                sb.AppendLine($"#{durTicks}>s");
+            else if (n.Type == "SLD" && durTicks > 0)
+                sb.AppendLine($"#{durTicks}>s{Hx(n.EndCell)}{Hw(n.EndWidth)}");
         }
         return sb.ToString();
     }
 
-    private static string UCode(ChuNote n)
+    private static string UCode(ChuNote n, int tpm)
     {
         string c = Hx(n.Cell), w = Hw(n.Width);
+        var durTicks = Utils.Tick(n.Duration, tpm, 0);
+        var targetNote = string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote;
         return n.Type switch
         {
             "TAP" => $"t{c}{w}",
@@ -117,13 +104,13 @@ public class UgcGenerator : IGenerator<IChuChart>
             "SLC" or "SXC" => $"s{c}{w}",
             "FLK" => $"f{c}{w}A",
             "MNE" => $"d{c}{w}",
-            "AIR" => $"a{c}{w}UC{n.TargetNote}",
-            "AUR" => $"a{c}{w}UR{n.TargetNote}",
-            "AUL" => $"a{c}{w}UL{n.TargetNote}",
-            "AHD" => $"a{c}{w}HD{n.TargetNote}_{n.AirHoldDuration}",
-            "ADW" => $"a{c}{w}DC{n.TargetNote}",
-            "ADR" => $"a{c}{w}DR{n.TargetNote}",
-            "ADL" => $"a{c}{w}DL{n.TargetNote}",
+            "AIR" => $"a{c}{w}UC{targetNote}",
+            "AUR" => $"a{c}{w}UR{targetNote}",
+            "AUL" => $"a{c}{w}UL{targetNote}",
+            "AHD" or "AHX" => $"a{c}{w}HD{targetNote}_{durTicks}",
+            "ADW" => $"a{c}{w}DC{targetNote}",
+            "ADR" => $"a{c}{w}DR{targetNote}",
+            "ADL" => $"a{c}{w}DL{targetNote}",
             _ => $"t{c}{w}"
         };
     }

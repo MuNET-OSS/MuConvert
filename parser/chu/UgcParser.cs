@@ -1,7 +1,7 @@
 using System.Globalization;
-using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
+using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
@@ -247,10 +247,10 @@ public class UgcParser : IParser<UgcChart>
             return idx;
         }
 
+        var tpm = chart.TicksPerBeat * 4;
         var note = new ChuNote
         {
-            Measure = measure,
-            Offset = tick,
+            Time = measure + new Rational(tick, tpm),
         };
 
         var typeChar = char.ToLowerInvariant(code[0]);
@@ -258,28 +258,28 @@ public class UgcParser : IParser<UgcChart>
         switch (typeChar)
         {
             case 't':
-                ParseTapNote(code, note, alerts, lineNum);
+                ParseTapNote(code, note, alerts, lineNum, chart);
                 break;
 
             case 'h':
-                idx = ParseHoldNote(lines, idx, code, note, alerts);
+                idx = ParseHoldNote(lines, idx, code, note, alerts, chart);
                 break;
 
             case 's':
-                idx = ParseSlideNote(lines, idx, code, note, alerts);
+                idx = ParseSlideNote(lines, idx, code, note, alerts, chart);
                 break;
 
             case 'a':
-                ParseAirNote(code, note, alerts, lineNum);
+                ParseAirNote(code, note, alerts, lineNum, chart);
                 break;
 
             case 'x':
-                ParseChrNote(code, note, alerts, lineNum);
+                ParseChrNote(code, note, alerts, lineNum, chart);
                 break;
 
             case 'f':
                 note.Type = "FLK";
-                ParseCellWidth(code, 1, note, alerts, lineNum);
+                ParseCellWidth(code, 1, note, alerts, lineNum, chart);
                 if (code.Length > 3)
                     note.Tag = code[3..];
                 break;
@@ -289,7 +289,7 @@ public class UgcParser : IParser<UgcChart>
 
             case 'd':
                 note.Type = "MNE";
-                ParseCellWidth(code, 1, note, alerts, lineNum);
+                ParseCellWidth(code, 1, note, alerts, lineNum, chart);
                 break;
 
             default:
@@ -301,16 +301,17 @@ public class UgcParser : IParser<UgcChart>
         return idx;
     }
 
-    private static void ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum, UgcChart chart)
     {
         note.Type = "TAP";
-        ParseCellWidth(code, 1, note, alerts, lineNum);
+        ParseCellWidth(code, 1, note, alerts, lineNum, chart);
     }
 
-    private static int ParseHoldNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts)
+    private static int ParseHoldNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, UgcChart chart)
     {
         note.Type = "HLD";
-        ParseCellWidth(code, 1, note, alerts, idx + 1);
+        var tpm = chart.TicksPerBeat * 4;
+        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
 
         bool foundFirst = false;
         while (idx + 1 < lines.Length)
@@ -322,20 +323,21 @@ public class UgcParser : IParser<UgcChart>
                 break;
             }
 
-            note.HoldDuration += duration;
+            note.Duration += new Rational(duration, tpm);
             idx++;
             foundFirst = true;
         }
 
         if (!foundFirst)
-            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note, chart) });
         return idx;
     }
 
-    private static int ParseSlideNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts)
+    private static int ParseSlideNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, UgcChart chart)
     {
         note.Type = "SLD";
-        ParseCellWidth(code, 1, note, alerts, idx + 1);
+        var tpm = chart.TicksPerBeat * 4;
+        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
 
         bool foundFirst = false;
         while (idx + 1 < lines.Length)
@@ -347,7 +349,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
             }
 
-            note.SlideDuration += duration;
+            note.Duration += new Rational(duration, tpm);
             note.EndCell = endCell;
             note.EndWidth = endWidth;
             idx++;
@@ -355,7 +357,7 @@ public class UgcParser : IParser<UgcChart>
         }
 
         if (!foundFirst)
-            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = FormatNoteRef(note, chart) });
 
         return idx;
     }
@@ -368,13 +370,19 @@ public class UgcParser : IParser<UgcChart>
         if (!TryParseFollowerLine(line, out var duration, out var endCell, out var endWidth)) return false;
 
         // find the last SLD or HLD note and attach duration
+        var tpm = chart.TicksPerBeat * 4;
         for (int i = chart.Notes.Count - 1; i >= 0; i--)
         {
             var n = chart.Notes[i];
             if (n.Type is "SLD" or "HLD")
             {
-                if (n.Type == "SLD") { n.SlideDuration = duration; n.EndCell = endCell; n.EndWidth = endWidth; }
-                else { n.HoldDuration = duration; }
+                if (n.Type == "SLD")
+                {
+                    n.Duration = new Rational(duration, tpm);
+                    n.EndCell = endCell;
+                    n.EndWidth = endWidth;
+                }
+                else n.Duration = new Rational(duration, tpm);
                 return true;
             }
         }
@@ -410,7 +418,7 @@ public class UgcParser : IParser<UgcChart>
         return true;
     }
 
-    private static void ParseCellWidth(string code, int startIdx, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseCellWidth(string code, int startIdx, ChuNote note, List<Alert> alerts, int lineNum, UgcChart chart)
     {
         if (code.Length > startIdx)
         {
@@ -418,15 +426,15 @@ public class UgcParser : IParser<UgcChart>
             if (code.Length > startIdx + 1)
                 note.Width = WidthHexCharToInt(code[startIdx + 1]);
             else
-                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}") { Line = lineNum, RelevantNote = FormatNoteRef(note, chart) });
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}") { Line = lineNum, RelevantNote = FormatNoteRef(note, chart) });
         }
     }
 
-    private static void ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum, UgcChart chart)
     {
         // Matches UgcGenerator: "a" + cell + width + two-letter direction + targetNote [ + "_" + airHoldDuration for AHD ]
         if (code.Length < 5)
@@ -436,7 +444,7 @@ public class UgcParser : IParser<UgcChart>
             return;
         }
 
-        ParseCellWidth(code, 1, note, alerts, lineNum);
+        ParseCellWidth(code, 1, note, alerts, lineNum, chart);
         var afterCellWidth = code[3..];
         var underscoreIdx = afterCellWidth.IndexOf('_');
         var mainPart = underscoreIdx >= 0 ? afterCellWidth[..underscoreIdx] : afterCellWidth;
@@ -456,7 +464,7 @@ public class UgcParser : IParser<UgcChart>
         else
         {
             note.Type = "AIR";
-            alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {dir}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {dir}") { Line = lineNum, RelevantNote = FormatNoteRef(note, chart) });
         }
 
         note.TargetNote = mainPart.Length > 2 ? mainPart[2..] : "N";
@@ -465,11 +473,11 @@ public class UgcParser : IParser<UgcChart>
         {
             var durStr = afterCellWidth[(underscoreIdx + 1)..];
             if (int.TryParse(durStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ahdDuration))
-                note.AirHoldDuration = ahdDuration;
+                note.Duration = new Rational(ahdDuration, chart.TicksPerBeat * 4);
         }
     }
 
-    private static void ParseChrNote(string code, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseChrNote(string code, ChuNote note, List<Alert> alerts, int lineNum, UgcChart chart)
     {
         note.Type = "CHR";
         if (code.Length < 3)
@@ -478,7 +486,7 @@ public class UgcParser : IParser<UgcChart>
             return;
         }
 
-        ParseCellWidth(code, 1, note, alerts, lineNum);
+        ParseCellWidth(code, 1, note, alerts, lineNum, chart);
         var extraRaw = code.Length > 3 ? code[3..] : "";
         if (ChrExtras.TryGetValue(extraRaw, out var chrDir))
             note.Tag = chrDir;
@@ -508,9 +516,11 @@ public class UgcParser : IParser<UgcChart>
         };
     }
 
-    private static string FormatNoteRef(ChuNote note)
+    private static string FormatNoteRef(ChuNote note, UgcChart chart)
     {
-        return $"#{note.Measure}'{note.Offset}:{note.Type}";
+        var tpm = chart.TicksPerBeat * 4;
+        var (m, o) = Utils.BarAndTick(note.Time, tpm, 0);
+        return $"#{m}'{o}:{note.Type}";
     }
 }
 

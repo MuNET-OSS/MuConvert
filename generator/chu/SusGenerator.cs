@@ -1,5 +1,4 @@
 using System.Text;
-using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -32,9 +31,8 @@ public class SusGenerator : IGenerator<IChuChart>
         if (chart is C2sChart c2s)
         {
             bpm = c2s.BpmEvents.Count > 0 ? c2s.BpmEvents[0].Bpm : c2s.DefBpm;
-            int c2sTpb = c2s.Resolution / 4;
             var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = title, Artist = artist };
-            foreach (var n in c2s.Notes) result.Notes.Add(ScaleUp(n, c2sTpb));
+            result.Notes = c2s.Notes;
             return result;
         }
 
@@ -42,7 +40,7 @@ public class SusGenerator : IGenerator<IChuChart>
         {
             bpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0;
             var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
-            foreach (var n in ugc.Notes) result.Notes.Add(ScaleUp(n, ugc.TicksPerBeat));
+            result.Notes = ugc.Notes;
             return result;
         }
 
@@ -50,21 +48,10 @@ public class SusGenerator : IGenerator<IChuChart>
         throw new ConversionException(alerts);
     }
 
-    private static ChuNote ScaleUp(ChuNote n, int sourceTicksPerBeat)
-    {
-        int s(int v) => (int)((long)v * SusTpb / sourceTicksPerBeat);
-        return new ChuNote
-        {
-            Type = n.Type, Measure = n.Measure, Offset = s(n.Offset),
-            Cell = n.Cell * 2, Width = n.Width * 2,
-            HoldDuration = s(n.HoldDuration), SlideDuration = s(n.SlideDuration),
-            EndCell = n.EndCell * 2, EndWidth = n.EndWidth * 2,
-            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = s(n.AirHoldDuration),
-        };
-    }
-
     private static string Serialize(SusChart sus)
     {
+        sus.Sort();
+        
         var sb = new StringBuilder();
         if (!string.IsNullOrEmpty(sus.Title)) sb.AppendLine($"#TITLE \"{sus.Title}\"");
         if (!string.IsNullOrEmpty(sus.Artist)) sb.AppendLine($"#ARTIST \"{sus.Artist}\"");
@@ -73,22 +60,27 @@ public class SusGenerator : IGenerator<IChuChart>
         sb.AppendLine($"#REQUEST \"{sus.TicksPerBeat}\"");
         sb.AppendLine();
 
-        foreach (var n in sus.Notes.OrderBy(n => n.Measure).ThenBy(n => n.Offset))
-            sb.AppendLine($"#{n.Measure:X2}{n.Offset:X3}:{FormatData(n)}");
+        var tpm = sus.TicksPerBeat * 4;
+        foreach (var n in sus.Notes)
+        {
+            var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
+            sb.AppendLine($"#{m:X2}{o:X3}:{FormatData(n, tpm)}");
+        }
 
         return sb.ToString();
     }
 
-    private static string FormatData(ChuNote n)
+    private static string FormatData(ChuNote n, int tpm)
     {
-        string lw = $"{n.Cell:X2}{n.Width:X2}";
+        string lw = $"{n.Cell*2:X2}{n.Width*2:X2}";
         string tc = TypeCode(n.Type);
-        string dur = $"{(n.HoldDuration > 0 ? n.HoldDuration : n.SlideDuration > 0 ? n.SlideDuration : n.AirHoldDuration):X4}";
+        var durTicks = Utils.Tick(n.Duration, tpm);
+        string dur = $"{durTicks:X4}";
         return tc switch
         {
             "01" or "02" or "03" or "10" => $"{tc}{lw}",
             "05" or "08" => $"{tc}{lw}{dur}",
-            "06" => $"{tc}{lw}{dur}{n.EndCell:X2}{n.EndWidth:X2}",
+            "06" => $"{tc}{lw}{dur}{n.EndCell*2:X2}{n.EndWidth*2:X2}",
             "07" or "09" => $"{tc}{lw}{n.TargetNote}",
             _ => $"01{lw}"
         };
@@ -99,7 +91,7 @@ public class SusGenerator : IGenerator<IChuChart>
         "TAP" => "01", "CHR" => "02", "FLK" => "03",
         "HLD" => "05", "SLD" => "06", "SLC" => "06",
         "AIR" => "07", "AUR" => "07", "AUL" => "07",
-        "AHD" => "08", "ADW" => "09", "ADR" => "09", "ADL" => "09",
+        "AHD" => "08", "AHX" => "08", "ADW" => "09", "ADR" => "09", "ADL" => "09",
         "MNE" => "10", _ => "01"
     };
 }

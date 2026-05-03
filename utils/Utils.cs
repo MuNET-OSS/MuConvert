@@ -66,7 +66,7 @@ public static class Utils
     }
 }
 
-internal static class ExtensionUtils
+public static class ExtensionUtils
 {
     internal static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
     {

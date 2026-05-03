@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -39,8 +38,7 @@ public class C2sGenerator : IGenerator<IChuChart>
                 result.BpmEvents.Add((b.Measure, ScaleDown(b.Offset, ugc.TicksPerBeat), b.Bpm));
             foreach (var b in ugc.BeatEvents)
                 result.MetEvents.Add((b.Measure, 0, b.Den, b.Num));
-            foreach (var n in ugc.Notes)
-                result.Notes.Add(ScaleNote(n, ugc.TicksPerBeat));
+            result.Notes = ugc.Notes;
             return result;
         }
 
@@ -48,8 +46,7 @@ public class C2sGenerator : IGenerator<IChuChart>
         {
             var result = new C2sChart { DefBpm = sus.Bpm };
             result.BpmEvents.Add((0, 0, sus.Bpm));
-            foreach (var n in sus.Notes)
-                result.Notes.Add(ScaleNote(n, sus.TicksPerBeat));
+            result.Notes = sus.Notes;
             return result;
         }
 
@@ -57,24 +54,12 @@ public class C2sGenerator : IGenerator<IChuChart>
         throw new ConversionException(alerts);
     }
 
-    private static ChuNote ScaleNote(ChuNote n, int tpb)
-    {
-        int scaleDown(int v) => (int)((long)v * (C2sResolution / 4) / tpb);
-        return new ChuNote
-        {
-            Type = n.Type, Measure = n.Measure, Offset = scaleDown(n.Offset),
-            Cell = n.Cell, Width = n.Width,
-            HoldDuration = scaleDown(n.HoldDuration), SlideDuration = scaleDown(n.SlideDuration),
-            EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
-            StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
-        };
-    }
-
     private static int ScaleDown(int ticks, int tpb) => (int)((long)ticks * (C2sResolution / 4) / tpb);
 
     private static string Serialize(C2sChart chart)
     {
+        chart.Sort();
+        
         var sb = new StringBuilder();
         sb.AppendLine($"VERSION\t{chart.Version}");
         sb.AppendLine($"MUSIC\t{chart.MusicId}");
@@ -99,26 +84,54 @@ public class C2sGenerator : IGenerator<IChuChart>
             sb.AppendLine($"SFL\t{s.Measure}\t{s.Offset}\t{s.Duration}\t{Mlt(s.Multiplier)}");
         sb.AppendLine();
 
-        foreach (var n in chart.Notes.OrderBy(n => n.Measure * C2sResolution + n.Offset))
-            sb.AppendLine(FormatNote(n));
+        foreach (var n in chart.Notes)
+            sb.AppendLine(FormatNote(n, chart.Resolution));
 
         sb.AppendLine();
         return sb.ToString();
     }
 
-    private static string FormatNote(ChuNote n) => n.Type switch
+    private static string FormatNote(ChuNote n, int tpm)
     {
-        "TAP" => $"TAP\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}",
-        "CHR" => $"CHR\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Tag}",
-        "HLD" or "HXD" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.HoldDuration}",
-        "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.SlideDuration}\t{n.EndCell}\t{n.EndWidth}",
-        "FLK" => $"FLK\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Tag}",
-        "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}",
-        "AHD" => $"AHD\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.AirHoldDuration}",
-        "ALD" or "ASD" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.StartHeight}\t{n.SlideDuration}\t{n.EndCell}\t{n.EndWidth}\t{n.TargetHeight}\t{n.NoteColor}",
-        "MNE" => $"MNE\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}",
-        _ => $"TAP\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}"
-    };
+        var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
+        var durTicks = Utils.Tick(n.Duration, tpm, 0);
+        return n.Type switch
+        {
+            "TAP" => $"TAP\t{m}\t{o}\t{n.Cell}\t{n.Width}",
+            "CHR" => $"CHR\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.Tag}",
+            "HLD" or "HXD" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}",
+            "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}",
+            "FLK" => $"FLK\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.Tag}",
+            "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" =>
+                string.IsNullOrEmpty(n.Tag)
+                    ? $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}"
+                    : $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.Tag}",
+            "AHD" or "AHX" =>
+                string.IsNullOrEmpty(n.Tag)
+                    ? $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{durTicks}"
+                    : $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{durTicks}\t{n.Tag}",
+            "ASD" or "ASC" => FormatAsdAsc(n, m, o, durTicks),
+            "ALD" => FormatAld(n, m, o),
+            "MNE" => $"MNE\t{m}\t{o}\t{n.Cell}\t{n.Width}",
+            _ => $"TAP\t{m}\t{o}\t{n.Cell}\t{n.Width}"
+        };
+    }
+
+    private static string FormatAsdAsc(ChuNote n, int m, int o, int durTicks)
+    {
+        var e0 = n.ExtraData.Count > 0 ? n.ExtraData[0] : 0;
+        var e1 = n.ExtraData.Count > 1 ? n.ExtraData[1] : 0;
+        return $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{e0}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{e1}\t{n.Tag}";
+    }
+
+    private static string FormatAld(ChuNote n, int m, int o)
+    {
+        var a = n.ExtraData.Count > 0 ? n.ExtraData[0] : 0;
+        var b = n.ExtraData.Count > 1 ? n.ExtraData[1] : 0;
+        var c = n.ExtraData.Count > 2 ? n.ExtraData[2] : 0;
+        var tail = n.ExtraData.Count > 3 ? n.ExtraData[3] : 0;
+        return $"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{a}\t{b}\t{c}\t{n.EndCell}\t{n.EndWidth}\t{tail}";
+    }
 
     private static string Fmt(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
     private static string Mlt(double v) => v.ToString("0.000000", CultureInfo.InvariantCulture);

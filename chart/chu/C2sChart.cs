@@ -16,9 +16,4 @@ public class C2sChart : BaseChart<ChuNote>, IChuChart
     public List<(int Measure, int Offset, double Bpm)> BpmEvents = [];
     public List<(int Measure, int Offset, int Denom, int Num)> MetEvents = [];
     public List<(int Measure, int Offset, int Duration, double Multiplier)> SflEvents = [];
-
-    public override decimal StartBpm => (decimal)(BpmEvents.Count > 0 ? BpmEvents[0].Bpm : DefBpm);
-    public override decimal StartTime => Notes.Count > 0 ? Notes.Min(n => n.Measure * Resolution + n.Offset) / (decimal)Resolution * 240m / StartBpm : 0;
-    public override decimal EndTime => Notes.Count > 0 ? Notes.Max(n => n.Measure * Resolution + n.Offset + Math.Max(n.HoldDuration, Math.Max(n.SlideDuration, n.AirHoldDuration))) / (decimal)Resolution * 240m / StartBpm : 0;
-    public override int TotalNotes => Notes.Count;
 }

@@ -1,5 +1,7 @@
 using System.Reflection;
 using MuConvert.chu;
+using MuConvert.utils;
+using Rationals;
 
 namespace MuConvert.Tests.chu;
 
@@ -49,29 +51,21 @@ public class ChuTests
     /// </summary>
     private static string SnapshotNote(ChuNote note)
     {
-        var props = typeof(ChuNote).GetProperties(BindingFlags.Instance | BindingFlags.Public);
-        var parts = props
-            .OrderBy(p => p.Name)
-            .Select(p => $"{p.Name}={p.GetValue(note)}");
-        return string.Join("|", parts);
-    }
-
-    /// <summary>
-    /// Same tick scaling as <see cref="C2sGenerator"/> when converting UGC → C2S (384 ticks per measure).
-    /// </summary>
-    private static ChuNote UgcNoteScaledToC2sTicks(ChuNote n, int ticksPerBeat)
-    {
-        const int c2sResolution = 384;
-        int scaleDown(int v) => (int)((long)v * (c2sResolution / 4) / ticksPerBeat);
-        return new ChuNote
+        static string F(object? v) => v switch
         {
-            Type = n.Type, Measure = n.Measure, Offset = scaleDown(n.Offset),
-            Cell = n.Cell, Width = n.Width,
-            HoldDuration = scaleDown(n.HoldDuration), SlideDuration = scaleDown(n.SlideDuration),
-            EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
-            StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
+            Rational r => r.CanonicalForm.ToString(),
+            List<int> list => string.Join(",", list),
+            null => "",
+            _ => v.ToString() ?? "",
         };
+
+        var propParts = typeof(ChuNote).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .OrderBy(p => p.Name)
+            .Select(p => $"{p.Name}={F(p.GetValue(note))}");
+        var fieldParts = typeof(ChuNote).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .OrderBy(f => f.Name)
+            .Select(f => $"{f.Name}={F(f.GetValue(note))}");
+        return string.Join("|", propParts.Concat(fieldParts));
     }
 
     /// <summary>
@@ -82,7 +76,7 @@ public class ChuTests
     private static void AssertUgcNotesEquivalentToReparsedC2s(UgcChart ugc, C2sChart c2s, bool isUgcReference)
     {
         var ugcSnaps = ugc.Notes
-            .Select(n => SnapshotNote(UgcNoteScaledToC2sTicks(n, ugc.TicksPerBeat)))
+            .Select(SnapshotNote)
             .OrderBy(s => s)
             .ToArray();
         var c2sSnaps = c2s.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();

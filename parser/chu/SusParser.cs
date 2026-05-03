@@ -1,7 +1,7 @@
 using System.Globalization;
-using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
+using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
@@ -118,6 +118,7 @@ public class SusParser : IParser<SusChart>
 
         var measure = HexToInt(timingStr[..2]);
         var tick = HexToInt(timingStr[2..5]);
+        var tpm = chart.TicksPerBeat * 4;
 
         if (dataStr.Length < 6)
         {
@@ -138,8 +139,7 @@ public class SusParser : IParser<SusChart>
         var note = new ChuNote
         {
             Type = typeName,
-            Measure = measure,
-            Offset = tick,
+            Time = measure + new Rational(tick, tpm),
             Cell = lane / 2,
             Width = Math.Max(1, width / 2),
         };
@@ -153,47 +153,47 @@ public class SusParser : IParser<SusChart>
                 break;
 
             case "HLD":
-                ParseHoldData(dataStr, note, alerts, lineNum);
+                ParseHoldData(dataStr, note, tpm, alerts, lineNum);
                 break;
 
             case "SLD":
-                ParseSlideData(dataStr, note, alerts, lineNum);
+                ParseSlideData(dataStr, note, tpm, alerts, lineNum);
                 break;
 
             case "AIR":
             case "ADW":
-                ParseAirTarget(dataStr, note, alerts, lineNum);
+                ParseAirTarget(dataStr, note, tpm, alerts, lineNum);
                 break;
 
             case "AHD":
-                ParseAhdData(dataStr, note, alerts, lineNum);
+                ParseAhdData(dataStr, note, tpm, alerts, lineNum);
                 break;
         }
 
         chart.Notes.Add(note);
     }
 
-    private static void ParseHoldData(string dataStr, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseHoldData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
     {
         if (dataStr.Length >= 10)
         {
-            note.HoldDuration = HexToInt(dataStr[6..10]);
+            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
         }
     }
 
-    private static void ParseSlideData(string dataStr, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseSlideData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
     {
         if (dataStr.Length >= 10)
         {
-            note.SlideDuration = HexToInt(dataStr[6..10]);
+            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
             return;
         }
 
@@ -204,7 +204,7 @@ public class SusParser : IParser<SusChart>
         }
     }
 
-    private static void ParseAirTarget(string dataStr, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseAirTarget(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
     {
         if (dataStr.Length >= 8)
         {
@@ -212,19 +212,19 @@ public class SusParser : IParser<SusChart>
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"AIR/ADW 音符缺少目标: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"AIR/ADW 音符缺少目标: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
         }
     }
 
-    private static void ParseAhdData(string dataStr, ChuNote note, List<Alert> alerts, int lineNum)
+    private static void ParseAhdData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
     {
         if (dataStr.Length >= 10)
         {
-            note.AirHoldDuration = HexToInt(dataStr[6..10]);
+            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"AHD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+            alerts.Add(new Alert(Warning, $"AHD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
         }
     }
 
@@ -239,8 +239,9 @@ public class SusParser : IParser<SusChart>
         return trimmed;
     }
 
-    private static string FormatNoteRef(ChuNote note)
+    private static string FormatNoteRef(ChuNote note, int tpm)
     {
-        return $"#{note.Measure:X2}{note.Offset:X2}:{note.Type}";
+        var (m, o) = Utils.BarAndTick(note.Time, tpm, 0);
+        return $"#{m:X2}{o:X3}:{note.Type}";
     }
 }

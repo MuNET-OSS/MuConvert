@@ -19,9 +19,4 @@ public class UgcChart : BaseChart<ChuNote>, IChuChart
     public List<(int Measure, int Num, int Den)> BeatEvents = [];
     public List<(int Measure, int Offset, double Bpm)> BpmEvents = [];
     public List<(int Measure, int Offset, double Multiplier)> SpeedEvents = [];
-
-    public override decimal StartBpm => (decimal)(BpmEvents.Count > 0 ? BpmEvents[0].Bpm : 120.0);
-    public override decimal StartTime => Notes.Count > 0 ? Notes.Min(n => n.Measure * TicksPerBeat * 4 + n.Offset) / (decimal)(TicksPerBeat * 4) * 240m / StartBpm : 0;
-    public override decimal EndTime => Notes.Count > 0 && StartBpm > 0 ? Notes.Max(n => n.Measure * TicksPerBeat * 4 + n.Offset + Math.Max(n.HoldDuration, Math.Max(n.SlideDuration, n.AirHoldDuration))) / (decimal)(TicksPerBeat * 4) * 240m / StartBpm : 0;
-    public override int TotalNotes => Notes.Count;
 }

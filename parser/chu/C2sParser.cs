@@ -1,7 +1,7 @@
 using System.Globalization;
-using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
+using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
 
 namespace MuConvert.chu;
@@ -86,7 +86,8 @@ public class C2sParser : IParser<C2sChart>
     private static void ParseNote(string[] p, C2sChart chart, List<Alert> alerts, int lineNum)
     {
         var tag = p[0].ToUpperInvariant();
-        var note = new ChuNote { Type = tag, Measure = Int(p, 1), Offset = Int(p, 2) };
+        var tpm = chart.Resolution;
+        var note = new ChuNote { Type = tag, Time = Int(p, 1) + new Rational(Int(p, 2), tpm) };
 
         switch (tag)
         {
@@ -95,21 +96,48 @@ public class C2sParser : IParser<C2sChart>
             case "CHR":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
             case "HLD": case "HXD":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.HoldDuration = Int(p, 5); break;
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Duration = new Rational(Int(p, 5), tpm); break;
             case "SLD": case "SLC": case "SXD": case "SXC":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.SlideDuration = Int(p, 5); note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1)); break;
+                note.Duration = new Rational(Int(p, 5), tpm);
+                note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
+                break;
             case "FLK":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
             case "AIR": case "AUR": case "AUL": case "ADW": case "ADR": case "ADL":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.TargetNote = Str(p, 5); break;
-            case "AHD":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.TargetNote = Str(p, 5);
+                if (p.Length >= 7) note.Tag = Str(p, 6);
+                break;
+            case "AHD": case "AHX":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.TargetNote = Str(p, 5); note.AirHoldDuration = Int(p, 6); break;
-            case "ALD": case "ASD":
-                note.StartHeight = Int(p, 3); note.SlideDuration = Int(p, 4);
-                note.EndCell = Int(p, 5); note.EndWidth = Math.Max(1, Int(p, 6, 1));
-                note.TargetHeight = Int(p, 7); note.NoteColor = Str(p, 8); break;
+                note.TargetNote = Str(p, 5); note.Duration = new Rational(Int(p, 6), tpm);
+                if (p.Length >= 8) note.Tag = Str(p, 7);
+                break;
+            case "ASD": case "ASC":
+                // 文档：M O Cell Width | TargetNote | 未知 | Duration | EndCell | EndWidth | 未知 | Tag
+                if (p.Length < 12)
+                {
+                    alerts.Add(new Alert(Warning, $"{tag} 列数不足（期望至少 12 列）") { Line = lineNum });
+                    return;
+                }
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
+                note.TargetNote = Str(p, 5);
+                note.ExtraData = [Int(p, 6), Int(p, 10)];
+                note.Duration = new Rational(Int(p, 7), tpm);
+                note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
+                note.Tag = Str(p, 11);
+                break;
+            case "ALD":
+                // 文档：M O Cell Width | 未知×3 | EndCell | EndWidth | 未知（1 或 3）
+                if (p.Length < 11)
+                {
+                    alerts.Add(new Alert(Warning, "ALD 列数不足（期望至少 11 列）") { Line = lineNum });
+                    return;
+                }
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
+                note.ExtraData = [Int(p, 5), Int(p, 6), Int(p, 7), Int(p, 10)];
+                note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
+                break;
             default:
                 alerts.Add(new Alert(Warning, string.Format(Locale.C2SUnknownNoteType, tag)) { Line = lineNum }); return;
         }
