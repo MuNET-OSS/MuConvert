@@ -59,7 +59,7 @@ public class SusGenerator : IGenerator<IChuChart>
             Cell = n.Cell * 2, Width = n.Width * 2,
             HoldDuration = s(n.HoldDuration), SlideDuration = s(n.SlideDuration),
             EndCell = n.EndCell * 2, EndWidth = n.EndWidth * 2,
-            Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = s(n.AirHoldDuration),
+            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = s(n.AirHoldDuration),
         };
     }
 

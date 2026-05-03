@@ -24,7 +24,7 @@ public class ChuNote
     /** SLD 终点宽度 */
     public int EndWidth { get; set; } = 1;
     /** CHR/FLK 附加数据（方向等） */
-    public string Extra { get; set; } = "";
+    public string Tag { get; set; } = "";
     /** AIR/AHD 关联的目标音符类型 */
     public string TargetNote { get; set; } = "";
     /** AHD 持续时长 */

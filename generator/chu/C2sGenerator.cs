@@ -66,7 +66,7 @@ public class C2sGenerator : IGenerator<IChuChart>
             Cell = n.Cell, Width = n.Width,
             HoldDuration = scaleDown(n.HoldDuration), SlideDuration = scaleDown(n.SlideDuration),
             EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
+            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
             StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
         };
     }
@@ -109,10 +109,10 @@ public class C2sGenerator : IGenerator<IChuChart>
     private static string FormatNote(ChuNote n) => n.Type switch
     {
         "TAP" => $"TAP\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}",
-        "CHR" => $"CHR\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Extra}",
+        "CHR" => $"CHR\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Tag}",
         "HLD" or "HXD" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.HoldDuration}",
         "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.SlideDuration}\t{n.EndCell}\t{n.EndWidth}",
-        "FLK" => $"FLK\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Extra}",
+        "FLK" => $"FLK\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.Tag}",
         "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}",
         "AHD" => $"AHD\t{n.Measure}\t{n.Offset}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.AirHoldDuration}",
         "ALD" or "ASD" => $"{n.Type}\t{n.Measure}\t{n.Offset}\t{n.StartHeight}\t{n.SlideDuration}\t{n.EndCell}\t{n.EndWidth}\t{n.TargetHeight}\t{n.NoteColor}",

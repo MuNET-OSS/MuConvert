@@ -58,7 +58,7 @@ public class UgcGenerator : IGenerator<IChuChart>
             Cell = n.Cell, Width = n.Width,
             HoldDuration = s(n.HoldDuration), SlideDuration = s(n.SlideDuration),
             EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Extra = n.Extra, TargetNote = IsAir(n.Type) && string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote,
+            Tag = n.Tag, TargetNote = IsAir(n.Type) && string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote,
             AirHoldDuration = s(n.AirHoldDuration),
             StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
         };
@@ -111,7 +111,7 @@ public class UgcGenerator : IGenerator<IChuChart>
         return n.Type switch
         {
             "TAP" => $"t{c}{w}",
-            "CHR" => $"x{c}{w}{n.Extra}",
+            "CHR" => $"x{c}{w}{n.Tag}",
             "HLD" or "HXD" => $"h{c}{w}",
             "SLD" or "SXD" => $"s{c}{w}",
             "SLC" or "SXC" => $"s{c}{w}",

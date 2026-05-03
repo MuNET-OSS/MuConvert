@@ -281,7 +281,7 @@ public class UgcParser : IParser<UgcChart>
                 note.Type = "FLK";
                 ParseCellWidth(code, 1, note, alerts, lineNum);
                 if (code.Length > 3)
-                    note.Extra = code[3..];
+                    note.Tag = code[3..];
                 break;
 
             case 'c':
@@ -481,9 +481,9 @@ public class UgcParser : IParser<UgcChart>
         ParseCellWidth(code, 1, note, alerts, lineNum);
         var extraRaw = code.Length > 3 ? code[3..] : "";
         if (ChrExtras.TryGetValue(extraRaw, out var chrDir))
-            note.Extra = chrDir;
+            note.Tag = chrDir;
         else
-            note.Extra = extraRaw;
+            note.Tag = extraRaw;
     }
 
     private static int HexCharToInt(char c)

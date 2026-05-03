@@ -93,14 +93,14 @@ public class C2sParser : IParser<C2sChart>
             case "TAP": case "MNE":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); break;
             case "CHR":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Extra = Str(p, 5); break;
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
             case "HLD": case "HXD":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.HoldDuration = Int(p, 5); break;
             case "SLD": case "SLC": case "SXD": case "SXC":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
                 note.SlideDuration = Int(p, 5); note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1)); break;
             case "FLK":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Extra = Str(p, 5); break;
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
             case "AIR": case "AUR": case "AUL": case "ADW": case "ADR": case "ADL":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.TargetNote = Str(p, 5); break;
             case "AHD":

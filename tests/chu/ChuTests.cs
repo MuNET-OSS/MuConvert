@@ -69,7 +69,7 @@ public class ChuTests
             Cell = n.Cell, Width = n.Width,
             HoldDuration = scaleDown(n.HoldDuration), SlideDuration = scaleDown(n.SlideDuration),
             EndCell = n.EndCell, EndWidth = n.EndWidth,
-            Extra = n.Extra, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
+            Tag = n.Tag, TargetNote = n.TargetNote, AirHoldDuration = scaleDown(n.AirHoldDuration),
             StartHeight = n.StartHeight, TargetHeight = n.TargetHeight, NoteColor = n.NoteColor,
         };
     }
