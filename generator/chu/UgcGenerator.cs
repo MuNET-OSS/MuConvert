@@ -36,6 +36,7 @@ public class UgcGenerator : IGenerator<IChuChart>
             };
             result.BpmList.AddRange(c2s.BpmList);
             result.MetList.AddRange(c2s.MetList);
+            result.SflList.AddRange(c2s.SflList);
             result.Notes = c2s.Notes;
             return result;
         }
@@ -70,6 +71,13 @@ public class UgcGenerator : IGenerator<IChuChart>
             sb.AppendLine($"@BPM\t{m}'{o}\t{b.Bpm:F5}");
         }
         sb.AppendLine("@TIL\t0\t0'0\t1.00000");
+
+        foreach (var s in ugc.SflList.OrderBy(x => x.Time)) 
+        { 
+            var (m, o) = Utils.BarAndTick(s.Time, tpm); 
+            sb.AppendLine($"@SPDMOD\t{m}'{o}\t{s.Multiplier:0.00000}");
+        }
+
         sb.AppendLine("@MAINTIL\t0");
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();

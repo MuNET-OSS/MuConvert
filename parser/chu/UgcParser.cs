@@ -61,7 +61,24 @@ public class UgcParser : IParser<UgcChart>
             }
         }
 
+        FinalizeUgcSflDurations(chart);
         return (chart, alerts);
+    }
+
+    private static void FinalizeUgcSflDurations(UgcChart chart)
+    {
+        if (chart.SflList.Count == 0) return;
+        chart.SflList = chart.SflList.OrderBy(s => s.Time).ToList();
+        var endTime = Utils.Max(chart.SflList[^1].Time, chart.Notes.Max(x=>x.EndTime));
+        
+        for (var i = 0; i < chart.SflList.Count; i++)
+        {
+            var t = chart.SflList[i].Time;
+            var dur = (i < chart.SflList.Count - 1 ? chart.SflList[i+1].Time : endTime) - t;
+            chart.SflList[i] = chart.SflList[i] with { Duration = dur.CanonicalForm };
+        }
+
+        chart.SflList = chart.SflList.Where(x => x.Multiplier != 1).ToList(); // 倍率为1的，没必要放进来的
     }
 
     private static void ParseHeaderLine(string line, UgcChart chart, List<Alert> alerts, int lineNum)
@@ -154,10 +171,7 @@ public class UgcParser : IParser<UgcChart>
                 {
                     var measureOffset = bpmPart[..bpmSpaceIdx];
                     var bpmValueStr = bpmPart[(bpmSpaceIdx + 1)..];
-                    var apostropheIdx = measureOffset.IndexOf('\'');
-                    if (apostropheIdx > 0
-                        && int.TryParse(measureOffset[..apostropheIdx], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmMeasure)
-                        && int.TryParse(measureOffset[(apostropheIdx + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmOffset)
+                    if (TryParseUgcMeasureTick(measureOffset, out var bpmMeasure, out var bpmOffset)
                         && decimal.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
                     {
                         var tpm = chart.TicksPerBeat * 4;
@@ -182,18 +196,38 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             case "@SPDMOD":
+            {
+                var parts = value.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length >= 2
+                    && TryParseUgcMeasureTick(parts[0], out var meas, out var tick)
+                    && decimal.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var mult))
                 {
-                    var parts = value.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tilMeasure)
-                        && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var tilMult))
-                        chart.SflList.Add((tilMeasure, Rational.Zero, (decimal)tilMult));
+                    var tpm = chart.TicksPerBeat * 4;
+                    chart.SflList.Add((meas + new Rational(tick, tpm), Rational.Zero, mult));
                 }
+                else
+                    alerts.Add(new Alert(Warning, $"@SPDMOD 格式错误: {line}") { Line = lineNum });
                 break;
+            }
 
             default:
                 alerts.Add(new Alert(Info, $"未知头部标签: {tag}") { Line = lineNum });
                 break;
         }
+    }
+
+    /** UGC 时刻字符串 measure'tick（@BPM、@SPDMOD、音符行 #m't 共用）。 */
+    private static bool TryParseUgcMeasureTick(string measureTick, out int measure, out int tick)
+    {
+        measure = 0;
+        tick = 0;
+        measureTick = measureTick.Trim();
+        var ap = measureTick.IndexOf('\'');
+        if (ap <= 0)
+            return false;
+
+        return int.TryParse(measureTick[..ap], NumberStyles.Integer, CultureInfo.InvariantCulture, out measure)
+            && int.TryParse(measureTick[(ap + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out tick);
     }
 
     private static int ParseNoteLine(string[] lines, int idx, UgcChart chart, List<Alert> alerts)
@@ -219,21 +253,15 @@ public class UgcParser : IParser<UgcChart>
         var prefix = line[..colonIdx];
         var code = line[(colonIdx + 1)..];
         var hashIdx = prefix.IndexOf('#');
-        var apostropheIdx = prefix.IndexOf('\'');
-        if (hashIdx < 0 || apostropheIdx < 0 || apostropheIdx <= hashIdx + 1)
+        if (hashIdx < 0)
         {
             alerts.Add(new Alert(Warning, $"音符行前缀格式错误: {line}") { Line = lineNum });
             return idx;
         }
 
-        if (!int.TryParse(prefix[(hashIdx + 1)..apostropheIdx], NumberStyles.Integer, CultureInfo.InvariantCulture, out var measure))
+        if (!TryParseUgcMeasureTick(prefix[(hashIdx + 1)..], out var measure, out var tick))
         {
-            alerts.Add(new Alert(Warning, $"无法解析 measure: {line}") { Line = lineNum });
-            return idx;
-        }
-        if (!int.TryParse(prefix[(apostropheIdx + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tick))
-        {
-            alerts.Add(new Alert(Warning, $"无法解析 tick: {line}") { Line = lineNum });
+            alerts.Add(new Alert(Warning, $"无法解析 measure'tick: {line}") { Line = lineNum });
             return idx;
         }
 

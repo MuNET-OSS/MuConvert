@@ -28,6 +28,8 @@ public static class Utils
     
     public static BigInteger Max(BigInteger a, BigInteger b) => a > b ? a : b;
     
+    public static Rational Max(Rational a, Rational b) => a > b ? a : b;
+    
     public static Rational Min(Rational a, Rational b) => a < b ? a : b;
     
     private static readonly Dictionary<string, int> _simaiLexerMap = Enumerable.Range(1, L.ruleNames.Length)

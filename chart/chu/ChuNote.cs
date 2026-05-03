@@ -15,7 +15,7 @@ public class ChuNote: BaseNote
     /** 宽度 (1–16) */
     public int Width { get; set; } = 1;
     /** HLD/SLD/AHD/ASD等的 持续时长 */
-    public Rational Duration { get; set; } = 0;
+    public Rational Duration { get; set => field = value.CanonicalForm; } = 0;
     /** SLD 终点列 */
     public int EndCell { get; set; }
     /** SLD 终点宽度 */
@@ -27,5 +27,5 @@ public class ChuNote: BaseNote
     /** ASD/ASC/ALD上具有的、目前含义还不明确的字段，统一收集到这个里面。 */
     public List<int> ExtraData = [];
     
-    public override Rational EndTime => Time + Duration;
+    public override Rational EndTime => (Time + Duration).CanonicalForm;
 }

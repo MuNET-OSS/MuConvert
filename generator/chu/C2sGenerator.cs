@@ -33,6 +33,7 @@ public class C2sGenerator : IGenerator<IChuChart>
             };
             result.BpmList.AddRange(ugc.BpmList);
             result.MetList.AddRange(ugc.MetList);
+            result.SflList.AddRange(ugc.SflList);
             result.Notes = ugc.Notes;
             return result;
         }
