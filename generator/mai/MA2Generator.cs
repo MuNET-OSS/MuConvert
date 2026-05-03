@@ -45,15 +45,6 @@ GENERATED_BY	MuConvert v{8}
 ";
 
     private Rational __1_384 = new(1, 384);
-    
-    private (decimal, decimal, decimal, decimal) bpmStats()
-    {
-        var bpms = chart.BpmList.Select(x => x.Bpm).ToList();
-        var max = bpms.Max();
-        var min = bpms.Min();
-        var modes = bpms.GroupBy(x => x).OrderByDescending(g => g.Count()).First().Key; // 众数
-        return (chart.BpmList.First().Bpm, modes, max, min);
-    }
 
     /**
      * 把Rational的时间近似到RESOLUTION允许的最接近tick上
@@ -196,7 +187,7 @@ GENERATED_BY	MuConvert v{8}
     // 生成文件头
     protected void GenerateFileHead(StringBuilder result)
     {
-        var bpmStatistics = bpmStats();
+        var bpmStatistics = chart.BpmList.BPM_DEF();
         string head = string.Format(headTemplate, 
             $"{MA2Version / 100}.{MA2Version % 100:D2}.00", IsUtage?1:0, 
             bpmStatistics.Item1, bpmStatistics.Item2,  bpmStatistics.Item3, bpmStatistics.Item4,

@@ -30,8 +30,8 @@ public class SusGenerator : IGenerator<IChuChart>
 
         if (chart is C2sChart c2s)
         {
-            bpm = c2s.BpmEvents.Count > 0 ? c2s.BpmEvents[0].Bpm : c2s.DefBpm;
-            var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = title, Artist = artist };
+            bpm = c2s.BpmEvents[0].Bpm;
+            var result = new SusChart { TicksPerBeat = SusTpb, Title = title, Artist = artist };
             result.Notes = c2s.Notes;
             return result;
         }
@@ -39,7 +39,7 @@ public class SusGenerator : IGenerator<IChuChart>
         if (chart is UgcChart ugc)
         {
             bpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0;
-            var result = new SusChart { Bpm = bpm, TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
+            var result = new SusChart { TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
             result.Notes = ugc.Notes;
             return result;
         }
@@ -56,7 +56,7 @@ public class SusGenerator : IGenerator<IChuChart>
         if (!string.IsNullOrEmpty(sus.Title)) sb.AppendLine($"#TITLE \"{sus.Title}\"");
         if (!string.IsNullOrEmpty(sus.Artist)) sb.AppendLine($"#ARTIST \"{sus.Artist}\"");
         if (!string.IsNullOrEmpty(sus.Designer)) sb.AppendLine($"#DESIGNER \"{sus.Designer}\"");
-        sb.AppendLine($"#BPM_DEF {sus.Bpm:F2}");
+        sb.AppendLine($"#BPM_DEF {sus.StartBpm:F2}");
         sb.AppendLine($"#REQUEST \"{sus.TicksPerBeat}\"");
         sb.AppendLine();
 

@@ -7,14 +7,13 @@ namespace MuConvert.chu;
  */
 public class UgcChart : BaseChart<ChuNote>, IChuChart
 {
-    public string Version { get; set; } = "6";
     public string Title { get; set; } = "";
     public string Artist { get; set; } = "";
     public string Designer { get; set; } = "";
-    public string Difficulty { get; set; } = "";
-    public int Level { get; set; }
-    public double Constant { get; set; }
-    public string SongId { get; set; } = "";
+    public int Difficulty { get; set; } = 3;
+    public string DisplayLevel = "";
+    public decimal Level { get; set; }
+    public string MusicId { get; set; } = "";
     public int TicksPerBeat { get; set; } = 480;
     public List<(int Measure, int Num, int Den)> BeatEvents = [];
     public List<(int Measure, int Offset, double Bpm)> BpmEvents = [];

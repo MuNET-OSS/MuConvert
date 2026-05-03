@@ -31,9 +31,9 @@ public class UgcGenerator : IGenerator<IChuChart>
             var result = new UgcChart
             {
                 TicksPerBeat = UgcTicksPerBeat,
-                Designer = c2s.Creator,
-                Difficulty = MapDiffId(c2s.DifficultId),
-                SongId = c2s.MusicId.ToString(),
+                Designer = c2s.Designer,
+                Difficulty = c2s.Difficulty,
+                MusicId = c2s.MusicId,
             };
             foreach (var b in c2s.BpmEvents)
                 result.BpmEvents.Add((b.Measure, ScaleUp(b.Offset), b.Bpm));
@@ -49,11 +49,6 @@ public class UgcGenerator : IGenerator<IChuChart>
 
     private static int ScaleUp(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
 
-    private static string MapDiffId(int id) => id switch
-    {
-        0 => "BASIC", 1 => "ADVANCED", 2 => "EXPERT", 3 => "MASTER", 4 => "ULTIMA", _ => "0"
-    };
-
     private static string Serialize(UgcChart ugc)
     {
         ugc.Sort();
@@ -63,10 +58,10 @@ public class UgcGenerator : IGenerator<IChuChart>
         if (!string.IsNullOrEmpty(ugc.Title)) sb.AppendLine($"@TITLE\t{ugc.Title}");
         if (!string.IsNullOrEmpty(ugc.Artist)) sb.AppendLine($"@ARTIST\t{ugc.Artist}");
         if (!string.IsNullOrEmpty(ugc.Designer)) sb.AppendLine($"@DESIGN\t{ugc.Designer}");
-        sb.AppendLine($"@DIFF\t{DiffId(ugc.Difficulty)}");
-        sb.AppendLine($"@LEVEL\t{ugc.Level}");
-        sb.AppendLine($"@CONST\t{ugc.Constant:F5}");
-        sb.AppendLine($"@SONGID\t{ugc.SongId}");
+        sb.AppendLine($"@DIFF\t{ugc.Difficulty}");
+        sb.AppendLine($"@LEVEL\t{ugc.DisplayLevel}");
+        sb.AppendLine($"@CONST\t{ugc.Level:F5}");
+        sb.AppendLine($"@SONGID\t{ugc.MusicId}");
         sb.AppendLine($"@TICKS\t{ugc.TicksPerBeat}");
         foreach (var b in ugc.BeatEvents) sb.AppendLine($"@BEAT\t{b.Measure}\t{b.Num}\t{b.Den}");
         foreach (var b in ugc.BpmEvents) sb.AppendLine($"@BPM\t{b.Measure}'{b.Offset}\t{b.Bpm:F5}");
@@ -117,5 +112,4 @@ public class UgcGenerator : IGenerator<IChuChart>
 
     private static string Hx(int v) => "0123456789ABCDEF"[Math.Clamp(v, 0, 15)].ToString();
     private static string Hw(int v) => "123456789ABCDEFG"[Math.Clamp(v - 1, 0, 15)].ToString();
-    private static int DiffId(string d) => d switch { "BASIC" => 0, "ADVANCED" => 1, "EXPERT" => 2, "MASTER" => 3, "ULTIMA" => 4, _ => 0 };
 }

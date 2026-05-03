@@ -11,5 +11,5 @@ public class SusChart : BaseChart<ChuNote>, IChuChart
     public string Artist { get; set; } = "";
     public string Designer { get; set; } = "";
     public int TicksPerBeat { get; set; } = 480;
-    public double Bpm { get; set; } = 120.0;
+    public List<(int Measure, int Offset, double Bpm)> BpmEvents = [];
 }

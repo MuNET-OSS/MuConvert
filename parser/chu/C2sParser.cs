@@ -57,11 +57,9 @@ public class C2sParser : IParser<C2sChart>
         var tag = p[0].ToUpperInvariant();
         switch (tag)
         {
-            case "VERSION": chart.Version = Str(p, 1); break;
-            case "MUSIC": chart.MusicId = Int(p, 1); break;
-            case "DIFFICULT": chart.DifficultId = Int(p, 1); break;
-            case "CREATOR": chart.Creator = Str(p, 1); break;
-            case "BPM_DEF": chart.DefBpm = Dbl(p, 1, 120.0); break;
+            case "MUSIC": chart.MusicId = Int(p, 1).ToString(); break;
+            case "DIFFICULT": chart.Difficulty = Int(p, 1); break;
+            case "CREATOR": chart.Designer = Str(p, 1); break;
             case "RESOLUTION": chart.Resolution = Math.Max(1, Int(p, 1, 384)); break;
         }
     }

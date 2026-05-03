@@ -77,10 +77,6 @@ public class UgcParser : IParser<UgcChart>
 
         switch (tag)
         {
-            case "@VER":
-                chart.Version = value;
-                break;
-
             case "@TITLE":
                 chart.Title = value;
                 break;
@@ -96,38 +92,36 @@ public class UgcParser : IParser<UgcChart>
             case "@DIFF":
                 if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var diff))
                 {
-                    chart.Difficulty = diff switch
-                    {
-                        0 => "BASIC",
-                        1 => "ADVANCED",
-                        2 => "EXPERT",
-                        3 => "MASTER",
-                        4 => "ULTIMA",
-                        _ => value,
-                    };
+                    chart.Difficulty = diff;
                 }
                 else
                 {
-                    chart.Difficulty = value;
+                    chart.Difficulty = new string(value.Where(char.IsLetter).ToArray()).ToUpperInvariant() switch
+                    {
+                        "BASIC" => 0,
+                        "ADVANCED" => 1,
+                        "EXPERT" => 2,
+                        "MASTER" => 3,
+                        "WORLDSEND" => 4,
+                        "ULTIMA" => 5,
+                        _ => 3,
+                    };
                 }
                 break;
 
             case "@LEVEL":
-                if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var level))
-                    chart.Level = level;
-                else
-                    alerts.Add(new Alert(Warning, $"@LEVEL 格式错误: {line}") { Line = lineNum });
+                chart.DisplayLevel = value;
                 break;
 
             case "@CONST":
-                if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var constant))
-                    chart.Constant = constant;
+                if (decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var constant))
+                    chart.Level = constant;
                 else
                     alerts.Add(new Alert(Warning, $"@CONST 格式错误: {line}") { Line = lineNum });
                 break;
 
             case "@SONGID":
-                chart.SongId = value;
+                chart.MusicId = value;
                 break;
 
             case "@TICKS":
@@ -179,7 +173,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
 
             // silently ignored metadata tags
-            case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
+            case "@VER": case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
             case "@MAINTIL":

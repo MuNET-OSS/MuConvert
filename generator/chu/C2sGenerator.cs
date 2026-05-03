@@ -30,9 +30,7 @@ public class C2sGenerator : IGenerator<IChuChart>
         {
             var result = new C2sChart
             {
-                Version = "1.08.00\t1.08.00",
-                Creator = ugc.Designer,
-                DefBpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0,
+                Designer = ugc.Designer,
             };
             foreach (var b in ugc.BpmEvents)
                 result.BpmEvents.Add((b.Measure, ScaleDown(b.Offset, ugc.TicksPerBeat), b.Bpm));
@@ -44,8 +42,8 @@ public class C2sGenerator : IGenerator<IChuChart>
 
         if (chart is SusChart sus)
         {
-            var result = new C2sChart { DefBpm = sus.Bpm };
-            result.BpmEvents.Add((0, 0, sus.Bpm));
+            var result = new C2sChart();
+            // result.BpmEvents.Add((0, 0, sus.Bpm));
             result.Notes = sus.Notes;
             return result;
         }
@@ -60,14 +58,16 @@ public class C2sGenerator : IGenerator<IChuChart>
     {
         chart.Sort();
         
+        int.TryParse(chart.MusicId, out var musicId);
         var sb = new StringBuilder();
-        sb.AppendLine($"VERSION\t{chart.Version}");
-        sb.AppendLine($"MUSIC\t{chart.MusicId}");
+        sb.AppendLine($"VERSION\t1.08.00\t1.08.00");
+        sb.AppendLine($"MUSIC\t{musicId}");
         sb.AppendLine("SEQUENCEID\t0");
-        sb.AppendLine($"DIFFICULT\t{chart.DifficultId:D2}");
+        sb.AppendLine($"DIFFICULT\t{chart.Difficulty:D2}");
         sb.AppendLine("LEVEL\t0.0");
-        sb.AppendLine($"CREATOR\t{chart.Creator}");
-        sb.AppendLine($"BPM_DEF\t{Fmt(chart.DefBpm)}\t{Fmt(chart.DefBpm)}\t{Fmt(chart.DefBpm)}\t{Fmt(chart.DefBpm)}");
+        sb.AppendLine($"CREATOR\t{chart.Designer}");
+        var bpm_def = chart.BpmList.BPM_DEF();
+        sb.AppendLine($"BPM_DEF\t{bpm_def.Item1}\t{bpm_def.Item2}\t{bpm_def.Item3}\t{bpm_def.Item4}");
         sb.AppendLine("MET_DEF\t4\t4");
         sb.AppendLine($"RESOLUTION\t{chart.Resolution}");
         sb.AppendLine($"CLK_DEF\t{chart.Resolution}");

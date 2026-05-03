@@ -84,7 +84,7 @@ public class SusParser : IParser<SusChart>
         {
             var bpmStr = content[8..].Trim().Trim('"');
             if (double.TryParse(bpmStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpm))
-                chart.Bpm = bpm;
+                chart.BpmEvents.Add((0, 0, bpm));
             else
                 alerts.Add(new Alert(Warning, $"BPM_DEF 格式错误: {content}") { Line = lineNum });
         }

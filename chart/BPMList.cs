@@ -99,6 +99,15 @@ public class BPMList : List<BPM>
             return result.CanonicalForm;
         }
     }
+    
+    internal (decimal, decimal, decimal, decimal) BPM_DEF()
+    {
+        var bpms = this.Select(x => x.Bpm).ToList();
+        var max = bpms.Max();
+        var min = bpms.Min();
+        var modes = bpms.GroupBy(x => x).OrderByDescending(g => g.Count()).First().Key; // 众数
+        return (this.First().Bpm, modes, max, min);
+    }
 }
 
 public record BPM(Rational Time, decimal Bpm);

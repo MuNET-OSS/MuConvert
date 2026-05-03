@@ -90,7 +90,7 @@ public class ChuTests
         if (!File.Exists(UgcPath)) throw new SkipException($"Missing: {UgcPath}");
         var (chart, _) = new UgcParser().Parse(File.ReadAllText(UgcPath));
         Assert.NotEmpty(chart.Notes);
-        Assert.Equal("MASTER", chart.Difficulty);
+        Assert.Equal(3, chart.Difficulty);
     }
 
     [Fact]
