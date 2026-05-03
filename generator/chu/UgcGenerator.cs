@@ -11,7 +11,7 @@ namespace MuConvert.chu;
  */
 public class UgcGenerator : IGenerator<IChuChart>
 {
-    private const int UgcTicksPerBeat = 480;
+    private static int RSL = 480 * 4;
 
     public (string, List<Alert>) Generate(IChuChart chart)
     {
@@ -29,7 +29,6 @@ public class UgcGenerator : IGenerator<IChuChart>
         {
             var result = new UgcChart
             {
-                TicksPerBeat = UgcTicksPerBeat,
                 Designer = c2s.Designer,
                 Difficulty = c2s.Difficulty,
                 MusicId = c2s.MusicId,
@@ -58,23 +57,22 @@ public class UgcGenerator : IGenerator<IChuChart>
         sb.AppendLine($"@LEVEL\t{ugc.DisplayLevel}");
         sb.AppendLine($"@CONST\t{ugc.Level:F5}");
         sb.AppendLine($"@SONGID\t{ugc.MusicId}");
-        sb.AppendLine($"@TICKS\t{ugc.TicksPerBeat}");
-        var tpm = ugc.TicksPerBeat * 4;
+        sb.AppendLine($"@TICKS\t{RSL / 4}");
         foreach (var met in ugc.MetList)
         {
-            var (m, _) = Utils.BarAndTick(met.Time, tpm);
+            var (m, _) = Utils.BarAndTick(met.Time, RSL);
             sb.AppendLine($"@BEAT\t{m}\t{met.Numerator}\t{met.Denominator}");
         }
         foreach (var b in ugc.BpmList)
         {
-            var (m, o) = Utils.BarAndTick(b.Time, tpm);
+            var (m, o) = Utils.BarAndTick(b.Time, RSL);
             sb.AppendLine($"@BPM\t{m}'{o}\t{b.Bpm:F5}");
         }
         sb.AppendLine("@TIL\t0\t0'0\t1.00000");
 
         foreach (var s in ugc.SflList.OrderBy(x => x.Time)) 
         { 
-            var (m, o) = Utils.BarAndTick(s.Time, tpm); 
+            var (m, o) = Utils.BarAndTick(s.Time, RSL); 
             sb.AppendLine($"@SPDMOD\t{m}'{o}\t{s.Multiplier:0.00000}");
         }
 
@@ -84,10 +82,10 @@ public class UgcGenerator : IGenerator<IChuChart>
 
         foreach (var n in ugc.Notes)
         {
-            var (m, o) = Utils.BarAndTick(n.Time, tpm);
-            sb.Append($"#{m}'{o}:{UCode(n, tpm)}");
+            var (m, o) = Utils.BarAndTick(n.Time, RSL);
+            sb.Append($"#{m}'{o}:{UCode(n, RSL)}");
             sb.AppendLine();
-            var durTicks = Utils.Tick(n.Duration, tpm);
+            var durTicks = Utils.Tick(n.Duration, RSL);
             if (n.Type == "HLD" && durTicks > 0)
                 sb.AppendLine($"#{durTicks}>s");
             else if (n.Type == "SLD" && durTicks > 0)

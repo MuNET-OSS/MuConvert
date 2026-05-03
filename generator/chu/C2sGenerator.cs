@@ -13,6 +13,8 @@ namespace MuConvert.chu;
  */
 public class C2sGenerator : IGenerator<IChuChart>
 {
+    private const int RSL = 384;
+    
     public (string, List<Alert>) Generate(IChuChart chart)
     {
         var alerts = new List<Alert>();
@@ -68,36 +70,35 @@ public class C2sGenerator : IGenerator<IChuChart>
         var bpm_def = chart.BpmList.BPM_DEF();
         sb.AppendLine($"BPM_DEF\t{bpm_def.Item1}\t{bpm_def.Item2}\t{bpm_def.Item3}\t{bpm_def.Item4}");
         sb.AppendLine("MET_DEF\t4\t4");
-        sb.AppendLine($"RESOLUTION\t{chart.Resolution}");
-        sb.AppendLine($"CLK_DEF\t{chart.Resolution}");
+        sb.AppendLine($"RESOLUTION\t{RSL}");
+        sb.AppendLine($"CLK_DEF\t{RSL}");
         sb.AppendLine("PROGJUDGE_BPM\t240.000");
         sb.AppendLine("PROGJUDGE_AER\t0.999");
         sb.AppendLine("TUTORIAL\t0");
         sb.AppendLine();
 
-        var res = chart.Resolution;
         foreach (var b in chart.BpmList)
         {
-            var (m, o) = Utils.BarAndTick(b.Time, res);
+            var (m, o) = Utils.BarAndTick(b.Time, RSL);
             sb.AppendLine($"BPM\t{m}\t{o}\t{b.Bpm:0.000}");
         }
 
         foreach (var met in chart.MetList)
         {
-            var (m, o) = Utils.BarAndTick(met.Time, res);
+            var (m, o) = Utils.BarAndTick(met.Time, RSL);
             sb.AppendLine($"MET\t{m}\t{o}\t{met.Denominator}\t{met.Numerator}");
         }
 
         foreach (var s in chart.SflList.OrderBy(s => s.Time))
         {
-            var (m, o) = Utils.BarAndTick(s.Time, res);
-            var durTicks = Utils.Tick(s.Duration, res);
+            var (m, o) = Utils.BarAndTick(s.Time, RSL);
+            var durTicks = Utils.Tick(s.Duration, RSL);
             sb.AppendLine($"SFL\t{m}\t{o}\t{durTicks}\t{s.Multiplier:0.000000}");
         }
         sb.AppendLine();
 
         foreach (var n in chart.Notes)
-            sb.AppendLine(FormatNote(n, chart.Resolution));
+            sb.AppendLine(FormatNote(n, RSL));
 
         sb.AppendLine();
         return sb.ToString();

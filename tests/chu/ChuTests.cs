@@ -19,7 +19,6 @@ public class ChuTests
         if (!File.Exists(C2sPath)) throw new SkipException($"Missing: {C2sPath}");
         var (chart, _) = new C2sParser().Parse(File.ReadAllText(C2sPath));
         Assert.NotEmpty(chart.Notes);
-        Assert.Equal(384, chart.Resolution);
     }
 
     [Fact]
@@ -113,11 +112,10 @@ public class ChuTests
     /// </summary>
     private static void AssertUgcNotesEquivalentToReparsedC2s(UgcChart ugc, C2sChart c2s, bool isUgcReference)
     {
-        var res = c2s.Resolution;
         if (isUgcReference)
         {
             var ugcSnaps = ugc.Notes
-                .Select(n => SnapshotNote(UgcNoteScaledToC2sTicks(n, ugc.TicksPerBeat, res)))
+                .Select(n => SnapshotNote(UgcNoteScaledToC2sTicks(n, 480, 384)))
                 .OrderBy(s => s)
                 .ToArray();
             var c2sSnaps = c2s.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();
@@ -127,7 +125,7 @@ public class ChuTests
         {
             var ugcSnaps = ugc.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();
             var c2sSnaps = c2s.Notes
-                .Select(n => SnapshotNote(C2sNoteScaledToUgcTicks(n, ugc.TicksPerBeat, res)))
+                .Select(n => SnapshotNote(C2sNoteScaledToUgcTicks(n, 480, 384)))
                 .OrderBy(s => s)
                 .ToArray();
             Assert.Equal(c2sSnaps, ugcSnaps);

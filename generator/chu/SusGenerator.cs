@@ -12,7 +12,7 @@ namespace MuConvert.chu;
  */
 public class SusGenerator : IGenerator<IChuChart>
 {
-    private const int SusTpb = 480;
+    private static int RSL = 480 * 4;
 
     public (string, List<Alert>) Generate(IChuChart chart)
     {
@@ -32,7 +32,7 @@ public class SusGenerator : IGenerator<IChuChart>
         if (chart is C2sChart c2s)
         {
             bpm = c2s.BpmList.Count > 0 ? (double)c2s.BpmList[0].Bpm : 120.0;
-            var result = new SusChart { TicksPerBeat = SusTpb, Title = title, Artist = artist };
+            var result = new SusChart { Title = title, Artist = artist };
             result.BpmList.Add(new BPM(0, (decimal)bpm));
             result.Notes = c2s.Notes;
             return result;
@@ -41,7 +41,7 @@ public class SusGenerator : IGenerator<IChuChart>
         if (chart is UgcChart ugc)
         {
             bpm = ugc.BpmList.Count > 0 ? (double)ugc.BpmList[0].Bpm : 120.0;
-            var result = new SusChart { TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
+            var result = new SusChart { Title = ugc.Title, Artist = ugc.Artist };
             result.BpmList.Add(new BPM(0, (decimal)bpm));
             result.Notes = ugc.Notes;
             return result;
@@ -60,14 +60,13 @@ public class SusGenerator : IGenerator<IChuChart>
         if (!string.IsNullOrEmpty(sus.Artist)) sb.AppendLine($"#ARTIST \"{sus.Artist}\"");
         if (!string.IsNullOrEmpty(sus.Designer)) sb.AppendLine($"#DESIGNER \"{sus.Designer}\"");
         sb.AppendLine($"#BPM_DEF {sus.StartBpm:F2}");
-        sb.AppendLine($"#REQUEST \"{sus.TicksPerBeat}\"");
+        sb.AppendLine($"#REQUEST \"{RSL / 4}\"");
         sb.AppendLine();
 
-        var tpm = sus.TicksPerBeat * 4;
         foreach (var n in sus.Notes)
         {
-            var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
-            sb.AppendLine($"#{m:X2}{o:X3}:{FormatData(n, tpm)}");
+            var (m, o) = Utils.BarAndTick(n.Time, RSL);
+            sb.AppendLine($"#{m:X2}{o:X3}:{FormatData(n, RSL)}");
         }
 
         return sb.ToString();

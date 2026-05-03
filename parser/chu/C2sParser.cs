@@ -13,6 +13,7 @@ namespace MuConvert.chu;
  */
 public class C2sParser : IParser<C2sChart>
 {
+    private static int RSL = 384;
     private static readonly HashSet<string> HeadTags = new(StringComparer.OrdinalIgnoreCase)
         { "VERSION", "MUSIC", "SEQUENCEID", "DIFFICULT", "LEVEL", "CREATOR", "BPM_DEF", "MET_DEF", "RESOLUTION", "CLK_DEF", "PROGJUDGE_BPM", "PROGJUDGE_AER", "TUTORIAL" };
     private static readonly HashSet<string> TimingTags = new(StringComparer.OrdinalIgnoreCase)
@@ -61,26 +62,25 @@ public class C2sParser : IParser<C2sChart>
             case "MUSIC": chart.MusicId = Int(p, 1).ToString(); break;
             case "DIFFICULT": chart.Difficulty = Int(p, 1); break;
             case "CREATOR": chart.Designer = Str(p, 1); break;
-            case "RESOLUTION": chart.Resolution = Math.Max(1, Int(p, 1, 384)); break;
+            case "RESOLUTION": RSL = Math.Max(1, Int(p, 1, 384)); break;
         }
     }
 
     private static void ParseTiming(string[] p, C2sChart chart)
     {
         var tag = p[0].ToUpperInvariant();
-        var tpm = chart.Resolution;
         switch (tag)
         {
             case "BPM":
-                chart.BpmList.Add(new BPM(Int(p, 1) + new Rational(Int(p, 2), tpm), decimal.Parse(p[3])));
+                chart.BpmList.Add(new BPM(Int(p, 1) + new Rational(Int(p, 2), RSL), decimal.Parse(p[3])));
                 break;
             case "MET":
-                chart.MetList.Add(new MET(Int(p, 1) + new Rational(Int(p, 2), tpm), Int(p, 4, 4), Int(p, 3, 4)));
+                chart.MetList.Add(new MET(Int(p, 1) + new Rational(Int(p, 2), RSL), Int(p, 4, 4), Int(p, 3, 4)));
                 break;
             case "SFL":
                 chart.SflList.Add((
-                    Int(p, 1) + new Rational(Int(p, 2), tpm),
-                    new Rational(Int(p, 3), tpm),
+                    Int(p, 1) + new Rational(Int(p, 2), RSL),
+                    new Rational(Int(p, 3), RSL),
                     decimal.Parse(p[4])));
                 break;
         }
@@ -89,8 +89,7 @@ public class C2sParser : IParser<C2sChart>
     private static void ParseNote(string[] p, C2sChart chart, List<Alert> alerts, int lineNum)
     {
         var tag = p[0].ToUpperInvariant();
-        var tpm = chart.Resolution;
-        var note = new ChuNote { Type = tag, Time = Int(p, 1) + new Rational(Int(p, 2), tpm) };
+        var note = new ChuNote { Type = tag, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
 
         switch (tag)
         {
@@ -99,10 +98,10 @@ public class C2sParser : IParser<C2sChart>
             case "CHR":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
             case "HLD": case "HXD":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Duration = new Rational(Int(p, 5), tpm); break;
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Duration = new Rational(Int(p, 5), RSL); break;
             case "SLD": case "SLC": case "SXD": case "SXC":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.Duration = new Rational(Int(p, 5), tpm);
+                note.Duration = new Rational(Int(p, 5), RSL);
                 note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
                 break;
             case "FLK":
@@ -113,7 +112,7 @@ public class C2sParser : IParser<C2sChart>
                 break;
             case "AHD": case "AHX":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.TargetNote = Str(p, 5); note.Duration = new Rational(Int(p, 6), tpm);
+                note.TargetNote = Str(p, 5); note.Duration = new Rational(Int(p, 6), RSL);
                 if (p.Length >= 8) note.Tag = Str(p, 7);
                 break;
             case "ASD": case "ASC":
@@ -126,7 +125,7 @@ public class C2sParser : IParser<C2sChart>
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
                 note.TargetNote = Str(p, 5);
                 note.ExtraData = [Int(p, 6), Int(p, 10)];
-                note.Duration = new Rational(Int(p, 7), tpm);
+                note.Duration = new Rational(Int(p, 7), RSL);
                 note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
                 note.Tag = Str(p, 11);
                 break;

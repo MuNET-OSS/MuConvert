@@ -15,6 +15,5 @@ public class UgcChart : BaseChart<ChuNote>, IChuChart
     public string DisplayLevel = "";
     public decimal Level { get; set; }
     public string MusicId { get; set; } = "";
-    public int TicksPerBeat { get; set; } = 480;
     public List<(Rational Time, Rational Duration, decimal Multiplier)> SflList = []; // 所有变速声明构成的列表。
 }

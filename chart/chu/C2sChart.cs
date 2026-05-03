@@ -15,6 +15,5 @@ public class C2sChart : BaseChart<ChuNote>, IChuChart
     public string DisplayLevel { get; set; } = ""; // 显示等级，字符串
     public decimal Level { get; set; } // 定数，小数
     public string MusicId { get; set; } = "0";
-    public int Resolution { get; set; } = 384;
     public List<(Rational Time, Rational Duration, decimal Multiplier)> SflList = []; // 所有变速声明构成的列表。
 }

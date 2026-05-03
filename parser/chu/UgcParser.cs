@@ -13,6 +13,8 @@ namespace MuConvert.chu;
  */
 public class UgcParser : IParser<UgcChart>
 {
+    private static int RSL = 480 * 4;
+    
     private static readonly Dictionary<string, string> AirDirections = new()
     {
         ["UC"] = "AIR",
@@ -144,7 +146,7 @@ public class UgcParser : IParser<UgcChart>
 
             case "@TICKS":
                 if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ticks))
-                    chart.TicksPerBeat = ticks;
+                    RSL = ticks * 4;
                 else
                     alerts.Add(new Alert(Warning, $"@TICKS 格式错误: {line}") { Line = lineNum });
                 break;
@@ -174,8 +176,7 @@ public class UgcParser : IParser<UgcChart>
                     if (TryParseUgcMeasureTick(measureOffset, out var bpmMeasure, out var bpmOffset)
                         && decimal.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
                     {
-                        var tpm = chart.TicksPerBeat * 4;
-                        chart.BpmList.Add(new BPM(bpmMeasure + new Rational(bpmOffset, tpm), bpmValue));
+                        chart.BpmList.Add(new BPM(bpmMeasure + new Rational(bpmOffset, RSL), bpmValue));
                     }
                     else
                     {
@@ -202,8 +203,7 @@ public class UgcParser : IParser<UgcChart>
                     && TryParseUgcMeasureTick(parts[0], out var meas, out var tick)
                     && decimal.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var mult))
                 {
-                    var tpm = chart.TicksPerBeat * 4;
-                    chart.SflList.Add((meas + new Rational(tick, tpm), Rational.Zero, mult));
+                    chart.SflList.Add((meas + new Rational(tick, RSL), Rational.Zero, mult));
                 }
                 else
                     alerts.Add(new Alert(Warning, $"@SPDMOD 格式错误: {line}") { Line = lineNum });
@@ -271,10 +271,9 @@ public class UgcParser : IParser<UgcChart>
             return idx;
         }
 
-        var tpm = chart.TicksPerBeat * 4;
         var note = new ChuNote
         {
-            Time = measure + new Rational(tick, tpm),
+            Time = measure + new Rational(tick, RSL),
         };
 
         var typeChar = char.ToLowerInvariant(code[0]);
@@ -334,7 +333,6 @@ public class UgcParser : IParser<UgcChart>
     private static int ParseHoldNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, UgcChart chart)
     {
         note.Type = "HLD";
-        var tpm = chart.TicksPerBeat * 4;
         ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
 
         bool foundFirst = false;
@@ -347,7 +345,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
             }
 
-            note.Duration += new Rational(duration, tpm);
+            note.Duration += new Rational(duration, RSL);
             idx++;
             foundFirst = true;
         }
@@ -360,7 +358,6 @@ public class UgcParser : IParser<UgcChart>
     private static int ParseSlideNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, UgcChart chart)
     {
         note.Type = "SLD";
-        var tpm = chart.TicksPerBeat * 4;
         ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
 
         bool foundFirst = false;
@@ -373,7 +370,7 @@ public class UgcParser : IParser<UgcChart>
                 break;
             }
 
-            note.Duration += new Rational(duration, tpm);
+            note.Duration += new Rational(duration, RSL);
             note.EndCell = endCell;
             note.EndWidth = endWidth;
             idx++;
@@ -394,7 +391,6 @@ public class UgcParser : IParser<UgcChart>
         if (!TryParseFollowerLine(line, out var duration, out var endCell, out var endWidth)) return false;
 
         // find the last SLD or HLD note and attach duration
-        var tpm = chart.TicksPerBeat * 4;
         for (int i = chart.Notes.Count - 1; i >= 0; i--)
         {
             var n = chart.Notes[i];
@@ -402,11 +398,11 @@ public class UgcParser : IParser<UgcChart>
             {
                 if (n.Type == "SLD")
                 {
-                    n.Duration = new Rational(duration, tpm);
+                    n.Duration = new Rational(duration, RSL);
                     n.EndCell = endCell;
                     n.EndWidth = endWidth;
                 }
-                else n.Duration = new Rational(duration, tpm);
+                else n.Duration = new Rational(duration, RSL);
                 return true;
             }
         }
@@ -497,7 +493,7 @@ public class UgcParser : IParser<UgcChart>
         {
             var durStr = afterCellWidth[(underscoreIdx + 1)..];
             if (int.TryParse(durStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ahdDuration))
-                note.Duration = new Rational(ahdDuration, chart.TicksPerBeat * 4);
+                note.Duration = new Rational(ahdDuration, RSL);
         }
     }
 
@@ -542,8 +538,7 @@ public class UgcParser : IParser<UgcChart>
 
     private static string FormatNoteRef(ChuNote note, UgcChart chart)
     {
-        var tpm = chart.TicksPerBeat * 4;
-        var (m, o) = Utils.BarAndTick(note.Time, tpm, 0);
+        var (m, o) = Utils.BarAndTick(note.Time, RSL, 0);
         return $"#{m}'{o}:{note.Type}";
     }
 }

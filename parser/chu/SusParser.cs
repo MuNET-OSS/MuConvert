@@ -13,6 +13,8 @@ namespace MuConvert.chu;
  */
 public class SusParser : IParser<SusChart>
 {
+    private static int RSL = 480 * 4;
+    
     private static readonly Dictionary<int, string> TypeMap = new()
     {
         [0x01] = "TAP",
@@ -93,7 +95,7 @@ public class SusParser : IParser<SusChart>
         {
             var reqStr = content[8..].Trim().Trim('"');
             if (int.TryParse(reqStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ticks))
-                chart.TicksPerBeat = ticks;
+                RSL = ticks * 4;
             else
                 alerts.Add(new Alert(Warning, $"REQUEST 格式错误: {content}") { Line = lineNum });
         }
@@ -119,7 +121,6 @@ public class SusParser : IParser<SusChart>
 
         var measure = HexToInt(timingStr[..2]);
         var tick = HexToInt(timingStr[2..5]);
-        var tpm = chart.TicksPerBeat * 4;
 
         if (dataStr.Length < 6)
         {
@@ -140,7 +141,7 @@ public class SusParser : IParser<SusChart>
         var note = new ChuNote
         {
             Type = typeName,
-            Time = measure + new Rational(tick, tpm),
+            Time = measure + new Rational(tick, RSL),
             Cell = lane / 2,
             Width = Math.Max(1, width / 2),
         };
@@ -154,20 +155,20 @@ public class SusParser : IParser<SusChart>
                 break;
 
             case "HLD":
-                ParseHoldData(dataStr, note, tpm, alerts, lineNum);
+                ParseHoldData(dataStr, note, RSL, alerts, lineNum);
                 break;
 
             case "SLD":
-                ParseSlideData(dataStr, note, tpm, alerts, lineNum);
+                ParseSlideData(dataStr, note, RSL, alerts, lineNum);
                 break;
 
             case "AIR":
             case "ADW":
-                ParseAirTarget(dataStr, note, tpm, alerts, lineNum);
+                ParseAirTarget(dataStr, note, RSL, alerts, lineNum);
                 break;
 
             case "AHD":
-                ParseAhdData(dataStr, note, tpm, alerts, lineNum);
+                ParseAhdData(dataStr, note, RSL, alerts, lineNum);
                 break;
         }
 
