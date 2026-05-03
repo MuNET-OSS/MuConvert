@@ -12,7 +12,6 @@ namespace MuConvert.chu;
 public class UgcGenerator : IGenerator<IChuChart>
 {
     private const int UgcTicksPerBeat = 480;
-    private const int C2sResolution = 384;
 
     public (string, List<Alert>) Generate(IChuChart chart)
     {
@@ -35,10 +34,8 @@ public class UgcGenerator : IGenerator<IChuChart>
                 Difficulty = c2s.Difficulty,
                 MusicId = c2s.MusicId,
             };
-            foreach (var b in c2s.BpmEvents)
-                result.BpmEvents.Add((b.Measure, ScaleUp(b.Offset), b.Bpm));
-            foreach (var m in c2s.MetEvents)
-                result.BeatEvents.Add((m.Measure, m.Num, m.Denom));
+            result.BpmList.AddRange(c2s.BpmList);
+            result.MetList.AddRange(c2s.MetList);
             result.Notes = c2s.Notes;
             return result;
         }
@@ -46,8 +43,6 @@ public class UgcGenerator : IGenerator<IChuChart>
         alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ UGC")));
         throw new ConversionException(alerts);
     }
-
-    private static int ScaleUp(int v) => (int)((long)v * UgcTicksPerBeat / (C2sResolution / 4));
 
     private static string Serialize(UgcChart ugc)
     {
@@ -63,20 +58,28 @@ public class UgcGenerator : IGenerator<IChuChart>
         sb.AppendLine($"@CONST\t{ugc.Level:F5}");
         sb.AppendLine($"@SONGID\t{ugc.MusicId}");
         sb.AppendLine($"@TICKS\t{ugc.TicksPerBeat}");
-        foreach (var b in ugc.BeatEvents) sb.AppendLine($"@BEAT\t{b.Measure}\t{b.Num}\t{b.Den}");
-        foreach (var b in ugc.BpmEvents) sb.AppendLine($"@BPM\t{b.Measure}'{b.Offset}\t{b.Bpm:F5}");
+        var tpm = ugc.TicksPerBeat * 4;
+        foreach (var met in ugc.MetList)
+        {
+            var (m, _) = Utils.BarAndTick(met.Time, tpm);
+            sb.AppendLine($"@BEAT\t{m}\t{met.Numerator}\t{met.Denominator}");
+        }
+        foreach (var b in ugc.BpmList)
+        {
+            var (m, o) = Utils.BarAndTick(b.Time, tpm);
+            sb.AppendLine($"@BPM\t{m}'{o}\t{b.Bpm:F5}");
+        }
         sb.AppendLine("@TIL\t0\t0'0\t1.00000");
         sb.AppendLine("@MAINTIL\t0");
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
 
-        var tpm = ugc.TicksPerBeat * 4;
         foreach (var n in ugc.Notes)
         {
-            var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
+            var (m, o) = Utils.BarAndTick(n.Time, tpm);
             sb.Append($"#{m}'{o}:{UCode(n, tpm)}");
             sb.AppendLine();
-            var durTicks = Utils.Tick(n.Duration, tpm, 0);
+            var durTicks = Utils.Tick(n.Duration, tpm);
             if (n.Type == "HLD" && durTicks > 0)
                 sb.AppendLine($"#{durTicks}>s");
             else if (n.Type == "SLD" && durTicks > 0)
@@ -88,7 +91,7 @@ public class UgcGenerator : IGenerator<IChuChart>
     private static string UCode(ChuNote n, int tpm)
     {
         string c = Hx(n.Cell), w = Hw(n.Width);
-        var durTicks = Utils.Tick(n.Duration, tpm, 0);
+        var durTicks = Utils.Tick(n.Duration, tpm);
         var targetNote = string.IsNullOrEmpty(n.TargetNote) ? "N" : n.TargetNote;
         return n.Type switch
         {

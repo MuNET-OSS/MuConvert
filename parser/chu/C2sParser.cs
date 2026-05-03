@@ -1,4 +1,5 @@
 using System.Globalization;
+using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
@@ -67,16 +68,20 @@ public class C2sParser : IParser<C2sChart>
     private static void ParseTiming(string[] p, C2sChart chart)
     {
         var tag = p[0].ToUpperInvariant();
+        var tpm = chart.Resolution;
         switch (tag)
         {
             case "BPM":
-                chart.BpmEvents.Add((Int(p, 1), Int(p, 2), Dbl(p, 3, 120.0)));
+                chart.BpmList.Add(new BPM(Int(p, 1) + new Rational(Int(p, 2), tpm), decimal.Parse(p[3])));
                 break;
             case "MET":
-                chart.MetEvents.Add((Int(p, 1), Int(p, 2), Int(p, 3, 4), Int(p, 4, 4)));
+                chart.MetList.Add(new MET(Int(p, 1) + new Rational(Int(p, 2), tpm), Int(p, 4, 4), Int(p, 3, 4)));
                 break;
             case "SFL":
-                chart.SflEvents.Add((Int(p, 1), Int(p, 2), Int(p, 3), Dbl(p, 4, 1.0)));
+                chart.SflList.Add((
+                    Int(p, 1) + new Rational(Int(p, 2), tpm),
+                    new Rational(Int(p, 3), tpm),
+                    decimal.Parse(p[4])));
                 break;
         }
     }
@@ -144,6 +149,5 @@ public class C2sParser : IParser<C2sChart>
     }
 
     private static int Int(string[] p, int i, int def = 0) => i < p.Length && int.TryParse(p[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : def;
-    private static double Dbl(string[] p, int i, double def = 0) => i < p.Length && double.TryParse(p[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : def;
     private static string Str(string[] p, int i) => i < p.Length ? p[i] : "";
 }

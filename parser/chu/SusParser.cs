@@ -1,4 +1,5 @@
 using System.Globalization;
+using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
@@ -84,7 +85,7 @@ public class SusParser : IParser<SusChart>
         {
             var bpmStr = content[8..].Trim().Trim('"');
             if (double.TryParse(bpmStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpm))
-                chart.BpmEvents.Add((0, 0, bpm));
+                chart.BpmList.Add(new BPM(0, (decimal)bpm));
             else
                 alerts.Add(new Alert(Warning, $"BPM_DEF 格式错误: {content}") { Line = lineNum });
         }

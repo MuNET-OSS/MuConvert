@@ -69,19 +69,69 @@ public class ChuTests
     }
 
     /// <summary>
-    /// Compares UGC-side notes to C2S-side notes in C2S tick space (384): snapshots of
-    /// <see cref="UgcNoteScaledToC2sTicks"/> for each <paramref name="ugc"/> note vs snapshots of <paramref name="c2s"/> notes.
-    /// Use with <c>UgcToC2sViaGenerator</c> (source UGC, C2S from generate+parse) or <c>C2sToUgcViaGenerator</c> (UGC from generate+parse, source C2S).
+    /// 将 UGC 网格上的 <see cref="ChuNote"/> 的 Time / Duration 投影为「经 C2S 生成器写出再解析」后等价的分数（C2S 小节 tick = <paramref name="c2sResolution"/>）。
+    /// </summary>
+    private static ChuNote UgcNoteScaledToC2sTicks(ChuNote n, int ugcTicksPerBeat, int c2sResolution)
+    {
+        var tpmUgc = ugcTicksPerBeat * 4;
+        var (m, oU) = Utils.BarAndTick(n.Time, tpmUgc, 0);
+        var oC = (int)((long)oU * c2sResolution / tpmUgc);
+        var time = m + new Rational(oC, c2sResolution);
+        var dur = new Rational(Utils.Tick(n.Duration, c2sResolution, 0), c2sResolution);
+        return CloneChuNoteWithTiming(n, time, dur);
+    }
+
+    /// <summary>
+    /// 将 C2S 网格上的音符投影为「经 UGC 生成器写出再解析」后等价的分数（UGC 小节 tick = <paramref name="ugcTicksPerBeat"/> × 4）。
+    /// </summary>
+    private static ChuNote C2sNoteScaledToUgcTicks(ChuNote n, int ugcTicksPerBeat, int c2sResolution)
+    {
+        var tpmUgc = ugcTicksPerBeat * 4;
+        var (m, oC) = Utils.BarAndTick(n.Time, c2sResolution, 0);
+        var oU = (int)((long)oC * tpmUgc / c2sResolution);
+        var time = m + new Rational(oU, tpmUgc);
+        var dur = new Rational(Utils.Tick(n.Duration, tpmUgc, 0), tpmUgc);
+        return CloneChuNoteWithTiming(n, time, dur);
+    }
+
+    private static ChuNote CloneChuNoteWithTiming(ChuNote n, Rational time, Rational duration) => new()
+    {
+        Type = n.Type,
+        Time = time,
+        Cell = n.Cell,
+        Width = n.Width,
+        Duration = duration,
+        EndCell = n.EndCell,
+        EndWidth = n.EndWidth,
+        TargetNote = n.TargetNote,
+        Tag = n.Tag,
+        ExtraData = [..n.ExtraData],
+    };
+
+    /// <summary>
+    /// 比较 UGC 与 C2S 的音符 IR：因 tick 网格不同，在各自「经对方格式写回再解析」的量化意义下比较快照。
     /// </summary>
     private static void AssertUgcNotesEquivalentToReparsedC2s(UgcChart ugc, C2sChart c2s, bool isUgcReference)
     {
-        var ugcSnaps = ugc.Notes
-            .Select(SnapshotNote)
-            .OrderBy(s => s)
-            .ToArray();
-        var c2sSnaps = c2s.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();
-        if (isUgcReference) Assert.Equal(ugcSnaps, c2sSnaps);
-        else Assert.Equal(c2sSnaps, ugcSnaps);
+        var res = c2s.Resolution;
+        if (isUgcReference)
+        {
+            var ugcSnaps = ugc.Notes
+                .Select(n => SnapshotNote(UgcNoteScaledToC2sTicks(n, ugc.TicksPerBeat, res)))
+                .OrderBy(s => s)
+                .ToArray();
+            var c2sSnaps = c2s.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();
+            Assert.Equal(ugcSnaps, c2sSnaps);
+        }
+        else
+        {
+            var ugcSnaps = ugc.Notes.Select(SnapshotNote).OrderBy(s => s).ToArray();
+            var c2sSnaps = c2s.Notes
+                .Select(n => SnapshotNote(C2sNoteScaledToUgcTicks(n, ugc.TicksPerBeat, res)))
+                .OrderBy(s => s)
+                .ToArray();
+            Assert.Equal(c2sSnaps, ugcSnaps);
+        }
     }
 
     [Fact]

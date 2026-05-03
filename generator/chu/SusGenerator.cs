@@ -1,4 +1,5 @@
 using System.Text;
+using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -30,16 +31,18 @@ public class SusGenerator : IGenerator<IChuChart>
 
         if (chart is C2sChart c2s)
         {
-            bpm = c2s.BpmEvents[0].Bpm;
+            bpm = c2s.BpmList.Count > 0 ? (double)c2s.BpmList[0].Bpm : 120.0;
             var result = new SusChart { TicksPerBeat = SusTpb, Title = title, Artist = artist };
+            result.BpmList.Add(new BPM(0, (decimal)bpm));
             result.Notes = c2s.Notes;
             return result;
         }
 
         if (chart is UgcChart ugc)
         {
-            bpm = ugc.BpmEvents.Count > 0 ? ugc.BpmEvents[0].Bpm : 120.0;
+            bpm = ugc.BpmList.Count > 0 ? (double)ugc.BpmList[0].Bpm : 120.0;
             var result = new SusChart { TicksPerBeat = SusTpb, Title = ugc.Title, Artist = ugc.Artist };
+            result.BpmList.Add(new BPM(0, (decimal)bpm));
             result.Notes = ugc.Notes;
             return result;
         }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using MuConvert.chart;
 using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
@@ -138,7 +139,7 @@ public class UgcParser : IParser<UgcChart>
                     && int.TryParse(beatParts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatNum)
                     && int.TryParse(beatParts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatDen))
                 {
-                    chart.BeatEvents.Add((beatMeasure, beatNum, beatDen));
+                    chart.MetList.Add(new MET(beatMeasure, beatNum, beatDen));
                 }
                 else
                 {
@@ -157,9 +158,10 @@ public class UgcParser : IParser<UgcChart>
                     if (apostropheIdx > 0
                         && int.TryParse(measureOffset[..apostropheIdx], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmMeasure)
                         && int.TryParse(measureOffset[(apostropheIdx + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var bpmOffset)
-                        && double.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
+                        && decimal.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
                     {
-                        chart.BpmEvents.Add((bpmMeasure, bpmOffset, bpmValue));
+                        var tpm = chart.TicksPerBeat * 4;
+                        chart.BpmList.Add(new BPM(bpmMeasure + new Rational(bpmOffset, tpm), bpmValue));
                     }
                     else
                     {
@@ -176,15 +178,15 @@ public class UgcParser : IParser<UgcChart>
             case "@VER": case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
-            case "@MAINTIL":
+            case "@MAINTIL": case "@TIL":
                 break;
 
-            case "@TIL": case "@SPDMOD":
+            case "@SPDMOD":
                 {
                     var parts = value.Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length >= 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tilMeasure)
                         && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var tilMult))
-                        chart.SpeedEvents.Add((tilMeasure, 0, tilMult));
+                        chart.SflList.Add((tilMeasure, Rational.Zero, (decimal)tilMult));
                 }
                 break;
 

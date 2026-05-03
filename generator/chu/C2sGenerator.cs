@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -12,8 +13,6 @@ namespace MuConvert.chu;
  */
 public class C2sGenerator : IGenerator<IChuChart>
 {
-    private const int C2sResolution = 384;
-
     public (string, List<Alert>) Generate(IChuChart chart)
     {
         var alerts = new List<Alert>();
@@ -32,10 +31,8 @@ public class C2sGenerator : IGenerator<IChuChart>
             {
                 Designer = ugc.Designer,
             };
-            foreach (var b in ugc.BpmEvents)
-                result.BpmEvents.Add((b.Measure, ScaleDown(b.Offset, ugc.TicksPerBeat), b.Bpm));
-            foreach (var b in ugc.BeatEvents)
-                result.MetEvents.Add((b.Measure, 0, b.Den, b.Num));
+            result.BpmList.AddRange(ugc.BpmList);
+            result.MetList.AddRange(ugc.MetList);
             result.Notes = ugc.Notes;
             return result;
         }
@@ -43,7 +40,10 @@ public class C2sGenerator : IGenerator<IChuChart>
         if (chart is SusChart sus)
         {
             var result = new C2sChart();
-            // result.BpmEvents.Add((0, 0, sus.Bpm));
+            if (sus.BpmList.Count > 0)
+                result.BpmList.AddRange(sus.BpmList);
+            else
+                result.BpmList.Add(new BPM(0, 120m));
             result.Notes = sus.Notes;
             return result;
         }
@@ -51,8 +51,6 @@ public class C2sGenerator : IGenerator<IChuChart>
         alerts.Add(new Alert(Error, string.Format(Locale.ChuGeneratorUnsupported, "→ C2S")));
         throw new ConversionException(alerts);
     }
-
-    private static int ScaleDown(int ticks, int tpb) => (int)((long)ticks * (C2sResolution / 4) / tpb);
 
     private static string Serialize(C2sChart chart)
     {
@@ -76,12 +74,25 @@ public class C2sGenerator : IGenerator<IChuChart>
         sb.AppendLine("TUTORIAL\t0");
         sb.AppendLine();
 
-        foreach (var b in chart.BpmEvents)
-            sb.AppendLine($"BPM\t{b.Measure}\t{b.Offset}\t{Fmt(b.Bpm)}");
-        foreach (var m in chart.MetEvents)
-            sb.AppendLine($"MET\t{m.Measure}\t{m.Offset}\t{m.Denom}\t{m.Num}");
-        foreach (var s in chart.SflEvents)
-            sb.AppendLine($"SFL\t{s.Measure}\t{s.Offset}\t{s.Duration}\t{Mlt(s.Multiplier)}");
+        var res = chart.Resolution;
+        foreach (var b in chart.BpmList)
+        {
+            var (m, o) = Utils.BarAndTick(b.Time, res);
+            sb.AppendLine($"BPM\t{m}\t{o}\t{b.Bpm:0.000}");
+        }
+
+        foreach (var met in chart.MetList)
+        {
+            var (m, o) = Utils.BarAndTick(met.Time, res);
+            sb.AppendLine($"MET\t{m}\t{o}\t{met.Denominator}\t{met.Numerator}");
+        }
+
+        foreach (var s in chart.SflList.OrderBy(s => s.Time))
+        {
+            var (m, o) = Utils.BarAndTick(s.Time, res);
+            var durTicks = Utils.Tick(s.Duration, res);
+            sb.AppendLine($"SFL\t{m}\t{o}\t{durTicks}\t{s.Multiplier:0.000000}");
+        }
         sb.AppendLine();
 
         foreach (var n in chart.Notes)
@@ -93,8 +104,8 @@ public class C2sGenerator : IGenerator<IChuChart>
 
     private static string FormatNote(ChuNote n, int tpm)
     {
-        var (m, o) = Utils.BarAndTick(n.Time, tpm, 0);
-        var durTicks = Utils.Tick(n.Duration, tpm, 0);
+        var (m, o) = Utils.BarAndTick(n.Time, tpm);
+        var durTicks = Utils.Tick(n.Duration, tpm);
         return n.Type switch
         {
             "TAP" => $"TAP\t{m}\t{o}\t{n.Cell}\t{n.Width}",
@@ -132,7 +143,4 @@ public class C2sGenerator : IGenerator<IChuChart>
         var tail = n.ExtraData.Count > 3 ? n.ExtraData[3] : 0;
         return $"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{a}\t{b}\t{c}\t{n.EndCell}\t{n.EndWidth}\t{tail}";
     }
-
-    private static string Fmt(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
-    private static string Mlt(double v) => v.ToString("0.000000", CultureInfo.InvariantCulture);
 }

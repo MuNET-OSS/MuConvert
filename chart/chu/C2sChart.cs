@@ -1,4 +1,5 @@
 using MuConvert.chart;
+using Rationals;
 
 namespace MuConvert.chu;
 
@@ -15,7 +16,5 @@ public class C2sChart : BaseChart<ChuNote>, IChuChart
     public decimal Level { get; set; } // 定数，小数
     public string MusicId { get; set; } = "0";
     public int Resolution { get; set; } = 384;
-    public List<(int Measure, int Offset, double Bpm)> BpmEvents = [];
-    public List<(int Measure, int Offset, int Denom, int Num)> MetEvents = [];
-    public List<(int Measure, int Offset, int Duration, double Multiplier)> SflEvents = [];
+    public List<(Rational Time, Rational Duration, decimal Multiplier)> SflList = []; // 所有变速声明构成的列表。
 }
