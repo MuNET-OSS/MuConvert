@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
+using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
 
 namespace MuConvert.mai;
 
-public abstract class Note
+public abstract class Note: BaseNote
 {
     public readonly MaiChart Chart;
-    public Rational Time { get; set => field = value.CanonicalForm; }
     protected int _key;
     
     public bool IsBreak;
@@ -65,7 +65,7 @@ public abstract class Note
     
     internal virtual string DebuggerDisplay() => "";
 
-    public virtual Rational EndTime => Time + Duration.Bar;
+    public override Rational EndTime => Time + Duration.Bar;
 }
 
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]

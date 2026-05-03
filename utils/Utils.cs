@@ -63,6 +63,11 @@ internal static class ExtensionUtils
         return r.WholePart + (r.FractionPart == 0 ? 0 : 1);
     }
     
+    public static Rational Sum(this IEnumerable<Rational> source)
+    {
+        return source.Aggregate(Rational.Zero, (acc, r) => acc + r);
+    }
+    
     internal static Dictionary<K, V> RemoveRange<K, V>(this Dictionary<K, V> dict, IEnumerable<K> keys) where K : notnull
     {
         foreach (var key in keys) dict.Remove(key);
