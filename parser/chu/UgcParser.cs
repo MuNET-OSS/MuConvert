@@ -239,10 +239,6 @@ public class UgcParser : IParser<ChuChart>
         if (line.StartsWith('\'') || line.StartsWith('@'))
             return idx;
 
-        // standalone follower line: silently skip (will be attached by parent or ignored)
-        if (line.StartsWith('#') && !line.Contains(':') && (line.Contains(">s") || line.Contains(">c")))
-            return idx;
-
         var colonIdx = line.IndexOf(':');
         if (colonIdx < 0)
         {
