@@ -79,4 +79,18 @@ internal static class ExtensionUtils
         foreach (var (k, v) in dict2) dict[k] = v;
         return dict;
     }
+
+    internal static void SetFirst<T>(this List<T> list, T? item)
+    {
+        if (item != null)
+        {
+            if (list.Count == 0) list.Add(item);
+            else list[0] = item;
+        }
+        else
+        {
+            if (list.Count == 1) list.RemoveAt(0);
+            else if (list.Count > 1) list[0] = item!; // item是null，所以直接赋值进去就是null了
+        }
+    }
 }

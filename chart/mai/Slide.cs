@@ -18,7 +18,11 @@ public class Star : Tap
 [DebuggerDisplay("{DebuggerDisplay(),nq}")]
 public class Slide : Note
 {
-    public Tap? OwnHead; // 属于自己的星星头。只有在SharedHeadWith=null的那根星星上应该设置此项，否则直接通过SharedHeadWith链过去即可
+    public Tap? OwnHead // 属于自己的星星头。同头星星的情况下，只有在SharedHeadWith=null的那一根星星上应该设置此项，其他的都直接通过SharedHeadWith链过去即可。
+    {
+        get => Children.FirstOrDefault() as Tap;
+        set => Children.SetFirst(value);
+    } 
     // PS: 根据simai语法，星星头既可以是普通的星星形状(1-5)，也可以是Tap形状的(1@-5)，也可以没有(1?-5或1!-5)
     public Slide? SharedHeadWith;
     public List<SlideSegment> segments = new();

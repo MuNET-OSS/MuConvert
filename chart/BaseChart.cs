@@ -105,7 +105,20 @@ public abstract class BaseChart<TNote>: IBaseChart where TNote: BaseNote
         MetList = MetList.Select(x => x with { Time = x.Time + offset }) // 同上
             .Skip(MetList.Count(x => x.Time <= 0) - 1)
             .Select((x, i) => i == 0 ? x with { Time = 0 } : x).ToList();
-        // Notes，直接丢弃所有负数项即可
-        Notes = Notes.Select(x => { x.Time += offset; return x; }).Where(x => x.Time >= 0).ToList();
+        
+        // Notes，时间加上offset，但注意需要对children进行递归操作
+        HashSet<BaseNote> processed = [];
+        Notes = Notes.Where(x => addOffset(x).Time >= 0).ToList();
+        
+        BaseNote addOffset(BaseNote note)
+        {
+            if (!processed.Contains(note))
+            {
+                note.Time += offset;
+                processed.Add(note);
+                foreach (var child in note.Children) addOffset(child);
+            }
+            return note;
+        }
     }
 }
