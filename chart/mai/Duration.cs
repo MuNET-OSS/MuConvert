@@ -45,7 +45,7 @@ public class Duration
                 case Type.Bar:
                     return _data;
                 case Type.InvariantBar:
-                    return ConvertTime(_data, (Rational)InvariantBpm, null);
+                    return ConvertTime(_data, InvariantBpm, null);
                 case Type.Seconds:
                     return ConvertTime(_data, 240, null); // seconds秒数可以等效为240bpm下的小节数
                 default:
@@ -68,9 +68,9 @@ public class Duration
                 case Type.InvariantBar:
                     return _data;
                 case Type.Bar:
-                    return ConvertTime(_data, null, (Rational)InvariantBpm);
+                    return ConvertTime(_data, null, InvariantBpm);
                 case Type.Seconds:
-                    return ConvertTime(_data, 240, (Rational)InvariantBpm); // seconds秒数可以等效为240bpm下的小节数
+                    return ConvertTime(_data, 240, InvariantBpm); // seconds秒数可以等效为240bpm下的小节数
                 default:
                     throw new InvalidOperationException();
             }
@@ -93,7 +93,7 @@ public class Duration
                 case Type.Bar:
                     return ConvertTime(_data, null, 240); // seconds秒数可以等效为240bpm下的小节数
                 case Type.InvariantBar:
-                    return ConvertTime(_data, (Rational)InvariantBpm, 240);
+                    return ConvertTime(_data, InvariantBpm, 240);
                 default:
                     throw new InvalidOperationException();
             }
@@ -105,69 +105,14 @@ public class Duration
         }
     }
 
-    /**
-     * 用于在不同格式的时间数值之间转换的函数。
-     *
-     * 首先指出一个重要原理：Seconds格式下以秒为单位的时间，在数值上实际等价于 240bpm下的不变小节时间。这就是为什么可以构造一个通用的转换函数的原理。
-     *
-     * <param name="value">要被转换的时间值</param>
-     * <param name="srcBpm">指定value所对应的源bpm。若为None，表示使用BPMList中动态的bpm(对应把Bar转换为其他类型的情况)</param>
-     * <param name="dstBpm">转换的目标bpm。若为None，表示使用BPMList中动态的bpm(对应把其他类型转换为Bar的情况)</param>
-     */
-    private Rational ConvertTime(Rational value, Rational? srcBpm, Rational? dstBpm)
+    private Rational ConvertTime(Rational value, decimal? srcBpm, decimal? dstBpm)
     {
         var startTime = _note.Time;
         if (_note is Slide slide && slide.WaitTime != this)
         { // 如果我不是WaitTime，则我是Duration，则应加上等待时间
             startTime += slide.WaitTime.Bar;
         }
-        return ConvertTime(startTime, value, srcBpm, dstBpm, BpmList);
-    }
-    
-    internal static Rational ConvertTime(Rational startTime, Rational value, Rational? srcBpm, Rational? dstBpm, BPMList bpmList)
-    {
-        if (srcBpm != null && dstBpm != null)
-        {
-            // 静态的src和dst，直接算一下即可，无需遍历bpm表
-            return (value * (dstBpm.Value / srcBpm.Value)).CanonicalForm;
-        }
-        else
-        {
-            var rangeStart = startTime;
-            var bpmIndex = bpmList.FindIndex(rangeStart);
-            Rational result = 0;
-            Rational remain = value;
-            while (remain > 0)
-            {
-                // 当前所处bpm区间的结束位置。如果当前已经是最后一个区间了，则结束位置写成一个很大的数就可以了，反正本轮remain一定会被清空
-                var bpmRangeEnd = bpmIndex < bpmList.Count - 1 ? bpmList[bpmIndex + 1].Time : 9999999;
-                // 本区间可以消耗掉remain的最大数量，以src的bpm为单位。
-                Rational curRangeCapacity = bpmRangeEnd - rangeStart;
-                
-                var srcBpmNow = srcBpm; // 每次循环要复制一份srcBpm，不然直接改了srcBpm的话，再次循环时逻辑就不对了
-                var dstBpmNow = dstBpm;
-                if (srcBpmNow == null)
-                { // 如果srcBpm传入的是None，说明应该使用当前的实时bpm作为srcBpm
-                    srcBpmNow = (Rational)bpmList[bpmIndex].Bpm;
-                    // 此时capacity已经是以srcBpm为单位了，无需再转换
-                }
-                else if (dstBpmNow == null)
-                {
-                    dstBpmNow = (Rational)bpmList[bpmIndex].Bpm;
-                    // 此时capacity是基于可变bpm即dstBpm的，需要换算到srcBpm上
-                    curRangeCapacity *= (srcBpmNow.Value / dstBpmNow.Value);
-                }
-
-                Rational toSubtract = curRangeCapacity < remain ? curRangeCapacity : remain; // 要从remain中减掉的量，应该是（剩余量，本bpm区间允许消耗量）的最小值
-                remain -= toSubtract;
-                result += toSubtract * (dstBpmNow!.Value / srcBpmNow.Value);
-                
-                bpmIndex += 1;
-                rangeStart = bpmRangeEnd;
-            }
-
-            return result.CanonicalForm;
-        }
+        return BpmList.ConvertTime(startTime, value, srcBpm, dstBpm);
     }
     
     public static Duration operator +(Duration a, Duration b)

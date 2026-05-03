@@ -58,19 +58,10 @@ GENERATED_BY	MuConvert v{8}
     /**
      * 把Rational的时间近似到RESOLUTION允许的最接近tick上
      */
-    private (int, int) BT(Rational r, int offset = 0)
-    {
-        if (offset != 0) r += new Rational(offset, RSL);
-        return ((int)r.WholePart, (int)Math.Round((double)(r.FractionPart * RSL)));
-    }
+    private (int, int) BT(Rational r, int offset = 0) => Utils.BarAndTick(r, RSL, offset);
 
     // 持续时间/等待时间，使用"总tick数"（可超过1小节），不是小节内tick
-    protected int T(Rational r, int offset = 0)
-    {
-        var result = (int)Math.Round((double)(r* RSL));
-        if (offset != 0) result = Math.Max(result + offset, result > 0 ? 1 : 0);
-        return result;
-    }
+    protected int T(Rational r, int offset = 0) => Utils.Tick(r, RSL, offset, r > 0 ? 1 : 0);
     protected int T(int bar, int tick) => bar * RSL + tick;
     protected int T(MA2Line ma2Line) => T(ma2Line.Bar, ma2Line.Tick);
 

@@ -12,8 +12,19 @@ public class ChartShift测试
 {
     private static readonly Rational QuarterBar = new(1, 4);
 
-    private static List<(Rational Time, int FalseEachIdx)> NotesInStableOrder(MaiChart c) =>
-        c.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx).Select(n => (n.Time, n.FalseEachIdx)).ToList();
+    private static List<(Rational Time, int FalseEachIdx)> NotesInStableOrder(MaiChart c)
+    {
+        List<(Rational Time, int FalseEachIdx)> result = [];
+        foreach (var n in c.Notes.OrderBy(n => n.Time).ThenBy(n => n.FalseEachIdx))
+        {
+            result.Add((n.Time, n.FalseEachIdx));
+            if (n is Slide slide && slide.OwnHead != null)
+            {
+                result.Add((slide.OwnHead.Time, slide.OwnHead.FalseEachIdx));
+            }
+        }
+        return result;
+    }
 
     private static List<BPM> BpmInOrder(MaiChart c) => c.BpmList.OrderBy(x => x.Time).ToList();
 
