@@ -38,4 +38,44 @@ public class OgkChart: BaseChart<OgkNote>
     
     // 部分谱面中会有，上方的敌人在上面进行水平方向的移动的情况。
     public List<EnemyMovement> EnemyMovements = [];
+
+    public override decimal StartTime => Math.Min(base.StartTime, (decimal)ToSecond(Bullets.First().Time));
+    public override decimal EndTime => Math.Max(base.EndTime, (decimal)ToSecond(Bullets.Last().Time));
+    public override int TotalNotes => throw new NotImplementedException();
+
+    public override void Sort()
+    {
+        base.Sort();
+        // 在base通用实现的基础上，额外排序我们自己新增的四个字段
+        Lanes = Lanes.OrderBy(x => x.Time).ToList();
+        Bullets = Bullets.OrderBy(x => x.Time).ToList();
+        EnemyList.Sort();
+        EnemyMovements = EnemyMovements.OrderBy(x => x.Time).ToList();
+    }
+
+    public override void Shift(Rational offset, decimal? bpm = null)
+    {
+        bpm ??= StartBpm;
+        offset = _calcOffsetForShift(offset, bpm.Value);
+        
+        base.Shift(offset, bpm);
+        // 在base通用实现的基础上，额外移动我们自己新增的四个字段
+        Lanes = Lanes.Where(x => addOffset(x).Time >= 0).ToList();
+        EnemyList = EnemyList.Select(x => x with {Time = x.Time + offset}).Where(x=>x.Time >= 0).ToList();
+        EnemyMovements = EnemyMovements.Where(x => addOffset(x).Time >= 0).ToList();
+        
+        foreach (var bul in Bullets)
+        {
+            if (bul is Bullet bullet) bullet.Time += offset;
+            else if (bul is Beam beam) beam.Points = beam.Points.Select(x => x with { Time = x.Time + offset }).ToList();
+            else throw Utils.Fail();
+        }
+        Bullets = Bullets.Where(x => x.Time >= 0).ToList();
+        
+        T addOffset<T>(T lane)where T: OgkBaseLane<OgkLanePoint>
+        {
+            lane.Points = lane.Points.Select(x => x with {Time = x.Time + offset}).ToList();
+            return lane;
+        }
+    }
 }

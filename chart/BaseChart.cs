@@ -120,16 +120,7 @@ public abstract class BaseChart<TNote>: IBaseChart where TNote: BaseNote
     public virtual void Shift(Rational offset, decimal? bpm = null)
     {
         bpm ??= StartBpm;
-        
-        if (offset < 0)
-        { // 向前平移。此时存在的一种极端情况就是指定的区间跨过了多个BPM区间。
-            // 传入的bpm参数本质是一种写死的InvariantBar，因此要把它转为可变Bar，才是真正的要去应用的offset。
-            offset = -BpmList.ConvertTime(0, -offset, bpm, null);
-        }
-        else if (offset > 0)
-        { // 向后平移。需要把传入的offset的量换算到乐曲开头BPM下，才是真正的量。
-            offset = offset * (Rational)StartBpm / (Rational)bpm;
-        }
+        offset = _calcOffsetForShift(offset, bpm.Value);
 
         // 对BpmList和MetList的处理：需要确保首项为0
         BpmList = new BPMList(BpmList.Select(x => x with { Time = x.Time + offset })
@@ -159,5 +150,19 @@ public abstract class BaseChart<TNote>: IBaseChart where TNote: BaseNote
             }
             return note;
         }
+    }
+
+    protected Rational _calcOffsetForShift(Rational offset, decimal bpm)
+    {
+        if (offset < 0)
+        { // 向前平移。此时存在的一种极端情况就是指定的区间跨过了多个BPM区间。
+            // 传入的bpm参数本质是一种写死的InvariantBar，因此要把它转为可变Bar，才是真正的要去应用的offset。
+            offset = -BpmList.ConvertTime(0, -offset, bpm, null);
+        }
+        else if (offset > 0)
+        { // 向后平移。需要把传入的offset的量换算到乐曲开头BPM下，才是真正的量。
+            offset = offset * (Rational)StartBpm / (Rational)bpm;
+        }
+        return offset;
     }
 }

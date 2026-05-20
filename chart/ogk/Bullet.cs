@@ -7,6 +7,7 @@ namespace MuConvert.ogk;
 public interface IBullet
 {
     public BulletPallete? Detail { get; set; }
+    public Rational Time { get; }
 }
 
 /**
@@ -32,7 +33,7 @@ public class Bullet: IBullet
     public BulletPallete Detail { get; set; } = new();
 #pragma warning restore CS8767
     
-    public Rational Time;
+    public Rational Time { get; set; }
     public int Pos;
 
     public BulletDamage Damage = BulletDamage.NML;
