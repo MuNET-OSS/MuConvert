@@ -356,3 +356,12 @@ public sealed class FooGenerator : IGenerator<MaiChart>
    - 详见上文[多语言(i18n)相关](#多语言i18n相关)部分的说明。
 7. **CLI**（可选）：如需实现CLI，可在`Program.cs`中增加相应的功能。
 
+### Ongeki谱面的数据结构实现
+- 关于ogkr格式中各种指令的含义，可参考[ogkr格式详解](https://github.com/MikiraSora/OngekiFumianDescription/blob/master/ongeki.md)和[补充说明](https://github.com/MikiraSora/OngekiFumianDescription/blob/master/description.md)。
+- ogkr格式当中，大量的采用列举Pallete列表+使用ID引用具体的数据的实现方式。
+  - 例如子弹`BLT`指令，要通过`strId`引用`[B_PALLETE]`中内容，Tap、Hold等音符需要通过`groupId`引用`Lane`相关的内容，等
+- 而我们的数据结构实现的过程中，采用直接的对象引用而不是ID字符串引用；同时对于`BulletPallete`和`Lane`，谱面数据结构中**不会保存其ID**。
+- 因此，推荐的做法是：
+  - 在Parser的解析过程中，在Parser内部缓存ID和具体对象的映射关系，每次解析完一个`[B_PALLETE]`或`Lane`对象时就把它放进该内部缓存中，以供后面解析具体的`BLT`、Tap时直接找到对象。
+  - 在Generator的生成过程中，也是在内部建立缓存、为每个相关对象编好ID，然后生成引用这些对象的具体音符的时候直接写入编号。
+  - 也就是说，**ID相关的逻辑应当由Parser和Generator内部自行实现，谱面数据结构中不会保存ID。**
