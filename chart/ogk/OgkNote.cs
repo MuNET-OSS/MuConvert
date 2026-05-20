@@ -26,8 +26,8 @@ public class Tap: OgkNote
 
 public class Hold : Tap
 {
-    public override Rational EndTime { get; set; }
-    public Rational EndPos;
+    public override Rational EndTime { get; set => field = value.CanonicalForm; }
+    public Rational EndPos { get; set; }
 }
 
 public class Flick : OgkNote

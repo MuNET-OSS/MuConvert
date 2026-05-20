@@ -28,7 +28,9 @@ public record BulletPallete(
 
 public class Bullet: IBullet
 {
+#pragma warning disable CS8767 // Bullet中的Detail是不能为null的
     public BulletPallete Detail { get; set; } = new();
+#pragma warning restore CS8767
     
     public Rational Time;
     public int Pos;
