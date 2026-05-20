@@ -197,5 +197,5 @@ public record TestInput(string Maidata, int LevelId)
         }
     }
     
-    public override string ToString() => $"{Path.GetFileName(Path.GetDirectoryName(Maidata))}-lv{LevelId}";
+    public override string ToString() => $"{Path.GetFileName(Dir)}-lv{LevelId}";
 }
