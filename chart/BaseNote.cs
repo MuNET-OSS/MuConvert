@@ -12,9 +12,13 @@ public abstract class BaseNote
     /**
      * 音符的结束时刻。以小节为单位（分数时间）
      *
-     * 默认实现中实现为等于开始时刻（瞬间音符，没有持续时间）。有持续时间的音符应当重写此属性。
+     * 默认实现中实现为等于开始时刻（瞬间音符，没有持续时间），且该属性只能get不能set。有持续时间的音符应当重写此属性。
      */
-    public virtual Rational EndTime => Time;
+    public virtual Rational EndTime
+    {
+        get => Time;
+        set => throw new InvalidOperationException("Cannot directly manipulate Note's EndTime. You may want to manipulate the 'Duration' property on the note.");
+    }
     
     /**
      * 如果有某个音符，包含另一个/一些音符作为子音符，这些子音符本身不会出现在Chart的Notes列表内：

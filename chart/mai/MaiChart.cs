@@ -1,22 +1,10 @@
 using MuConvert.chart;
-using MuConvert.utils;
-using Rationals;
 
 namespace MuConvert.mai;
 
 public class MaiChart: BaseChart<Note>
 {
     public string DefaultTouchSize = "M1";
-
-    public int ClockCount
-    {
-        get => ExplicitClocks?.Count ?? field;
-        set
-        {
-            field = value;
-            ExplicitClocks = null;
-        }
-    } = 4;
 
     /**
      * 获得谱面开始的时刻（即谱面中第一个音符的开始时刻）。
@@ -33,14 +21,6 @@ public class MaiChart: BaseChart<Note>
         note is Slide { segments.Count: > 1 }); // 星星段数大于1（fes星星）
 
     public Statistics Statistics => new(this);
-    
-    /**
-     * 这是MA2语句中，通过CLK指令所显式指定的哒哒哒哒的时刻。
-     * 一般来说极少会用到，这里只是忠实地记录一下；一方面符合我们“0信息损失”的原则、忠实地记录铺面中的信息；
-     * 另一方面，可以用作ClockCount自动推导的来源之一。
-     * 普通用户理论上极少会用到这个东西。
-     */
-    public List<Rational>? ExplicitClocks;
 
     protected override IEnumerable<Note> SortNotes()
     {

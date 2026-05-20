@@ -5,6 +5,9 @@ using Rationals;
 
 namespace MuConvert.mai;
 
+/**
+ * maimai的Note基类
+ */
 public abstract class Note: BaseNote
 {
     public readonly MaiChart Chart;
