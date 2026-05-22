@@ -25,7 +25,7 @@ public class ColorfulLane() : Lane(LaneType.Colorful)
 }
 
 // 这里的Start，是相对于Wall的开始时刻的！不是绝对时间！
-public record Block(Rational Start, Rational Duration, int Pos, int EndPos);
+public record Block(Rational Start, Rational Duration, Rational Pos, Rational EndPos);
 
 public class Wall() : Lane(LaneType.Wall)
 {

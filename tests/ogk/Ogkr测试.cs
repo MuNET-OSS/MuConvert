@@ -1,5 +1,6 @@
 using System.Text;
 using MuConvert.ogk;
+using MuConvert.utils;
 using Xunit.Abstractions;
 
 namespace MuConvert.Tests.ogk;
@@ -21,6 +22,12 @@ public class Ogkr测试
         var (chart, parseAlerts) = new OgkrParser().Parse(ogkrText);
         var (resultText, generateAlerts) = new OgkrGenerator().Generate(chart);
 
+        // 转出来的IR的基本健全性检查
+        Assert.NotEmpty(chart.BpmList);
+        Assert.True(chart.BpmList[0].Time == 0, "BpmList首项必须为0时刻");
+        Assert.NotEmpty(chart.Notes);
+        Assert.DoesNotContain(parseAlerts, a => a.Level == Alert.LEVEL.Error);
+        
         _output.WriteLine(string.Join('\n', parseAlerts));
         _output.WriteLine(string.Join('\n', generateAlerts));
         
