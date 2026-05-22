@@ -12,6 +12,9 @@ public class Ogkr测试
     public Ogkr测试(ITestOutputHelper output) => _output = output;
 
     public static IEnumerable<object[]> GetTestInputs(string dataDir) => OgkrTestUtils.GetTestInputs(dataDir);
+    
+    public static IEnumerable<object[]> GetTestInputsOnlyLv3(string dataDir) => GetTestInputs(dataDir)
+        .Where(x=>int.TryParse(((OgkrTestInput)x[0]).DifficultyId, out var id) && id == 3);
 
     [Theory(Skip = "ogkr的解析和生成还没实现完，所以暂时跳过")]
     [MemberData(nameof(GetTestInputs), "官谱")]
@@ -21,17 +24,55 @@ public class Ogkr测试
 
         var (chart, parseAlerts) = new OgkrParser().Parse(ogkrText);
         var (resultText, generateAlerts) = new OgkrGenerator().Generate(chart);
-
-        // 转出来的IR的基本健全性检查
-        Assert.NotEmpty(chart.BpmList);
-        Assert.True(chart.BpmList[0].Time == 0, "BpmList首项必须为0时刻");
-        Assert.NotEmpty(chart.Notes);
-        Assert.DoesNotContain(parseAlerts, a => a.Level == Alert.LEVEL.Error);
+        AssertOgkChartOk(chart, parseAlerts.Concat(generateAlerts));
         
         _output.WriteLine(string.Join('\n', parseAlerts));
         _output.WriteLine(string.Join('\n', generateAlerts));
         
         OgkrTextComparer.AssertOgkrEqual(ogkrText, resultText);
+    }
+    
+    [Theory]
+    [MemberData(nameof(GetTestInputsOnlyLv3), "官谱")]
+    public void 物量统计测试(OgkrTestInput c)
+    {
+        var ogkrText = File.ReadAllText(c.OgkrPath, Encoding.UTF8);
+        var (chart, parseAlerts) = new OgkrParser().Parse(ogkrText);
+        AssertOgkChartOk(chart, parseAlerts);
+        
+        // 从HEADER段直接解析原谱面中标注的T_xxx的期望值
+        var expected = ParseExpectedTValues(ogkrText);
+        var actual = chart.CountNotes();
+        
+        // 收集所有不一致的项，统一报出，便于调试
+        var diffs = new List<string>();
+        foreach (var key in expected.Keys.OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var a = actual.GetValueOrDefault(key, -1);
+            if (a != expected[key]) diffs.Add($"  {key}: expected={expected[key]}, actual={a}");
+        }
+        Assert.True(diffs.Count == 0, $"物量统计与原谱不一致:{Environment.NewLine}{string.Join(Environment.NewLine, diffs)}");
+    }
+
+    private static Dictionary<string, int> ParseExpectedTValues(string text)
+    {
+        var result = new Dictionary<string, int>();
+        foreach (var rawLine in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            var parts = rawLine.Trim().Split('\t');
+            if (parts.Length >= 2 && parts[0].StartsWith("T_") && int.TryParse(parts[1], out var v))
+                result[parts[0]] = v;
+        }
+        return result;
+    }
+
+    private void AssertOgkChartOk(OgkChart chart, IEnumerable<Alert> alerts)
+    {
+        // 转出来的IR的基本健全性检查
+        Assert.NotEmpty(chart.BpmList);
+        Assert.True(chart.BpmList[0].Time == 0, "BpmList首项必须为0时刻");
+        Assert.NotEmpty(chart.Notes);
+        Assert.DoesNotContain(alerts, a => a.Level == Alert.LEVEL.Error);
     }
 }
 

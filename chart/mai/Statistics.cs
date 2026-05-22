@@ -47,14 +47,7 @@ public class Statistics
         // T_JUDGE_HLD 原理应该是游戏DLL中的Manager.NotesReader.getProgJudgeGrid。
         // 但是具体的机制研究的也不是太明白，只是尽力实现了下
         if (note is Hold or TouchHold)
-        {
-            var bpmRanges = note.BpmRanges;
-            foreach (var (_, bpm, _, len) in bpmRanges)
-            {
-                var gridSize = new Rational(getProgJudgeGrid(bpm), 384);
-                T_JUDGE_HLD += Math.Max((int)(len / gridSize).Ceil(), 1);
-            }
-        }
+            T_JUDGE_HLD += StatisticsUtils.CalcHoldJudgeCount(note.Time, note.EndTime, note.Chart);
     }
 
     public Statistics(MaiChart chart)
@@ -127,11 +120,4 @@ public class Statistics
     
     private Rational _now = -1; // 计算双押个数用
     private int _nowFalseEachIndex = 0;
-    
-    private int getProgJudgeGrid(decimal bpm)
-    {
-        if (bpm < 15) return 3;
-        int exp = (int)Math.Min(Math.Floor(Math.Log2((double)bpm / 15)), 6);
-        return 6 * (int)Math.Pow(2, exp);
-    }
 }

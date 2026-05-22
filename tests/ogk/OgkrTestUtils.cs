@@ -11,7 +11,7 @@ internal static class OgkrTestUtils
         return new DirectoryInfo(Path.Combine(dir ?? throw new DirectoryNotFoundException("Could not locate repo root."), "ogk", "testset"));
     }
 
-    public static IEnumerable<object[]> GetTestInputs(string dataDir)
+    public static IEnumerable<OgkrTestInput[]> GetTestInputs(string dataDir)
     {
         var testsetRoot = Path.Combine(FindTestsetRoot().FullName, dataDir);
         if (!Directory.Exists(testsetRoot))

@@ -1,4 +1,4 @@
-﻿using MuConvert.chart;
+using MuConvert.chart;
 using MuConvert.utils;
 using Rationals;
 
@@ -41,8 +41,61 @@ public class OgkChart: BaseChart<OgkNote>
 
     public override decimal StartTime => Math.Min(base.StartTime, (decimal)ToSecond(Bullets.First().Time));
     public override decimal EndTime => Math.Max(base.EndTime, (decimal)ToSecond(Bullets.Last().Time));
-    public override int TotalNotes => throw new NotImplementedException();
+    public override int TotalNotes => CountNotes()["T_TOTAL"];
 
+    /**
+     * 基于谱面IR，计算ogkr中T_xxx的几个统计量（即谱面的"物量"信息）。
+     *
+     * 返回的字典将包含以下七个key：
+     * - T_TAP：非侧键Tap类判定数量。等于"Tap数量+Hold数量"（即Hold的头判也计入），不包括任何侧键
+     * - T_HOLD：非侧键Hold类判定数量。等于每条非侧键Hold的"头判定+中间判定"之和
+     * - T_SIDE：侧键Tap类判定数量。同T_TAP，但只计侧键
+     * - T_SHOLD：侧键Hold类判定数量。同T_HOLD，但只计侧键
+     * - T_FLICK：Flick数量
+     * - T_BELL：Bell数量
+     * - T_TOTAL：T_TAP + T_HOLD + T_SIDE + T_SHOLD + T_FLICK（注意，T_BELL不计入T_TOTAL）
+     */
+    public Dictionary<string, int> CountNotes()
+    {
+        int tTap = 0, tSide = 0, tHold = 0, tShold = 0, tFlick = 0, tBell = 0;
+
+        foreach (var note in Notes)
+        {
+            switch (note)
+            {
+                case Bell:
+                    tBell++;
+                    break;
+                case Flick:
+                    tFlick++;
+                    break;
+                case Hold hold:
+                {
+                    var judges = StatisticsUtils.CalcHoldJudgeCount(hold.Time, hold.EndTime, this, (int)ProgJudgeBpm);
+                    if (hold.Lane.Type == LaneType.Wall) { tSide++; tShold += judges; }
+                    else { tTap++; tHold += judges; }
+                    break;
+                }
+                case Tap tap:
+                {
+                    if (tap.Lane.Type == LaneType.Wall) tSide++;
+                    else tTap++;
+                    break;
+                }
+            }
+        }
+        return new Dictionary<string, int>
+        {
+            ["T_TOTAL"] = tTap + tHold + tSide + tShold + tFlick,
+            ["T_TAP"] = tTap,
+            ["T_HOLD"] = tHold,
+            ["T_SIDE"] = tSide,
+            ["T_SHOLD"] = tShold,
+            ["T_FLICK"] = tFlick,
+            ["T_BELL"] = tBell,
+        };
+    }
+    
     public override void Sort()
     {
         base.Sort();
