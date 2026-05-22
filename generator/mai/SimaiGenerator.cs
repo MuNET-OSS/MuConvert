@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using MuConvert.generator;
 using MuConvert.utils;
@@ -32,6 +33,14 @@ public class SimaiGenerator : IGenerator<MaiChart>
      * 如果你不希望开启本选项，请new SimaiGenerator() { Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime = false } 即可。
      */
     public bool Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime = true;
+    /**
+     * 这是一个Workaround的选项。
+     * 形如[120#3.45]的，BPM+绝对时间的星星持续时长写法，尽管Simai官方文档中明确其为标准语法，但AstroDX中会无法解析（直接报错拒绝运行）。
+     * 因此，这里提供了一个bool选项，默认为开启：
+     * 当本选项开启时，对持续时间为绝对秒数的星星，不会生成形如[120#3.45]的语句出来，而是写成[0.5##3.45]这种绝对等待时间+绝对持续时间的写法。
+     * 如果你不希望开启本选项，请new SimaiGenerator() { Workaround_ForceUseWaitTimeInsteadOfBPMForAbsDurationSlide = false } 即可。
+     */
+    public bool Workaround_ForceUseWaitTimeInsteadOfBPMForAbsDurationSlide = true;
     
     private readonly List<Alert> alerts = [];
     private string result = ""; // 不用StringBuilder是因为生成过程不可避免地需要对字符串做一些回溯的操作，需要倒着从字符串中查找字符。这样的场景下，StringBuilder并无性能优势，用string就够了。
@@ -190,14 +199,30 @@ public class SimaiGenerator : IGenerator<MaiChart>
                     
                     if (seg.Duration != null)
                     {
-                        bool nonStdWaitTime = rollingTime == slide.Time && // 是带有时间标记的第一段
-                                              slide.WaitTime.InvariantBar != new Rational(1, 4);
+                        bool isFirstDuration = rollingTime == slide.Time; // 是不是带有时间标记的第一段
+                        bool nonStdWaitTime = isFirstDuration && slide.WaitTime.InvariantBar != new Rational(1, 4);
                         var durationStr = DurationStr(rollingTime, seg.Duration,
                             // 对非标准等待时间的星星，如果相关Workaround选项开启，则强制其使用绝对时间。
                             forceAbsTime: nonStdWaitTime && Workaround_ForceUseAbsDurationForSlidesWithNonStandardWaitTime);
                         if (nonStdWaitTime)
                         { // 非标准等待时间的星星，应该加上等待时间标记。simai仅支持绝对时间的等待时间标记。
                             durationStr = FormattableString.Invariant($"[{(decimal)slide.WaitTime.Seconds:0.####}##{durationStr[1..].TrimStart('#')}");
+                        }
+                        else if (durationStr[1] == '#')
+                        { 
+                            // 对DurationStr函数，返回的是绝对时间[#3.45]的情况：
+                            // simai文档【SLIDE (基本・形状)】一节，并没给出`1-2[#3.45]`这种写法，因此无法认为这是“标准语法”；且经过测试，majdataplay和astrodx也都是不支持这种写法的。
+                            // simai文档中，只给出了`1-2[120#3.45]`或`1-2[0.5##3.45]`这两种写法。然后亲测，前者astrodx也是不支持的。
+                            // 所以现在的逻辑是：默认输出前者`1-2[120#3.45]`，但如果相关Workaround选项被开启，则使用后者1-2[0.5##3.45]`。
+                            if (!Workaround_ForceUseWaitTimeInsteadOfBPMForAbsDurationSlide)
+                            {
+                                durationStr = FormattableString.Invariant($"[{seg.Duration.InvariantBpm:0.####}#{durationStr[2..]}");
+                            }
+                            else
+                            {
+                                decimal waitSec = isFirstDuration ? (decimal)slide.WaitTime.Seconds : 0m;
+                                durationStr = FormattableString.Invariant($"[{waitSec:0.####}##{durationStr[2..]}");
+                            }
                         }
                         res += durationStr;
                         rollingTime += seg.Duration.Bar;
