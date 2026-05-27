@@ -302,6 +302,11 @@ GENERATED_BY	MuConvert v{8}
     {
         if (chart != null) throw new Exception(Locale.InstanceMultipleUsage);
         chart = _chart;
+        if (chart.Notes.Count == 0)
+        {
+            alerts.Add(new Alert(Error, Locale.NoNotesInChart));
+            throw new ConversionException(alerts);
+        }
         chart.Sort();
         StringBuilder result = new StringBuilder();
         
