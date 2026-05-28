@@ -3,8 +3,9 @@ MuConvert - 新一代多功能音游转谱器
 
 MuConvert 是一个多功能的音游转谱器。目前支持maimai、chunithm的谱面格式转换，未来还可能加入更多游戏/更多格式支持。
 - maimai：支持 Simai（自制谱社区最主流格式，[MajdataEdit](https://majdata.net/edit)、[Visual Maimai](https://github.com/CH3COOOHH/Visual-Maimai-Release)等都是这种格式）与 MA2（官方游戏格式）的双向互转。
-- chunithm：支持 UGC（[Umiguri](https://umgr.inonote.jp/en/)的格式）与 C2S（官方游戏格式）的双向互转；
+- CHUNITHM：支持 UGC（[Umiguri](https://umgr.inonote.jp/en/)的格式）与 C2S（官方游戏格式）的双向互转；
   - 此外，还实验性地支持SUS与上述格式的双向互转（注意目前支持还不太完善，可能有较多bug，如遇bug欢迎反馈）
+- Ongeki：由于这款游戏尚无普遍通用的社区自制谱格式，因此支持的是OGKR（官方游戏格式）的解析和生成逻辑，而非直接的谱面转换。详见下文[Ongeki游戏支持](#Ongeki游戏支持)部分所述。
 
 > Kind reminder: To reduce developers’ workload, this README is maintained only in Chinese. We recommend using an LLM to translate and read this document.
 
@@ -15,7 +16,7 @@ MuConvert 是一个多功能的音游转谱器。目前支持maimai、chunithm�
 - 工具+基础库：既可以直接当作命令行工具使用，也可以把它作为一个C#依赖库嵌入到你的工程里。
 - 可扩展的架构设计：本项目以中间表示(Chart类)为核心，通过为每种语言编写parser、将语言解析为统一的中间表示对象，再为每种语言编写generator，实现任意两个语言间的互转。
   - 项目设计具有良好的可扩展性，您可轻松按照自己的需求定制自己的语言格式，也可直接把解析得到的Chart对象拿来服务于您自己的下游项目如谱面播放器等。
-- 多游戏支持：基于上述良好的可扩展性，本项目一套代码可提供对maimai、chunithm两款游戏共五种格式的支持，未来还可能加入ongeki等更多游戏。
+- 多游戏支持：基于上述良好的可扩展性，本项目一套代码可提供对maimai、CHUNITHM、Ongeki三款游戏共六种格式的支持，未来还可能加入更多游戏/更多格式。
 
 ## 使用文档
 本项目具有两种使用方式：
@@ -109,6 +110,8 @@ MuConvert "D:\charts\Song\0003_00.c2s"
 
 </details>
 
+> Ongeki游戏支持方面，目前仅支持对OGKR一种格式的解析和生成，不是直接两种格式间转换，因此没有直接调用CLI程序的入口，只能以代码调用的方式使用。详见下文[Ongeki游戏支持](#Ongeki游戏支持)部分所述。
+
 ### 2) 将本项目作为依赖库使用
 #### 导入依赖库
 - **推荐做法**：把本仓库作为 git submodule 引入你的工程仓库，然后把 `MuConvert.csproj` 加入你的 `.sln`/`.slnx`。
@@ -160,11 +163,40 @@ return maidataText; // maidataText即为转谱结果
 var (c2sChart, alerts) = new C2sParser().Parse(c2sText); // 解析 C2S 谱面字符串
 var (ugcChart, alerts) = new UgcParser().Parse(ugcText); // 解析 UGC 谱面字符串
 // 以上得到的c2sChart、ugcChart，都是ChuChart类型的谱面表示对象；
-// alerts是解析过程中可能产生的警告信息等，建议打印出来。
+// alerts是解析过程中可能产生的警告信息等，建议打印出来（直接对Alert对象调用ToString()即可）。
 
 var (c2sText, alerts) = new C2sGenerator().Generate(ugcChart);   // UGC -> C2S
 var (ugcText, alerts) = new UgcGenerator().Generate(c2sChart);   // C2S -> UGC
 // 各种Generator的Generate方法，均接受 ChuChart（可将任一 Parser 产出的 ChuChart 互相传入）。
+// 同上，alerts是生成过程中可能产生的警告信息等，建议打印出来。
+```
+
+#### Ongeki游戏支持
+由于这款游戏尚无普遍通用的社区自制谱格式，因此目前MuConvert支持的仅有OGKR（官方游戏格式）这一种格式的解析和生成。  
+解析得到的谱面表示对象为`OgkChart`类，内含`Notes`（正键、侧键、bell等各种音符）、`Lanes`（轨道和引导线）、`Bullets`（子弹）等字段、足以表达一个谱面的所有信息。具体的含义和用法，`chart/ogk/OgkChart.cs`的代码中有丰富的注释，请参见代码中的注释。
+
+关于其用途，您可以考虑把本项目作为您其他Ongeki相关项目的一个依赖库，通过使用其中的OGKR解析和/或OGKR生成的代码逻辑，来简化/优化您的开发工作，避免关注Ongeki游戏谱面格式的繁杂细节，直接把精力放在您的项目的核心。  
+例如，如果您正在开发一个Ongeki的谱面播放器，您就可以直接使用`OgkrParser`得到`OgkChart`对象，该对象中内置了关于谱面的所有细节信息；其中的音符类型(`OgkNote`)等上面都实现了丰富的方法，如小节时间`Time`、绝对时间`ToSecond()`等，可以直接调用使用、以便播放器直接计算各个音符在某一时刻的位置，而不必自己去解析OGKR文本、处理各种复杂的谱面相关细节问题了。
+
+以下示例展示了如何解析OGKR文本为OgkChart对象，做一点小小的改动（本例中为把第一个Hold的时长加倍），再生成回OGKR格式的文本。
+> 以下 C# 示例中的各类均位于命名空间 `MuConvert.ogk`中，使用时需添加 `using MuConvert.ogk;`。
+```csharp
+// 首先使用File.ReadAllText等方法，将谱面整体读取为字符串
+var (ogkChart, alerts) = new OngekiParser().Parse(ogkrText); // 解析 OGKR 谱面字符串
+// ogkChart即为OgkChart类的对象，包含了谱面中的所有信息；alerts是解析过程中可能产生的警告信息等，建议打印出来（直接对Alert对象调用ToString()即可）。
+
+// 对ogkChart进行一些你想要的改动，例如把第一个Hold的时长加倍
+foreach (OgkNote note in ogkChart.Notes)
+{
+    if (note is Hold hold)
+    {
+        var originDuration = hold.EndTime - hold.StartTime; // 计算原始时长
+        hold.EndTime = originDuration * 2 + hold.StartTime; // 把第一个Hold的时长加倍
+        break;
+    }
+}
+
+var (ogkrText, alerts) = new OngekiGenerator().Generate(ogkChart); // 将 OgkChart 对象导出为 OGKR 文本
 // 同上，alerts是生成过程中可能产生的警告信息等，建议打印出来。
 ```
 
@@ -219,6 +251,8 @@ finally
 
 - **中间表示 IR（Chart）**：MuConvert 内部统一的谱面数据结构
   - 对maimai，类型为 `MuConvert.mai.MaiChart`
+  - 对CHUNITHM，类型为 `MuConvert.chu.ChuChart`
+  - 对Ongeki，类型为 `MuConvert.ogk.OgkChart`
   - 关键字段包括 `Chart.BpmList` 与 `Chart.Notes`，以及 `Touch/Hold/Slide` 等具体 `Note` 子类
 
 - **generator（生成器）**：把中间表示转回“目标格式文本”
@@ -356,3 +390,12 @@ public sealed class FooGenerator : IGenerator<MaiChart>
    - 详见上文[多语言(i18n)相关](#多语言i18n相关)部分的说明。
 7. **CLI**（可选）：如需实现CLI，可在`Program.cs`中增加相应的功能。
 
+### Ongeki谱面的数据结构实现
+- 关于ogkr格式中各种指令的含义，可参考[ogkr格式详解](https://github.com/MikiraSora/OngekiFumianDescription/blob/master/ongeki.md)和[补充说明](https://github.com/MikiraSora/OngekiFumianDescription/blob/master/description.md)。
+- ogkr格式当中，大量的采用列举Pallete列表+使用ID引用具体的数据的实现方式。
+  - 例如子弹`BLT`指令，要通过`strId`引用`[B_PALLETE]`中内容，Tap、Hold等音符需要通过`groupId`引用`Lane`相关的内容，等
+- 而我们的数据结构实现的过程中，采用直接的对象引用而不是ID字符串引用；同时对于`BulletPallete`和`Lane`，谱面数据结构中**不会保存其ID**。
+- 因此，推荐的做法是：
+  - 在Parser的解析过程中，在Parser内部缓存ID和具体对象的映射关系，每次解析完一个`[B_PALLETE]`或`Lane`对象时就把它放进该内部缓存中，以供后面解析具体的`BLT`、Tap时直接找到对象。
+  - 在Generator的生成过程中，也是在内部建立缓存、为每个相关对象编好ID，然后生成引用这些对象的具体音符的时候直接写入编号。
+  - 也就是说，**ID相关的逻辑应当由Parser和Generator内部自行实现，谱面数据结构中不会保存ID。**

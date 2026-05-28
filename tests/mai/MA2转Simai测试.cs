@@ -43,7 +43,7 @@ public class MA2转Simai测试
 
 /// <summary>
 /// 按 Simai 文法 <c>chart: (notations ',')*</c> 将谱面切成顶层逗号分段，并在每个分段上复现与
-/// <see cref="MuConvert.parser.simai.SimaiParser"/> 一致的 <c>now</c> / <c>step</c> 推进规则，
+/// <see cref="MuConvert.mai.SimaiParser"/> 一致的 <c>now</c> / <c>step</c> 推进规则，
 /// 得到 (时刻, 原文) 序列；不构造 Note，不把片段再交给 SimaiParser。
 /// </summary>
 internal static partial class SimaiCommaTimeline

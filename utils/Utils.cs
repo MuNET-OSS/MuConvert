@@ -162,13 +162,12 @@ public static class ExtensionUtils
     }
     
     private static readonly Rational _half = new(1, 2);
-    // 工作范围仅限非负数；舍入策略方面，使用与系统库Math.Round相同的“四舍六入五成双”算法。
+    // 舍入策略方面，使用与系统库Math.Round相同的“四舍六入五成双”算法。
     public static BigInteger Round(this Rational r)
     {
-        if (r < 0) throw new ArgumentOutOfRangeException(nameof(r));
         var whole = r.WholePart;
         var frac = r.FractionPart;
-        var shouldAdd = frac > _half || (frac == _half && whole % 2 == 1);
+        var shouldAdd = frac > _half || (frac == _half && !whole.IsEven);
         return whole + (shouldAdd ? 1 : 0);
     }
     

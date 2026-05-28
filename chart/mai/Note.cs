@@ -5,6 +5,9 @@ using Rationals;
 
 namespace MuConvert.mai;
 
+/**
+ * maimai的Note基类
+ */
 public abstract class Note: BaseNote
 {
     public readonly MaiChart Chart;
@@ -42,26 +45,8 @@ public abstract class Note: BaseNote
     public virtual string Modifiers => (IsBreak ? "b" : "") + (IsEx ? "x" : "");
 
     // 当前音符落在了哪些BPM区间内、分别有多长。
-    public List<(int bpmIdx, decimal bpm, Rational start, Rational len)> BpmRanges
-    {
-        get
-        {
-            List<(int, decimal, Rational, Rational)> result = [];
-            var now = Time.CanonicalForm;
-            var end = (Time + Duration.Bar).CanonicalForm;
-            var isFirstRange = true; // 通过这个变量和对应的逻辑，确保返回的BpmRanges至少含有一个元素。即使note本身是0长度的，返回的BpmRanges也能有一个len=0的元素。
-            while (now < end || isFirstRange) 
-            {
-                var bpmIdx = Chart.BpmList.FindIndex(now);
-                var curBpmRangeEnd = bpmIdx < Chart.BpmList.Count - 1 ? Chart.BpmList[bpmIdx + 1].Time : 999999; // 当前BPM区间的结束时刻
-                var len = Utils.Min(end, curBpmRangeEnd) - now; // 音符落在本区间内的长度为，从当前时刻开始，到（本区间结束或音符结束的较早者）
-                result.Add((bpmIdx, Chart.BpmList[bpmIdx].Bpm, now, len.CanonicalForm));
-                now = (now + len).CanonicalForm;
-                isFirstRange = false;
-            }
-            return result;
-        }
-    }
+    public List<(int bpmIdx, decimal bpm, Rational start, Rational len)> BpmRanges =>
+        StatisticsUtils.CalcBpmRanges(Time, EndTime, Chart);
     
     internal virtual string DebuggerDisplay() => "";
 
