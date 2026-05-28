@@ -34,7 +34,7 @@ public class UgcParser: BaseChuParser
 
             if (inHeader)
             {
-                if (line == "@ENDHEAD")
+                if (line.StartsWith("@ENDHEAD"))
                 {
                     inHeader = false;
                     continue;
@@ -183,7 +183,9 @@ public class UgcParser: BaseChuParser
             case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
-            case "@MAINTIL": case "@TIL":
+            case "@MAINTIL": case "@TIL": case "@USETIL":
+            case "@MAINBPM":
+            case "@BGSCENE": case "@FLDSCENE": case "@RLDATE": case "@CMT":
                 break;
 
             case "@SPDMOD":
@@ -313,7 +315,7 @@ public class UgcParser: BaseChuParser
                 break;
 
             default:
-                alerts.Add(new Alert(Warning, $"未知的音符类型前缀 '{typeChar}': {line}", note.Time, (double)chart.ToSecond(note.Time), lineNum, line));
+                alerts.Add(new Alert(Warning, $"未知的音符类型前缀 '{typeChar}': {line}", (chart, note.Time), lineNum, line));
                 // 如果后面跟的是跟随行（子ノーツ）而非主行（親ノーツ）的话，把它们全部消耗掉
                 while (idx + 1 < lines.Length)
                 {
@@ -406,6 +408,23 @@ public class UgcParser: BaseChuParser
             alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
         return idx;
     }
+    
+    // UGC中约定Air系列音符都一定紧跟在其Previous的后面。
+    // 所以我们直接用上一个解析出的note就可以立即确定前驱了，无需再等到最后集中FillPrevious，而且等到最后集中FillPrevious时的结果也可能是错的。
+    // 本函数作为一个工具函数干的就是这个事情。
+    private bool AddAirPreviousFromLastNote(ChuNote note, ChuChart chart)
+    {
+        if (chart.Notes.Count > 0)
+        {
+            var filtered = FilterPreviousCandidates(note, [chart.Notes.Last()]); // 仅传入一个元素到FilterPreviousCandidates，因此返回结果最多一个元素
+            if (filtered.Count > 0)
+            {
+                note.Previous = filtered[0];
+                return true;
+            }
+        }
+        return false;
+    }
 
     private int ParseSlideNote(bool isAirSlide, string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
     {
@@ -439,6 +458,12 @@ public class UgcParser: BaseChuParser
                 EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : previousNote.EndHeight,
                 Previous = foundFirst ? previousNote : null,
             };
+
+            if (isAirSlide && !foundFirst)
+            {
+                if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
+                    alerts.Add(new Alert(Warning, $"无法找到 Air Slide 的前驱音符", (chart, note.Time), idx + 1, lines[idx]));
+            }
             
             chart.Notes.Add(note);
             previousNote = note;
@@ -496,51 +521,42 @@ public class UgcParser: BaseChuParser
             if (code.Length > startIdx + 1)
                 note.Width = HToI(code[startIdx + 1]);
             else
-                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}", note.Time, (double)chart.ToSecond(note.Time), lineNum, FormatNoteRef(note, code)));
+                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}", (chart, note.Time), lineNum, FormatNoteRef(note, code)));
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}", note.Time, (double)chart.ToSecond(note.Time), lineNum, FormatNoteRef(note, code)));
+            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}", (chart, note.Time), lineNum, FormatNoteRef(note, code)));
         }
     }
 
     private void ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart)
     {
+        note.Type = "AIR"; // 出错情况下的缺省值
         if (code.Length < 5)
         {
             alerts.Add(new Alert(Warning, $"AIR 音符代码过短: {code}") { Line = lineNum });
-            note.Type = "AIR";
             return;
         }
 
         ParseCellWidth(code, 1, note, alerts, lineNum, chart);
         var mainPart = code[3..];
 
-        if (mainPart.Length < 2)
-        {
-            alerts.Add(new Alert(Warning, $"AIR 音符方向代码过短: {code}") { Line = lineNum });
-            note.Type = "AIR";
-            return;
-        }
-
-        var dir = mainPart[..2];
-        if (U2C_AirDirections.TryGetValue(dir, out var airType))
-        {
-            note.Type = airType;
-        }
-        else
-        {
-            note.Type = "AIR";
-            alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {dir}") { Line = lineNum, RelevantNote = FormatNoteRef(note, code) });
-        }
+        // 解析方向
+        var direction = mainPart[..2];
+        if (U2C_AirDirections.TryGetValue(direction, out var airType)) note.Type = airType;
+        else alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {direction}") { Line = lineNum, RelevantNote = FormatNoteRef(note, code) });
+        // 解析颜色
         ParseHeightAndColor(note, mainPart[2..], alerts, lineNum, "a");
+        
+        if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
+            alerts.Add(new Alert(Warning, $"无法找到 Air 的前驱音符", (chart, note.Time), lineNum + 1, code));
     }
 
     private int ParseAirCrushNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
     {
         note.Type = "ALD";
         ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
-        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", note.Time, (double)chart.ToSecond(note.Time), idx+1, lines[idx]));
+        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, note.Time), idx+1, lines[idx]));
         else ParseHeightAndColor(note, code[3..], alerts, idx+1, "C");
         
         bool foundFirst = false;
@@ -555,7 +571,7 @@ public class UgcParser: BaseChuParser
             }
             
             if (Version >= 8 && marker != "c")
-                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", note.Time, (double)chart.ToSecond(note.Time), idx + 1, nextLine));
+                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, note.Time), idx + 1, nextLine));
 
             if (Version <= 6 && !intervalSet && marker == "s")
             {

@@ -46,7 +46,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
                 var filteredByRaw = filtered.Where(x=>x.Type == target).ToList();
                 if (filteredByRaw.Count == 0)
                 {
-                    alerts.Add(new Alert(Alert.LEVEL.Warning, "未找到声明的前驱/依附音符", cur.Time, (double)chart.ToSecond(cur.Time)));
+                    alerts.Add(new Alert(Alert.LEVEL.Warning, "未找到声明的前驱/依附音符", (chart, cur.Time)));
                 }
                 else filtered = filteredByRaw; // 缩小目标范围
             }
@@ -64,7 +64,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
         return IsSlide(n.Type) || IsAir(n.Type) || IsAirHold(n.Type) || IsAirSlide(n.Type);
     }
     
-    private static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
+    protected static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
     { // 注意：候选列表已满足“首尾相接”，这里仅做类型约束
         List<ChuNote> result = [];
         candidates = candidates.Where(n => n != cur).ToList(); // 自己不能成为自己的candidate，防止自环

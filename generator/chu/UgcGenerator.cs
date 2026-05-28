@@ -16,6 +16,33 @@ public class UgcGenerator : IGenerator<ChuChart>
         return (text, alerts);
     }
 
+    /**
+     * 对 chart.Notes 做一次稳定重排序，使得任何具有 Previous 的音符都会紧紧地出现在它的 Previous 之后，从而满足 UGC 对“Air/Air Slide应该紧跟着其依附的音符”的格式要求。
+     */
+    private List<ChuNote> SortedNotesForConnectingPrevious(ChuChart chart)
+    {
+        // 1. 基于Previous，反向构建Next信息
+        var nextDict = new Dictionary<ChuNote, List<ChuNote>>();
+        foreach (var n in chart.Notes)
+        {
+            if (n.Previous != null) nextDict.Add(n.Previous, n);
+        }
+
+        // 2. 遍历 chart.Notes，对每个 ChuNote 以 DFS 方式把它本身以及它所有 Next 子孙依次加入结果。
+        var result = new List<ChuNote>(chart.Notes.Count);
+        var visited = new HashSet<ChuNote>();
+        foreach (var root in chart.Notes) Dfs(root);
+        return result;
+
+        void Dfs(ChuNote n)
+        {
+            if (!visited.Add(n)) return;
+            result.Add(n);
+            if (!nextDict.TryGetValue(n, out var nexts)) return;
+            foreach (var next in nexts) Dfs(next);
+        }
+    }
+
     private string Serialize(ChuChart ugc, List<Alert> alerts)
     {
         ugc.Sort();
@@ -52,14 +79,16 @@ public class UgcGenerator : IGenerator<ChuChart>
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
 
+        var notes = SortedNotesForConnectingPrevious(ugc);
+
         // UGC Slide / AIR-SLIDE (v8):
         // - Chains (ChuNote.Previous) serialize as ONE parent line + follower lines (#OffsetTick from parent time).
         // - Ground slide: parent `s`, followers `>s` / `>c` + end cell/width.
         // - Air slide: parent `S` + cell/width + hh (base-36 ×2, C2S/UGC height units) + N/I; followers `>s`/`>c` + xw + hh.
         // - First segment may attach to TAP/HLD via Previous; only skip emit when Previous is another segment of the same chain.
-        var slideChains = BuildSlideChains(ugc.Notes);
+        var slideChains = BuildSlideChains(notes);
 
-        foreach (var n in ugc.Notes)
+        foreach (var n in notes)
         {
             if (IsSlideChainNote(n.Type) && IsSlideContinueSegments(n))
                 continue; // 是Slide且不是第一段Slide，则应当已经被处理过了，直接跳过
@@ -68,7 +97,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             var ucode = UCode(n);
             if (ucode == "")
             {
-                alerts.Add(new Alert(Alert.LEVEL.Warning, $"UGC Generator遇到了不支持的音符类型: {n.Type}", n.Time, (double)ugc.ToSecond(n.Time)));
+                alerts.Add(new Alert(Alert.LEVEL.Warning, $"UGC Generator遇到了不支持的音符类型: {n.Type}", (ugc, n.Time)));
                 continue;
             }
             sb.Append($"#{m}'{o}:{ucode}");

@@ -3,7 +3,14 @@ using Rationals;
 
 namespace MuConvert.chart;
 
-public interface IBaseChart;
+// 这个接口其实没什么实际作用，因为绝大多数情况下用的都是具体的Chart或下面的带泛型的BaseChart。
+// 只有极个别的情况：不依赖Notes等BaseChart内部的属性，只是希望有个类名表示Chart；而且不希望用泛型（写起来太复杂/构造函数无法使用泛型等情况），才会改为使用IBaseChart。
+// 这个接口应尽量保持简洁、尽量不声明东西，声明都放在抽象类BaseChart里面去。
+public interface IBaseChart
+{
+    // 如上所说这个接口应尽量保持简洁。但为什么要在这放这样一个声明呢，因为Alert的二号构造函数内需要用到ToSecond方法，而构造函数是不允许泛型的、只能使用IBaseChart。所以只好把ToSecond的声明加到接口里。
+    public Rational ToSecond(Rational barTime);
+}
 
 /**
  * 所有的谱面均应该继承自此类。
