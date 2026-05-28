@@ -64,7 +64,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
         return IsSlide(n.Type) || IsAir(n.Type) || IsAirHold(n.Type) || IsAirSlide(n.Type);
     }
     
-    private static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
+    protected static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
     { // 注意：候选列表已满足“首尾相接”，这里仅做类型约束
         List<ChuNote> result = [];
         candidates = candidates.Where(n => n != cur).ToList(); // 自己不能成为自己的candidate，防止自环
