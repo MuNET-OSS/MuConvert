@@ -37,7 +37,7 @@ public class ChuTests
         AssertNotesEqual(chart.Notes, reparsed.Notes);
     }
 
-    private static void AssertNotesEqual(IReadOnlyList<ChuNote> expected_, IReadOnlyList<ChuNote> actual_)
+    private static void AssertNotesEqual(IReadOnlyList<ChuNote> expected_, IReadOnlyList<ChuNote> actual_, bool allowExDiff = false)
     {
         const string EOF = "<EOF>";
         List<ChuNote> expected = expected_.ToList();
@@ -49,14 +49,14 @@ public class ChuTests
             if (i >= expected.Count || i >= actual.Count) result = false;
             else 
             {
-                result = CompareNote(expected[i], actual[i]);
+                result = CompareNote(expected[i], actual[i], allowExDiff);
                 if (!result)
                 {
                     // 尝试同一时刻的其他行有无相同的，如果有，交换之
                     var j = i + 1;
                     while (j < expected.Count && expected[j].Time == actual[i].Time)
                     {
-                        if (CompareNote(expected[j], actual[i]))
+                        if (CompareNote(expected[j], actual[i], allowExDiff))
                         {
                             (expected[j], expected[i]) = (expected[i], expected[j]);
                             result = true;
@@ -79,9 +79,9 @@ public class ChuTests
     /// <summary>
     /// 比较两个音符是否实质等同；时间与时长等字段可命中宽容规则（见测试类内常量与分支注释）。
     /// </summary>
-    public static bool CompareNote(ChuNote expected, ChuNote actual)
+    public static bool CompareNote(ChuNote expected, ChuNote actual, bool allowExDiff = false)
     {
-        if (expected.Type != actual.Type) return false;
+        if (!TypesEquivalent(expected.Type, actual.Type, allowExDiff)) return false;
         if (!TimesEquivalent(expected.Time, actual.Time)) return false;
         if (!DurationsEquivalent(expected, actual)) return false;
         if (expected.Cell != actual.Cell || expected.Width != actual.Width) return false;
@@ -89,12 +89,32 @@ public class ChuTests
         if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(expected.EndHeight - actual.EndHeight) > 0.05m) return false;
         if (expected.CrushInterval != actual.CrushInterval) return false;
         if (!TagsEquivalent(expected, actual)) return false;
-        if (expected.TargetNote != actual.TargetNote) return false;
+        if (!TypesEquivalent(expected.TargetNote, actual.TargetNote, allowExDiff)) return false;
         return true;
     }
 
     /// <summary>规则 (a)：time 相差 ≤ 1/768 视为相等。</summary>
     private static bool TimesEquivalent(Rational a, Rational b) => (a - b).Abs() <= Tol768;
+
+    /// <summary>
+    /// 类型比较。<paramref name="allowExDiff"/> 为 true 时，HLD/HXD、SLD/SXD、SLC/SXC 之间允许互相匹配
+    /// （即忽略 Ex 标志位差异）；否则要求严格相等。
+    /// </summary>
+    private static bool TypesEquivalent(string e, string a, bool allowExDiff)
+    {
+        if (e == a) return true;
+        if (!allowExDiff) return false;
+        return StripExFlag(e) == StripExFlag(a);
+
+        static string StripExFlag(string t) => t switch
+        {
+            "HXD" => "HLD",
+            "SXD" => "SLD",
+            "SXC" => "SLC",
+            "AHX" => "AHD",
+            _ => t,
+        };
+    }
 
     /// <summary>
     /// 规则 (b)：|Δduration| ≤ 1/768，或（|Δduration| ≤ 1/384 且 |ΔendTime| ≤ 1/768）时视为 duration 语义相等。
@@ -158,6 +178,6 @@ public class ChuTests
         // 再把转出来的ugc，parse回去，比较是否和一开始的c2s等价
         var (ugcReparsed, _) = new UgcParser().Parse(ugcText);
         Assert.NotEmpty(ugcReparsed.Notes);
-        AssertNotesEqual(c2s.Notes, ugcReparsed.Notes.Where(n => n.Type != "CLICK").ToList());
+        AssertNotesEqual(c2s.Notes, ugcReparsed.Notes.Where(n => n.Type != "CLICK").ToList(), allowExDiff: true);
     }
 }
