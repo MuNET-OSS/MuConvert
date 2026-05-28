@@ -201,7 +201,8 @@ public class OgkrParser: IParser<OgkChart>
                 chart.BpmList.Add(new BPM(ToBar(ParseInt(p[1]), ParseInt(p[2])), ParseDec(p[3])));
                 break;
             case "MET":
-                chart.MetList.Add(new MET(ToBar(ParseInt(p[1]), ParseInt(p[2])), ParseInt(p[4]), ParseInt(p[3])));
+                // MET tUnit tGrid numerator denominator
+                chart.MetList.Add(new MET(ToBar(ParseInt(p[1]), ParseInt(p[2])), ParseInt(p[3]), ParseInt(p[4])));
                 break;
             case "SFL":
                 // SFL tUnit tGrid tGridLength speed
