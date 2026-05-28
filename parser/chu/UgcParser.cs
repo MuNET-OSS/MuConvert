@@ -184,6 +184,8 @@ public class UgcParser: BaseChuParser
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
             case "@MAINTIL": case "@TIL":
+            case "@MAINBPM": case "@USETIL": case "@ENDHEAD":
+            case "@BGSCENE": case "@FLDSCENE": case "@RLDATE": case "@CMT":
                 break;
 
             case "@SPDMOD":
