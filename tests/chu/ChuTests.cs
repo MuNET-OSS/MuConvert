@@ -16,13 +16,13 @@ public class ChuTests
     public static IEnumerable<object[]> OfficialC2sChartPaths()
     {
         return Directory.EnumerateFiles(OfficialDir, "*.c2s", SearchOption.AllDirectories)
-            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).Select(path => (object[])[path]);
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).Select(path => (object[])[Path.GetRelativePath(Environment.CurrentDirectory, path)]);
     }
 
     public static IEnumerable<object[]> CustomUgcChartPaths()
     {
         return Directory.EnumerateFiles(CustomDir, "*.ugc", SearchOption.AllDirectories)
-            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).Select(path => (object[])[path]);
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).Select(path => (object[])[Path.GetRelativePath(Environment.CurrentDirectory, path)]);
     }
 
     [Theory]

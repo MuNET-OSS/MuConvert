@@ -1,4 +1,5 @@
-﻿using Rationals;
+﻿using MuConvert.chart;
+using Rationals;
 
 namespace MuConvert.utils;
 
@@ -34,12 +35,13 @@ public class Alert
         TimeInSeconds = timeInSeconds;
     }
     
-    public Alert(LEVEL level, string description, (mai.MaiChart, Rational) barTime, int? line = null, string? relevantNote = null)
+    public Alert(LEVEL level, string description, (IBaseChart, Rational) barTime, int? line = null, string? relevantNote = null)
         : this(level, description, line, relevantNote)
     {
         var (chart, time) = barTime; 
-        TimeInBar = time; 
-        if (chart.BpmList.Count > 0) TimeInSeconds = (double)chart.ToSecond(time);
+        TimeInBar = time;
+        try { TimeInSeconds = (double)chart.ToSecond(time); } 
+        catch (Exception) { /* 忽略异常。因为异常是由于ToSecond报错引起的，往往是BPMList为空或首项不为0导致的，这种情况直接不显示秒数就好，没必要死磕 */ }
     }
 
     public override string ToString()

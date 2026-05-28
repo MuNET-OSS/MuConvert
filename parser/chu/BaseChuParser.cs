@@ -46,7 +46,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
                 var filteredByRaw = filtered.Where(x=>x.Type == target).ToList();
                 if (filteredByRaw.Count == 0)
                 {
-                    alerts.Add(new Alert(Alert.LEVEL.Warning, "未找到声明的前驱/依附音符", cur.Time, (double)chart.ToSecond(cur.Time)));
+                    alerts.Add(new Alert(Alert.LEVEL.Warning, "未找到声明的前驱/依附音符", (chart, cur.Time)));
                 }
                 else filtered = filteredByRaw; // 缩小目标范围
             }

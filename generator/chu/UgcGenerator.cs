@@ -68,7 +68,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             var ucode = UCode(n);
             if (ucode == "")
             {
-                alerts.Add(new Alert(Alert.LEVEL.Warning, $"UGC Generator遇到了不支持的音符类型: {n.Type}", n.Time, (double)ugc.ToSecond(n.Time)));
+                alerts.Add(new Alert(Alert.LEVEL.Warning, $"UGC Generator遇到了不支持的音符类型: {n.Type}", (ugc, n.Time)));
                 continue;
             }
             sb.Append($"#{m}'{o}:{ucode}");

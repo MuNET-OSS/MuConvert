@@ -315,7 +315,7 @@ public class UgcParser: BaseChuParser
                 break;
 
             default:
-                alerts.Add(new Alert(Warning, $"未知的音符类型前缀 '{typeChar}': {line}", note.Time, (double)chart.ToSecond(note.Time), lineNum, line));
+                alerts.Add(new Alert(Warning, $"未知的音符类型前缀 '{typeChar}': {line}", (chart, note.Time), lineNum, line));
                 // 如果后面跟的是跟随行（子ノーツ）而非主行（親ノーツ）的话，把它们全部消耗掉
                 while (idx + 1 < lines.Length)
                 {
@@ -498,11 +498,11 @@ public class UgcParser: BaseChuParser
             if (code.Length > startIdx + 1)
                 note.Width = HToI(code[startIdx + 1]);
             else
-                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}", note.Time, (double)chart.ToSecond(note.Time), lineNum, FormatNoteRef(note, code)));
+                alerts.Add(new Alert(Warning, $"音符缺少 width: {code}", (chart, note.Time), lineNum, FormatNoteRef(note, code)));
         }
         else
         {
-            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}", note.Time, (double)chart.ToSecond(note.Time), lineNum, FormatNoteRef(note, code)));
+            alerts.Add(new Alert(Warning, $"音符缺少 cell 和 width: {code}", (chart, note.Time), lineNum, FormatNoteRef(note, code)));
         }
     }
 
@@ -542,7 +542,7 @@ public class UgcParser: BaseChuParser
     {
         note.Type = "ALD";
         ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
-        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", note.Time, (double)chart.ToSecond(note.Time), idx+1, lines[idx]));
+        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, note.Time), idx+1, lines[idx]));
         else ParseHeightAndColor(note, code[3..], alerts, idx+1, "C");
         
         bool foundFirst = false;
@@ -557,7 +557,7 @@ public class UgcParser: BaseChuParser
             }
             
             if (Version >= 8 && marker != "c")
-                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", note.Time, (double)chart.ToSecond(note.Time), idx + 1, nextLine));
+                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, note.Time), idx + 1, nextLine));
 
             if (Version <= 6 && !intervalSet && marker == "s")
             {
