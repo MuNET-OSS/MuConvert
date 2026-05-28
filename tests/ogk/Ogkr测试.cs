@@ -16,7 +16,7 @@ public class Ogkr测试
     public static IEnumerable<object[]> GetTestInputsOnlyLv3(string dataDir) => GetTestInputs(dataDir)
         .Where(x=>int.TryParse(((OgkrTestInput)x[0]).DifficultyId, out var id) && id == 3);
 
-    [Theory(Skip = "ogkr的解析和生成还没实现完，所以暂时跳过")]
+    [Theory]
     [MemberData(nameof(GetTestInputs), "官谱")]
     public void 解析Ogkr再生成回去(OgkrTestInput c)
     {
@@ -83,8 +83,11 @@ public class Ogkr测试
 /// 1. [HEADER]：忽略 T_ 开头的统计量与 TUTORIAL，其余逐行严格比较。
 /// 2. [B_PALETTE]：不直接逐行比较；但要求 actual 内不存在两行“实质相同”
 ///    （除去 ID 之外其余字段全部相同）。
-/// 3. [COMPOSITION] / [LANE] / [LANE_BLOCK] / [BEAM] / [FLICK] / [NOTES]：逐行严格比较。
-/// 4. [BULLET] / [BELL]：逐行比较，但其中引用 B_PALETTE ID 的字段，比较的是
+/// 3. [COMPOSITION] / [LANE] / [BEAM] / [FLICK] / [NOTES]：逐行严格比较。
+/// 4. [LANE_BLOCK]：将每一行视为一个多重集元素进行比较（顺序不敏感）。
+///    这是因为官谱中观察到不同谱面对同一时刻的多条LBK使用了不同的排序约定，
+///    且其在游戏内并无实际顺序意义，故宽松比较以适应这一点。
+/// 5. [BULLET] / [BELL]：逐行比较，但其中引用 B_PALETTE ID 的字段，比较的是
 ///    所引用的 BPL 行的实质内容（去 ID 后的其余字段）是否相同，而非 ID 字面相等。
 ///
 /// 比较失败时，会打印差异所在 expected 中的行号（1-based）。
@@ -113,7 +116,7 @@ internal static class OgkrTextComparer
 
         CompareSimpleSection("COMPOSITION", expectedSections, actualSections);
         CompareSimpleSection("LANE", expectedSections, actualSections);
-        CompareSimpleSection("LANE_BLOCK", expectedSections, actualSections);
+        CompareUnorderedSection("LANE_BLOCK", expectedSections, actualSections);
         CompareSimpleSection("BEAM", expectedSections, actualSections);
         CompareSimpleSection("FLICK", expectedSections, actualSections);
         CompareSimpleSection("NOTES", expectedSections, actualSections);
@@ -174,6 +177,35 @@ internal static class OgkrTextComparer
         var expected = expectedSections.TryGetValue(section, out var le) ? le : [];
         var actual = actualSections.TryGetValue(section, out var la) ? la : [];
         CompareLinesStrict(section, expected, actual);
+    }
+
+    /// <summary>
+    /// 把两个section内的所有行作为multiset做比较：只关心是否同时存在相同的行集合（含重数），不关心顺序。
+    /// </summary>
+    private static void CompareUnorderedSection(string section,
+        Dictionary<string, List<LineEntry>> expectedSections,
+        Dictionary<string, List<LineEntry>> actualSections)
+    {
+        var expected = expectedSections.TryGetValue(section, out var le) ? le : [];
+        var actual = actualSections.TryGetValue(section, out var la) ? la : [];
+
+        var expectedCounts = expected.GroupBy(e => e.Content).ToDictionary(g => g.Key, g => g.Count());
+        var actualCounts = actual.GroupBy(e => e.Content).ToDictionary(g => g.Key, g => g.Count());
+
+        var diffs = new List<string>();
+        foreach (var (k, ec) in expectedCounts)
+        {
+            actualCounts.TryGetValue(k, out var ac);
+            if (ac != ec) diffs.Add($"  missing/uneven in actual (expected x{ec}, actual x{ac}): {k}");
+        }
+        foreach (var (k, ac) in actualCounts)
+        {
+            if (!expectedCounts.ContainsKey(k)) diffs.Add($"  unexpected in actual (x{ac}): {k}");
+        }
+        if (diffs.Count > 0)
+        {
+            Assert.Fail($"[{section}] section (unordered) mismatch:{Environment.NewLine}{string.Join(Environment.NewLine, diffs)}");
+        }
     }
 
     private static void CompareLinesStrict(string section, List<LineEntry> expected, List<LineEntry> actual)

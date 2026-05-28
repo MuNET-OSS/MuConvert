@@ -8,7 +8,7 @@ public class OgkChart: BaseChart<OgkNote>
 {
     public string Designer { get; set; } = ""; // 谱师
 
-    public decimal ProgJudgeBpm = 240m; // 用于给Hold生成中间判定点的BPM值
+    public decimal ProgJudgeBpm = 240m; // 用于给Hold生成中间判定点的BPM值，绝大多数情况下不需要手动改动。
 
     // 全局声明的“子弹伤害类型与伤害数值的映射关系”。绝大多数情况下都是这个默认值，不需要做改动。
     public Dictionary<BulletDamage, decimal> BulletDamages = new() {
