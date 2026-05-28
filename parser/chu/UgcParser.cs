@@ -34,7 +34,7 @@ public class UgcParser: BaseChuParser
 
             if (inHeader)
             {
-                if (line == "@ENDHEAD")
+                if (line.StartsWith("@ENDHEAD"))
                 {
                     inHeader = false;
                     continue;
@@ -183,8 +183,8 @@ public class UgcParser: BaseChuParser
             case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
-            case "@MAINTIL": case "@TIL":
-            case "@MAINBPM": case "@USETIL": case "@ENDHEAD":
+            case "@MAINTIL": case "@TIL": case "@USETIL":
+            case "@MAINBPM":
             case "@BGSCENE": case "@FLDSCENE": case "@RLDATE": case "@CMT":
                 break;
 
