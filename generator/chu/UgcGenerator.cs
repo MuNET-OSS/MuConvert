@@ -57,9 +57,11 @@ public class UgcGenerator : IGenerator<ChuChart>
         if (!string.IsNullOrEmpty(ugc.Artist)) sb.AppendLine($"@ARTIST\t{ugc.Artist}");
         if (!string.IsNullOrEmpty(ugc.Designer)) sb.AppendLine($"@DESIGN\t{ugc.Designer}");
         sb.AppendLine($"@DIFF\t{ugc.Difficulty}");
-        sb.AppendLine($"@LEVEL\t{ugc.DisplayLevel}");
+        var displayLevelStr = !string.IsNullOrEmpty(ugc.DisplayLevel) ? ugc.DisplayLevel : "0";
+        sb.AppendLine($"@LEVEL\t{displayLevelStr}");
         sb.AppendLine(FormattableString.Invariant($"@CONST\t{ugc.Level:F5}"));
-        sb.AppendLine($"@SONGID\t{ugc.MusicId}");
+        var songId = !(string.IsNullOrEmpty(ugc.MusicId) || ugc.MusicId == "0") ? ugc.MusicId : $"MuC-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        sb.AppendLine($"@SONGID\t{songId}");
         sb.AppendLine("@FLAG\tHIPRECISION\tTRUE"); // 表明，谱面中的高度使用的是两位高度而不是一位高度
         sb.AppendLine($"@TICKS\t{RSL / 4}");
         foreach (var met in ugc.MetList)
