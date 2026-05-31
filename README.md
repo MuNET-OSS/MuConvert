@@ -167,6 +167,7 @@ var (ugcChart, alerts) = new UgcParser().Parse(ugcText); // 解析 UGC 谱面字
 
 var (c2sText, alerts) = new C2sGenerator().Generate(ugcChart);   // UGC -> C2S
 var (ugcText, alerts) = new UgcGenerator().Generate(c2sChart);   // C2S -> UGC
+// 若需在UGC的头部区域写入自定义的字段（如BGM、JACKET等），可向构造函数内传入一个List<(string, string)>参数，例如：new UgcGenerator([("BGM", "xxx.mp3"), ("JACKET", "xxx.png")]);
 // 各种Generator的Generate方法，均接受 ChuChart（可将任一 Parser 产出的 ChuChart 互相传入）。
 // 同上，alerts是生成过程中可能产生的警告信息等，建议打印出来。
 ```
@@ -208,6 +209,9 @@ var (ogkrText, alerts) = new OngekiGenerator().Generate(ogkChart); // 将 OgkCha
     - StrictLevelEnum `strictLevel` (默认为 `Normal`): 解析 Simai 时的严格程度（`Strict` / `Normal` / `Lax`），影响语法容错与报错策略。各个严格程度策略的具体含义，请参见上方[CLI文档](#基本用法)中的相关描述。
   - MA2Generator带有以下选项：
     - bool `isUtage` (默认为false): 仅影响生成的MA2的文件头区域的`FES_MODE`的值是1还是0，一般来说是不重要的。
+  - UgcGenerator带有以下选项：
+    - List<(string, string)> `extraHeaders` (默认为`null`即不添加额外的头字段)：在生成的UGC的头部区域中，写入额外的字段。
+      - `(string, string)`元组的第一项为字段名（不含`@`前缀），第二项为字段值；生成时会输出为 `@{字段名}\t{内容}`。
 
 #### 更多示例（异常处理）
 注意：当解析/生成步骤失败时，会抛出`ConversionException`异常，其中含有`Alerts`属性，是转谱过程中遇到的错误和警告等信息。（类比于C语言编译器会打印出Error和Warning信息）  

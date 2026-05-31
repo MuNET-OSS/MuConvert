@@ -10,6 +10,15 @@ public class UgcGenerator : IGenerator<ChuChart>
 {
     private int RSL = 480 * 4;
     private List<Alert> alerts = [];
+    public List<(string, string)> ExtraHeaders = [];
+
+    /**
+     * <param name="extraHeaders">在生成的UGC的HEAD区域，添加上额外的字段。</param>
+     */
+    public UgcGenerator(List<(string, string)>? extraHeaders = null)
+    {
+        if (extraHeaders != null) ExtraHeaders = extraHeaders;
+    }
 
     public (string, List<Alert>) Generate(ChuChart chart)
     {
@@ -48,6 +57,7 @@ public class UgcGenerator : IGenerator<ChuChart>
     private string Serialize(ChuChart ugc)
     {
         ugc.Sort();
+        var extraHeaderKeys = ExtraHeaders.Select(x => x.Item1).ToHashSet();
         
         var sb = new StringBuilder();
         sb.AppendLine($"' Created with MuConvert v{Utils.AppVersion}");
@@ -62,6 +72,10 @@ public class UgcGenerator : IGenerator<ChuChart>
         sb.AppendLine(FormattableString.Invariant($"@CONST\t{ugc.Level:F5}"));
         var songId = !(string.IsNullOrEmpty(ugc.MusicId) || ugc.MusicId == "0") ? ugc.MusicId : $"MuC-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
         sb.AppendLine($"@SONGID\t{songId}");
+        foreach (var (key, value) in ExtraHeaders)
+        { // 写入用户传入的ExtraHeaders中要求的字段
+            sb.AppendLine($"@{key}\t{value}");
+        }
         sb.AppendLine("@FLAG\tHIPRECISION\tTRUE"); // 表明，谱面中的高度使用的是两位高度而不是一位高度
         sb.AppendLine($"@TICKS\t{RSL / 4}");
         foreach (var met in ugc.MetList)
@@ -74,7 +88,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             var (m, o) = Utils.BarAndTick(b.Time, RSL);
             sb.AppendLine(FormattableString.Invariant($"@BPM\t{m}'{o}\t{b.Bpm:F5}"));
         }
-        sb.AppendLine("@TIL\t0\t0'0\t1.00000");
+        if (!extraHeaderKeys.Contains("TIL")) sb.AppendLine("@TIL\t0\t0'0\t1.00000"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
 
         foreach (var s in ugc.SflList.OrderBy(x => x.Time)) 
         { 
@@ -82,7 +96,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             sb.AppendLine(FormattableString.Invariant($"@SPDMOD\t{m}'{o}\t{s.Multiplier:0.00000}"));
         }
 
-        sb.AppendLine("@MAINTIL\t0");
+        if (!extraHeaderKeys.Contains("MAINTIL")) sb.AppendLine("@MAINTIL\t0"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
 
