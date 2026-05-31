@@ -50,7 +50,9 @@ public class UgcGenerator : IGenerator<ChuChart>
         ugc.Sort();
         
         var sb = new StringBuilder();
+        sb.AppendLine($"' Created with MuConvert v{Utils.AppVersion}");
         sb.AppendLine("@VER\t8");
+        sb.AppendLine("@EXVER\t1");
         if (!string.IsNullOrEmpty(ugc.Title)) sb.AppendLine($"@TITLE\t{ugc.Title}");
         if (!string.IsNullOrEmpty(ugc.Artist)) sb.AppendLine($"@ARTIST\t{ugc.Artist}");
         if (!string.IsNullOrEmpty(ugc.Designer)) sb.AppendLine($"@DESIGN\t{ugc.Designer}");
@@ -58,6 +60,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         sb.AppendLine($"@LEVEL\t{ugc.DisplayLevel}");
         sb.AppendLine(FormattableString.Invariant($"@CONST\t{ugc.Level:F5}"));
         sb.AppendLine($"@SONGID\t{ugc.MusicId}");
+        sb.AppendLine("@FLAG\tHIPRECISION\tTRUE"); // 表明，谱面中的高度使用的是两位高度而不是一位高度
         sb.AppendLine($"@TICKS\t{RSL / 4}");
         foreach (var met in ugc.MetList)
         {
