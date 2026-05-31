@@ -74,8 +74,8 @@ public class ChuUtils
     public static readonly Dictionary<string, string> C2U_AirCrushColor = Utils.ReverseDict(U2C_AirCrushColor);
     public static readonly HashSet<string> C2sAllowedCrushColors = C2U_AirCrushColor.Keys.ToHashSet();
     
-    public static decimal U2C_Height(decimal input) => input / 1.6m;
-    public static decimal C2U_Height(decimal input) => input * 1.6m;
+    public static decimal U2C_Height(decimal input) => input / 2 + 1;
+    public static decimal C2U_Height(decimal input) => (input - 1) * 2;
     
     public static bool IsHold(string t) => t is "HLD" or "HXD";
     public static bool IsSlide(string t) => t is "SLD" or "SLC" or "SXD" or "SXC";

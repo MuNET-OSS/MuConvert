@@ -126,11 +126,11 @@ public class C2sGenerator : IGenerator<ChuChart>
 
     private static string FormatAsdAsc(ChuNote n, int m, int o, int durTicks, List<Alert> alerts)
     {
-        return FormattableString.Invariant($"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}\t{AirColorTag(n, alerts)}");
+        return FormattableString.Invariant($"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.Height:F1}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:F1}\t{AirColorTag(n, alerts)}");
     }
 
     private static string FormatAld(ChuNote n, int m, int o, int durTicks, List<Alert> alerts)
     {
-        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{Utils.Tick(n.CrushInterval, RSL)}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}\t{AirCrushColorTag(n, alerts)}");
+        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{Utils.Tick(n.CrushInterval, RSL)}\t{n.Height:F1}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:F1}\t{AirCrushColorTag(n, alerts)}");
     }
 }

@@ -186,7 +186,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         => (IsSlide(n) && IsSlide(n.Previous)) || (IsAirSlide(n) && IsAirSlide(n.Previous));
     private static char SlideFollowerMarker(string t) => t is "SLC" or "SXC" or "ASC" ? 'c' : 's';
 
-    private static string EncodeAirHeight(decimal value) => IToH36((int)Math.Round(C2U_Height(value) * 10)).PadLeft(2, '0');
+    private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(C2U_Height(value) * 10), 0, 1295)).PadLeft(2, '0');
     
     private string AirColor(ChuNote n)
     {
