@@ -114,6 +114,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} encountered an unsupported Air color ({2}) while processing {1} notes. We would greatly appreciate it if you could report this chart to us (via https://github.com/MuNET-OSS/MuConvert/issues)!.
+        /// </summary>
+        public static string C2SUnsupportedAirColor {
+            get {
+                return ResourceManager.GetString("C2SUnsupportedAirColor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cannot convert chart to target format: {0}.
         /// </summary>
         public static string ChuGeneratorUnsupported {

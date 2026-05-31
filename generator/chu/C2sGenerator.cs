@@ -68,11 +68,23 @@ public class C2sGenerator : IGenerator<ChuChart>
         return sb.ToString();
     }
 
-    private static readonly List<string> allowedAirColors = ["DEF", "I"]; // TODO 搞清楚UGC里的'I'颜色，在C2S里，对应的字符串是什么
-    private static string AirColorTag(ChuNote n)
+    private static string AirColorTag(ChuNote n, List<Alert> alerts)
     {
-        if (allowedAirColors.Contains(n.Tag)) return n.Tag;
-        else return "DEF";
+        if (C2sAllowedColors.Contains(n.Tag)) return n.Tag;
+        else
+        {
+            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "C2S Generator", n.Type, n.Tag), n.Time));
+            return "DEF";
+        }
+    }
+    private static string AirCrushColorTag(ChuNote n, List<Alert> alerts)
+    {
+        if (C2sAllowedCrushColors.Contains(n.Tag)) return n.Tag;
+        else
+        {
+            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "C2S Generator", n.Type, n.Tag), n.Time));
+            return "DEF";
+        }
     }
 
     private static string FLKTag(ChuNote n) => n.Tag is "L" or "R" ? n.Tag : "L";
@@ -97,10 +109,10 @@ public class C2sGenerator : IGenerator<ChuChart>
             "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}",
             "FLK" => $"FLK\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{FLKTag(n)}",
             "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" =>
-                    $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{AirColorTag(n)}",
-            "AHD" or "AHX" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{durTicks}\t{AirColorTag(n)}",
-            "ASD" or "ASC" => FormatAsdAsc(n, m, o, durTicks),
-            "ALD" => FormatAld(n, m, o, durTicks),
+                    $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{AirColorTag(n, alerts)}",
+            "AHD" or "AHX" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{durTicks}\t{AirColorTag(n, alerts)}",
+            "ASD" or "ASC" => FormatAsdAsc(n, m, o, durTicks, alerts),
+            "ALD" => FormatAld(n, m, o, durTicks, alerts),
             "MNE" => $"MNE\t{m}\t{o}\t{n.Cell}\t{n.Width}",
             _ => alert(),
         };
@@ -112,13 +124,13 @@ public class C2sGenerator : IGenerator<ChuChart>
         }
     }
 
-    private static string FormatAsdAsc(ChuNote n, int m, int o, int durTicks)
+    private static string FormatAsdAsc(ChuNote n, int m, int o, int durTicks, List<Alert> alerts)
     {
-        return FormattableString.Invariant($"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}\t{AirColorTag(n)}");
+        return FormattableString.Invariant($"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}\t{AirColorTag(n, alerts)}");
     }
 
-    private static string FormatAld(ChuNote n, int m, int o, int durTicks)
+    private static string FormatAld(ChuNote n, int m, int o, int durTicks, List<Alert> alerts)
     {
-        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{Utils.Tick(n.CrushInterval, RSL)}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}");
+        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{Utils.Tick(n.CrushInterval, RSL)}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}\t{AirCrushColorTag(n, alerts)}");
     }
 }

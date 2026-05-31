@@ -26,10 +26,22 @@ public class ChuUtils
     public static readonly Dictionary<string, string> U2C_AirColor = new()
     {
         ["N"] = "DEF",
-        ["I"] = "I", // TODO 搞清楚UGC里的'I'颜色，在C2S里，对应的字符串是什么
+        // ["I"] = "I", // TODO 搞清楚UGC里的'I'颜色，在C2S里，对应的字符串是什么
     };
     public static readonly Dictionary<string, string> C2U_AirColor = Utils.ReverseDict(U2C_AirColor);
-
+    public static readonly HashSet<string> C2sAllowedColors = C2U_AirColor.Keys.ToHashSet();
+    
+    public static readonly Dictionary<string, string> U2C_AirCrushColor = new()
+    {
+        ["0"] = "DEF",
+        ["Z"] = "NON",
+        ["6"] = "CYN",
+        ["A"] = "VLT",
+        // TODO 补充更多对应关系
+    };
+    public static readonly Dictionary<string, string> C2U_AirCrushColor = Utils.ReverseDict(U2C_AirCrushColor);
+    public static readonly HashSet<string> C2sAllowedCrushColors = C2U_AirCrushColor.Keys.ToHashSet();
+    
     public static decimal U2C_Height(decimal input) => input / 1.6m;
     public static decimal C2U_Height(decimal input) => input * 1.6m;
     

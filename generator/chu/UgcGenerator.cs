@@ -9,11 +9,12 @@ namespace MuConvert.chu;
 public class UgcGenerator : IGenerator<ChuChart>
 {
     private int RSL = 480 * 4;
+    private List<Alert> alerts = [];
 
     public (string, List<Alert>) Generate(ChuChart chart)
     {
-        var alerts = new List<Alert>();
-        var text = Serialize(chart, alerts);
+        alerts = new List<Alert>();
+        var text = Serialize(chart);
         return (text, alerts);
     }
 
@@ -44,7 +45,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         }
     }
 
-    private string Serialize(ChuChart ugc, List<Alert> alerts)
+    private string Serialize(ChuChart ugc)
     {
         ugc.Sort();
         
@@ -184,7 +185,26 @@ public class UgcGenerator : IGenerator<ChuChart>
 
     private static string EncodeAirHeight(decimal value) => IToH36((int)Math.Round(C2U_Height(value) * 10)).PadLeft(2, '0');
     
-    private static string CrushColor(string t) => C2U_AirColor.GetValueOrDefault(t, t.Length > 0 ? t[..1] : "0");
+    private string AirColor(ChuNote n)
+    {
+        if (C2U_AirColor.TryGetValue(n.Tag, out var color)) return color;
+        else
+        {
+            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Tag), n.Time));
+            return "N";
+        }
+    }
+    private string CrushColor(ChuNote n)
+    {
+        if (C2U_AirCrushColor.TryGetValue(n.Tag, out var color)) return color;
+        else if (n.Tag.Length == 1) return n.Tag;
+        else
+        {
+            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Tag), n.Time));
+            return "0";
+        }
+    }
+
     private string CrushInterval(Rational crushInterval)
     {
         return crushInterval > 25 ? "$" : Utils.Tick(crushInterval, RSL).ToString();
@@ -203,11 +223,11 @@ public class UgcGenerator : IGenerator<ChuChart>
             "FLK" => $"f{c}{w}{n.Tag}",
             "MNE" => $"d{c}{w}",
             // AIR-SLIDE (v8): #BarTick:S x w hh c
-            "ASD" or "ASC" => $"S{c}{w}{EncodeAirHeight(n.Height)}{C2U_AirColor.GetValueOrDefault(n.Tag, "N")}",
-            "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"a{c}{w}{C2U_AirDirections[n.Type]}{C2U_AirColor.GetValueOrDefault(n.Tag, "N")}",
+            "ASD" or "ASC" => $"S{c}{w}{EncodeAirHeight(n.Height)}{AirColor(n)}",
+            "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"a{c}{w}{C2U_AirDirections[n.Type]}{AirColor(n)}",
             // AIR-HOLD (v8): #BarTick:H x w c + 子行 #OffsetTick:s / :c（见 Umiguri Chart v8 doc）
-            "AHD" or "AHX" => $"H{c}{w}{C2U_AirColor.GetValueOrDefault(n.Tag, "N")}",
-            "ALD" => $"C{c}{w}{EncodeAirHeight(n.Height)}{CrushColor(n.Tag)},{CrushInterval(n.CrushInterval)}",
+            "AHD" or "AHX" => $"H{c}{w}{AirColor(n)}",
+            "ALD" => $"C{c}{w}{EncodeAirHeight(n.Height)}{CrushColor(n)},{CrushInterval(n.CrushInterval)}",
             _ => ""
         };
     }

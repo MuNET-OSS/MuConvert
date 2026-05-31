@@ -214,6 +214,9 @@
   <data name="C2SUnknownNoteType" xml:space="preserve">
     <value>C2S 中存在无法识别的音符类型: {0}</value>
   </data>
+  <data name="C2SUnsupportedAirColor" xml:space="preserve">
+    <value>{0}处理{1}音符时，遇到了不支持的Air颜色: {2}。如果您能将这个谱面报告给我们（通过 https://github.com/MuNET-OSS/MuConvert/issues ）的话，我们会非常感谢！</value>
+  </data>
   <data name="ChuGeneratorUnsupported" xml:space="preserve">
     <value>无法将谱面转换为目标格式: {0}</value>
   </data>

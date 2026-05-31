@@ -214,6 +214,9 @@
   <data name="C2SUnknownNoteType" xml:space="preserve">
     <value>Unknown C2S note type: {0}</value>
   </data>
+  <data name="C2SUnsupportedAirColor" xml:space="preserve">
+    <value>{0} encountered an unsupported Air color ({2}) while processing {1} notes. We would greatly appreciate it if you could report this chart to us (via https://github.com/MuNET-OSS/MuConvert/issues)!</value>
+  </data>
   <data name="ChuGeneratorUnsupported" xml:space="preserve">
     <value>Cannot convert chart to target format: {0}</value>
   </data>
