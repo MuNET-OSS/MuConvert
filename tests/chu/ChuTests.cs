@@ -87,7 +87,7 @@ public class ChuTests
         if (expected.Cell != actual.Cell || expected.Width != actual.Width) return false;
         if (expected.EndCell != actual.EndCell || expected.EndWidth != actual.EndWidth) return false;
         if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(expected.EndHeight - actual.EndHeight) > 0.05m) return false;
-        if (expected.CrushInterval != actual.CrushInterval) return false;
+        if (!TimesEquivalent(expected.CrushInterval, actual.CrushInterval)) return false;
         if (!TagsEquivalent(expected, actual)) return false;
         if (!TypesEquivalent(expected.TargetNote, actual.TargetNote, allowExDiff)) return false;
         return true;

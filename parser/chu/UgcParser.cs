@@ -362,8 +362,8 @@ public class UgcParser: BaseChuParser
         {
             var intervalStr = str[(posOfComma+1)..];
             str = str[..posOfComma];
-            if (intervalStr == "$") n.CrushInterval = 38400;
-            else if (int.TryParse(intervalStr, out var interval)) n.CrushInterval = interval;
+            if (intervalStr == "$") n.CrushInterval = 100;
+            else if (int.TryParse(intervalStr, out var interval)) n.CrushInterval = new Rational(interval, RSL);
             else alerts.Add(new Alert(Warning, "解析Air-Crush的interval属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
         }
 
@@ -575,7 +575,7 @@ public class UgcParser: BaseChuParser
 
             if (Version <= 6 && !intervalSet && marker == "s")
             {
-                note.CrushInterval = endTick;
+                note.CrushInterval = new Rational(endTick, RSL);
                 intervalSet = true;
             }
             

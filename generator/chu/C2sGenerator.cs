@@ -119,6 +119,6 @@ public class C2sGenerator : IGenerator<ChuChart>
 
     private static string FormatAld(ChuNote n, int m, int o, int durTicks)
     {
-        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.CrushInterval}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}");
+        return FormattableString.Invariant($"ALD\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{Utils.Tick(n.CrushInterval, RSL)}\t{n.Height:0.#}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\t{n.EndHeight:0.#}");
     }
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using MuConvert.generator;
 using MuConvert.utils;
+using Rationals;
 using static MuConvert.utils.ChuUtils;
 
 namespace MuConvert.chu;
@@ -184,9 +185,12 @@ public class UgcGenerator : IGenerator<ChuChart>
     private static string EncodeAirHeight(decimal value) => IToH36((int)Math.Round(C2U_Height(value) * 10)).PadLeft(2, '0');
     
     private static string CrushColor(string t) => C2U_AirColor.GetValueOrDefault(t, t.Length > 0 ? t[..1] : "0");
-    private static string CrushInterval(int crushInterval) => crushInterval > 10000 ? "$" : crushInterval.ToString();
-    
-    private static string UCode(ChuNote n)
+    private string CrushInterval(Rational crushInterval)
+    {
+        return crushInterval > 25 ? "$" : Utils.Tick(crushInterval, RSL).ToString();
+    }
+
+    private string UCode(ChuNote n)
     {
         string c = IToH36(n.Cell), w = IToH36(n.Width);
         return n.Type switch

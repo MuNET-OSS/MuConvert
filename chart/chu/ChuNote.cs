@@ -49,7 +49,7 @@ public class ChuNote: BaseNote
     /** 结束高度。仅在Air Slide/Air Crush上具有。存储的是C2S格式中的数值，转UGC时需要乘以1.6。 */
     public decimal EndHeight { get; set; } = 5;
     /** Air Crush的interval值 */
-    public int CrushInterval { get; set; } = 0;
+    public Rational CrushInterval { get; set; } = 0;
     
     public override Rational EndTime => (Time + Duration).CanonicalForm;
     /** Air系列音符/Slide系列音符的 关联的目标音符类型。仅供向前兼容使用。 */

@@ -13,7 +13,7 @@ public class ChuUtils
         ["DR"] = "ADR",
         ["DL"] = "ADL",
     };
-    public static readonly Dictionary<string, string> C2U_AirDirections = ReverseDict(U2C_AirDirections);
+    public static readonly Dictionary<string, string> C2U_AirDirections = Utils.ReverseDict(U2C_AirDirections);
 
     public static readonly Dictionary<string, string> U2C_ChrExtras = new()
     {
@@ -21,20 +21,17 @@ public class ChuUtils
         ["D"] = "DW",
         ["C"] = "CE",
     };
-    public static readonly Dictionary<string, string> C2U_ChrExtras = ReverseDict(U2C_ChrExtras);
+    public static readonly Dictionary<string, string> C2U_ChrExtras = Utils.ReverseDict(U2C_ChrExtras);
     
     public static readonly Dictionary<string, string> U2C_AirColor = new()
     {
         ["N"] = "DEF",
         ["I"] = "I", // TODO 搞清楚UGC里的'I'颜色，在C2S里，对应的字符串是什么
     };
-    public static readonly Dictionary<string, string> C2U_AirColor = ReverseDict(U2C_AirColor);
+    public static readonly Dictionary<string, string> C2U_AirColor = Utils.ReverseDict(U2C_AirColor);
 
     public static decimal U2C_Height(decimal input) => input / 1.6m;
     public static decimal C2U_Height(decimal input) => input * 1.6m;
-
-    private static Dictionary<string, string> ReverseDict(Dictionary<string, string> dict) =>
-        dict.ToDictionary(x => x.Value, x => x.Key);
     
     public static bool IsHold(string t) => t is "HLD" or "HXD";
     public static bool IsSlide(string t) => t is "SLD" or "SLC" or "SXD" or "SXC";

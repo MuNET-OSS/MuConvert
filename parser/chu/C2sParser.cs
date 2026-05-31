@@ -144,7 +144,7 @@ public class C2sParser: BaseChuParser
                     return;
                 }
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.CrushInterval = Int(p, 5);
+                note.CrushInterval = new Rational(Int(p, 5), RSL);
                 note.Height = Decimal(p, 6, 5); note.EndHeight = Decimal(p, 10, 5);
                 note.Duration = new Rational(Int(p, 7), RSL);
                 note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));

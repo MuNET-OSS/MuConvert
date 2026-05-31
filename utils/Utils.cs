@@ -135,6 +135,9 @@ public static class Utils
         if (negative) sb.Append('-');
         return new string(sb.ToString().Reverse().ToArray());
     }
+    
+    public static Dictionary<string, string> ReverseDict(Dictionary<string, string> dict) =>
+        dict.ToDictionary(x => x.Value, x => x.Key);
 }
 
 public static class ExtensionUtils
