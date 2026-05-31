@@ -187,7 +187,7 @@ public class UgcGenerator : IGenerator<ChuChart>
     
     private string AirColor(ChuNote n)
     {
-        if (C2U_AirColor.TryGetValue(n.Tag, out var color)) return color;
+        if (Try_C2U_AirColor(n, out var color)) return color;
         else
         {
             if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Tag), n.Time));
@@ -216,7 +216,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         return n.Type switch
         {
             "TAP" => $"t{c}{w}",
-            "CHR" => $"x{c}{w}{C2U_ChrExtras.GetValueOrDefault(n.Tag, n.Tag)}",
+            "CHR" => $"x{c}{w}{C2U_ChrExtras.GetValueOrDefault(n.Tag, "C")}",
             "HLD" or "HXD" => $"h{c}{w}",
             "SLD" or "SXD" => $"s{c}{w}",
             "SLC" or "SXC" => $"s{c}{w}",

@@ -371,7 +371,8 @@ public class UgcParser: BaseChuParser
         if (str.Length > 0)
         { // 解析颜色
             var rawColorStr = str.Last().ToString();
-            n.Tag = (noteType == "C" ? U2C_AirCrushColor : U2C_AirColor).GetValueOrDefault(rawColorStr, rawColorStr);
+            if (noteType == "C") n.Tag = U2C_AirCrushColor.GetValueOrDefault(rawColorStr, rawColorStr); // Air Crush
+            else n.Tag = Try_U2C_AirColor(n, rawColorStr, out var color) ? color : rawColorStr;
         }
         if (str.Length > 1)
         { // 解析高度

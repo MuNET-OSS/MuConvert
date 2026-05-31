@@ -20,24 +20,56 @@ public class ChuUtils
         ["U"] = "UP",
         ["D"] = "DW",
         ["C"] = "CE",
+        ["L"] = "LS",
+        ["R"] = "RS",
+        ["A"] = "RC",
+        ["W"] = "LC",
+        ["I"] = "BS",
     };
     public static readonly Dictionary<string, string> C2U_ChrExtras = Utils.ReverseDict(U2C_ChrExtras);
     
-    public static readonly Dictionary<string, string> U2C_AirColor = new()
+    public static bool Try_U2C_AirColor(ChuNote n, string rawColorStr, out string color)
     {
-        ["N"] = "DEF",
-        // ["I"] = "I", // TODO 搞清楚UGC里的'I'颜色，在C2S里，对应的字符串是什么
-    };
-    public static readonly Dictionary<string, string> C2U_AirColor = Utils.ReverseDict(U2C_AirColor);
-    public static readonly HashSet<string> C2sAllowedColors = C2U_AirColor.Keys.ToHashSet();
+        color = rawColorStr switch
+        {
+            "N" => "DEF",
+            "I" => IsAirDown(n) ? "GRN" : "PPL",
+            _ => "",
+        };
+        return color != "";
+    }
+    public static bool Try_C2U_AirColor(ChuNote n, out string color)
+    {
+        color = n.Tag switch
+        {
+            "DEF" => "N",
+            "" => "N",
+            "GRN" => IsAirDown(n) ? "I" : "N",
+            "PPL" => IsAirDown(n) ? "N" : "I",
+            _ => "",
+        };
+        return color != "";
+    }
+    public static readonly HashSet<string> C2sAllowedColors = ["DEF", "GRN", "PPL"];
     
     public static readonly Dictionary<string, string> U2C_AirCrushColor = new()
     {
-        ["0"] = "DEF",
-        ["Z"] = "NON",
-        ["6"] = "CYN",
-        ["A"] = "VLT",
-        // TODO 补充更多对应关系
+        ["0"] = "DEF", // Normal / 通常
+        ["Z"] = "NON", // Transparent / 透明
+        ["1"] = "RED", // Red / 赤
+        ["2"] = "ORN", // Orange / 橙
+        ["3"] = "YEL", // Yellow / 黄
+        ["4"] = "LIM", // Grass / 黄緑
+        ["5"] = "GRN", // Green / 緑
+        ["6"] = "AQA", // Sky / 水
+        ["7"] = "CYN", // Sky blue / 空
+        ["8"] = "DGR", // （存疑，不确定） Cobalt blue / 天（DGR ≈ Dark GRay？）
+        ["9"] = "BLU", // Blue / 青
+        ["A"] = "VLT", // Violet / 青紫
+        ["Y"] = "PPL", // Purple / 赤紫
+        ["B"] = "PNK", // Pink / 桃
+        ["C"] = "GRY", // （有点存疑，略微不确定） White / 白
+        ["D"] = "BLK", // Black / 黒
     };
     public static readonly Dictionary<string, string> C2U_AirCrushColor = Utils.ReverseDict(U2C_AirCrushColor);
     public static readonly HashSet<string> C2sAllowedCrushColors = C2U_AirCrushColor.Keys.ToHashSet();
@@ -49,6 +81,7 @@ public class ChuUtils
     public static bool IsSlide(string t) => t is "SLD" or "SLC" or "SXD" or "SXC";
     public static bool IsAirSlide(string t) => t is "ASD" or "ASC";
     public static bool IsAir(string t) => t is "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL";
+    public static bool IsAirDown(string t) => t is "ADW" or "ADR" or "ADL";
     public static bool IsAirHold(string t) => t is "AHD" or "AHX";
     public static bool IsAirCrush(string t) => t is "ALD";
     // 是否是广义的air音符（Air/Air Hold/Air Slide/Air Crush）
@@ -58,6 +91,7 @@ public class ChuUtils
     public static bool IsSlide(ChuNote? n) => IsSlide(n?.Type!);
     public static bool IsAirSlide(ChuNote? n) => IsAirSlide(n?.Type!);
     public static bool IsAir(ChuNote? n) => IsAir(n?.Type!);
+    public static bool IsAirDown(ChuNote? n) => IsAirDown(n?.Type!);
     public static bool IsAirHold(ChuNote? n) => IsAirHold(n?.Type!);
     public static bool IsAirCrush(ChuNote? n) => IsAirCrush(n?.Type!);
     // 是否是广义的air音符（Air/Air Hold/Air Slide/Air Crush）
