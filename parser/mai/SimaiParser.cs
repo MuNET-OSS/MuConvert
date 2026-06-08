@@ -520,9 +520,11 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
     {
         var result = new Duration(currNote!);
         Duration? waitTime = null;
-        isRealExactWaitTime = false;
+        isRealExactWaitTime = false; // 是否通过##，指定了绝对的等待时间值
+        Rational? anotherBpm = null; // 是否通过类似 160#8:3，指定了显式的BPM，且和当前的实际BPM不同 
         AlertIfMoreParentheses(context._lp, context._rp);
 
+        // 解析绝对的等待时间
         if (context.waitTime() != null)
         {
             waitTime = new Duration(currNote!)
@@ -531,19 +533,26 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
             };
             isRealExactWaitTime = true;
         }
+        
+        // 解析显式的BPM
+        if (context.asBpm() != null)
+        {
+            var currentBpm = chart.BpmList.Last().Bpm;
+            var bpm = (decimal)VisitNumber(context.asBpm().number());
+            if (bpm != currentBpm)
+            {
+                anotherBpm = (Rational)bpm;
+                if (waitTime == null) // 如果未显式指定绝对的waitTime秒数，则waitTime也要变成该强行指定的bpm下的一拍。不然默认就是currentBpm下的一拍了。
+                    waitTime = new Duration(currNote!) { Seconds = 60 / anotherBpm.Value };
+            }
+        }
+        
         if (context.number() != null) result.Seconds = (Rational)(decimal)VisitNumber(context.number());
         else
         {
             var value = (Rational)VisitBeats(context.beats());
-            if (context.asBpm() == null) result.InvariantBar = value;
-            else
-            {
-                // 根据强行指定的bpm换算为秒数
-                var bpm = (Rational)(decimal)VisitNumber(context.asBpm().number());
-                result.Seconds = value * (240 / bpm);
-                // 如果未显式指定waitTime，则waitTime也要变成强行指定的bpm下的一拍。不然就是音符所在时刻下的一拍了。
-                waitTime ??= new Duration(currNote!) { Seconds = 60 / bpm };
-            }
+            if (anotherBpm == null) result.InvariantBar = value;
+            else result.Seconds = value * (240 / anotherBpm.Value); // 显式指定了bpm的情况，需要根据强行指定的bpm换算为秒数
         }
         return (waitTime, result);
     }
