@@ -274,7 +274,10 @@
   <data name="C2SUnknownNoteType" xml:space="preserve">
     <value>不明なC2Sノートタイプ: {0}</value>
   </data>
+  <data name="C2SUnsupportedAirColor" xml:space="preserve">
+    <value>{0} が {1} ノーツを処理中に、未対応の Air カラー（{2}）を検出しました。この譜面を `https://github.com/MuNET-OSS/MuConvert/issues` に報告いただけると大変助かります！</value>
+  </data>
   <data name="ChuGeneratorUnsupported" xml:space="preserve">
-    <value>チャートを変換できません: {0}</value>
+    <value>チャートを対象形式に変換できません: {0}</value>
   </data>
 </root>

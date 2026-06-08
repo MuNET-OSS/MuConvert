@@ -274,6 +274,9 @@
   <data name="C2SUnknownNoteType" xml:space="preserve">
     <value>알 수 없는 C2S 노트 타입: {0}</value>
   </data>
+  <data name="C2SUnsupportedAirColor" xml:space="preserve">
+    <value>{0}이(가) {1} 노트를 처리하는 중 지원하지 않는 Air 색상({2})을 발견했습니다. 이 채보를 `https://github.com/MuNET-OSS/MuConvert/issues` 에 제보해 주시면 정말 감사하겠습니다!</value>
+  </data>
   <data name="ChuGeneratorUnsupported" xml:space="preserve">
     <value>차트를 대상 형식으로 변환할 수 없습니다: {0}</value>
   </data>
