@@ -4,6 +4,10 @@ on:
   push:
     branches: [ "master" ]
 
+permissions:
+  id-token: write
+  attestations: write
+
 jobs:
   build_windows_cli:
     name: Build MuConvert.exe (win-x64)
@@ -33,6 +37,14 @@ jobs:
           -p:SelfContained=true
           -p:UseAppHost=true
           -p:PublishSingleFile=true
+
+      - name: Print build version
+        run: publish/win-x64/MuConvert.exe --version
+
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: publish/win-x64/MuConvert.exe
 
       - name: Upload artifact (MuConvert.exe)
         uses: actions/upload-artifact@v7
