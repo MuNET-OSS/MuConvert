@@ -88,6 +88,7 @@ public class Maidata : Dictionary<string, string>
             if (k.StartsWith("inote_"))
             {
                 if (!int.TryParse(k.Replace("inote_", ""), out var id)) continue;
+                if (string.IsNullOrWhiteSpace(this[k])) continue;
                 // 一边从info中移除内容，一边加到levels里去
                 infos.Remove(k, out var v);
                 infos.Remove($"lv_{id}", out var level);
