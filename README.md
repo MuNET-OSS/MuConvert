@@ -26,9 +26,10 @@ MuConvert 是一个多功能的音游转谱器。目前支持maimai、chunithm�
 ### 1) 直接使用本程序进行转谱（CLI）
 
 #### 如何下载
-- 请到 GitHub Actions 的 [`Build` 工作流页面](https://github.com/MuNET-OSS/MuConvert/actions/workflows/build.yml)，打开最新一次分支的构建，在 Artifacts 中下载 `MuConvert.exe` 即可。
+- 请到 [Release](https://github.com/MuNET-OSS/MuConvert/releases) 下载最新发布版本；也可到 [Actions](https://github.com/MuNET-OSS/MuConvert/actions/workflows/build.yml) 中，下载最新主线代码的构建版本（点击最新一次Action构建，向下翻到Artifacts部分）。
   - 下载到的`MuConvert.exe`，按照下文所述的用法，从命令行中直接运行即可。
-  > 如果你希望自己编译，也可以参考后面“开发者指南”部分的[编译为单文件exe模式](#编译为单文件exe模式)。
+  - 如果你希望自己编译，也可以参考后面“开发者指南”部分的[编译为单文件exe模式](#编译为单文件exe模式)。
+  > MuConvert的CI构建工作流现已接入[Github Attestation](https://docs.github.com/en/actions/concepts/security/artifact-attestations)，可通过`gh attestation verify MuConvert.exe -R MuNET-OSS/MuConvert`来验证文件的完整性，确保文件未被篡改。
 
 #### 基本用法
 
