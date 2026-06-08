@@ -51,6 +51,10 @@
       <PackageReference Include="System.CommandLine" Version="2.0.5" />
     </ItemGroup>
 
+    <PropertyGroup>
+        <MinVerDefaultPreReleaseIdentifiers>alpha</MinVerDefaultPreReleaseIdentifiers>
+    </PropertyGroup>
+
     <ItemGroup>
       <Antlr4 Include="parser\\mai\\Simai.g4">
         <Generator>MSBuild:Compile</Generator>
