@@ -30,10 +30,12 @@ public class Simai转MA2测试
         _output.WriteLine(string.Join('\n', alerts));
         _output.WriteLine(string.Join('\n', alerts2));
         
-        Assert.Equal(maidata.ClockCount * 96, TestUtils.TryParseMa2ClkDef(ma2));
-        ma2 = KeepNotesOnly(ma2);
-        expectedMa2 = KeepNotesOnly(expectedMa2);
-        AssertTextEqual(expectedMa2, ma2);
+        Assert.Equal(maidata.ClockCount * 96, TryParseMa2ClkDef(ma2));
+        AssertTextEqual(KeepNotesOnly(expectedMa2), KeepNotesOnly(ma2));
+        
+        // 转出来的MA2，重新parse一次、确保没有任何错误
+        var (_, alertsReparsed) = new MA2Parser().Parse(ma2);
+        Assert.Empty(alertsReparsed);
     }
 
     private static (int, int, string) GetSlideTime(string slide)
