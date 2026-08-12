@@ -643,6 +643,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
         result.OwnHead = head;
         
         currNote = result;
+        currContext = context;
         VisitSlideBody(context.slideBody());
         return result;
     }

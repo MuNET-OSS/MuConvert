@@ -2,12 +2,16 @@ using System.Globalization;
 using System.Text;
 using MuConvert.mai;
 using MuConvert.utils;
+using Xunit.Abstractions;
 using static MuConvert.Tests.mai.TestUtils;
 
 namespace MuConvert.Tests.mai;
 
 public class Simai片段测试
 {
+    private readonly ITestOutputHelper _output;
+
+    public Simai片段测试(ITestOutputHelper output) => _output = output;
     public static IEnumerable<object[]> FragmentYamlFiles()
     {
         var root = Path.Combine(FindTestsetRoot().FullName, "片段");
@@ -25,6 +29,8 @@ public class Simai片段测试
     {
         var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
         var (ma2Full, genAlerts) = new MA2Generator(isUtage: false).Generate(chart);
+        _output.WriteLine(string.Join('\n', parseAlerts));
+        _output.WriteLine(string.Join('\n', genAlerts));
 
         var actual = KeepNotesOnly(ma2Full);
         var expected = NormalizeMa2Block(c.Ma2);

@@ -77,6 +77,30 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
     // 从context获得为适合放进relevantNote里的形式
     private static string? RelevantNote(RuleContext? context, IRecognizer? recognizer, IToken? offendingSymbol)
     {
+        if (recognizer != null && offendingSymbol is { TokenIndex: >= 0 })
+        {
+            var i = offendingSymbol.TokenIndex;
+            var stream = (ITokenStream)recognizer.InputStream;
+            // 从offendingSymbol的位置向前、后分别找边界（逗号、双押/、伪双`），取中间的内容作为relevantNote
+            int left = i-1, right = i+1;
+            string RegionText() => stream.GetText(new Interval(left + 1, right - 1));
+            bool IsBoundary(int type) => type == L.COMMA || type == L.FALSE_EACH || type == Utils.TokenType("/");
+            
+            while (left >= 0 && !IsBoundary(stream.Get(left).Type)) left--;
+            while (left >= 0 || right < stream.Size) // 防止两边都到头了之后，死循环
+            {
+                while (right < stream.Size && !IsBoundary(stream.Get(right).Type)) right++;
+                if (RegionText().Length > 5) break; // 相关区域中至少应该大于5个字符，否则不准break
+                else if (left >= 0) left--; // 此时应强制left向左动一格，再继续向左找逗号
+                
+                while (left >= 0 && !IsBoundary(stream.Get(left).Type)) left--;
+                if (RegionText().Length > 5) break;
+                else if (right < stream.Size) right++;
+            }
+            return RegionText();
+        }
+        
+        // 否则（recognizer == null 或 offendingSymbol不是正常token），fallback回原来的办法
         string? result = null;
         while (context != null)
         {
@@ -86,13 +110,6 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
                 break;
             }
             context = context.Parent;
-        }
-
-        if (recognizer != null && offendingSymbol is { TokenIndex: >= 0 } && result is { Length: > 35 })
-        { // 根据offendingToken的位置，前截取5个、后截取三个token
-            var i = offendingSymbol.TokenIndex;
-            result = ((ITokenStream)recognizer.InputStream).GetText(
-                new Interval(Math.Max(i - 5, 0), Math.Min(i + 3, recognizer.InputStream.Size - 1)));
         }
         return result;
     }
