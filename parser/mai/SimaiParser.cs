@@ -255,6 +255,17 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
         }
         else AddAlert(Warning, string.Format(Locale.RecoverInlineExtraneousToken, extraStr));
     }
+    
+    private void AlertMissingToken(string missingStr, IToken nextToken)
+    {
+        if (missingStr.First() != '\'') missingStr = "'" + missingStr + "'";
+        if (StrictLevel == StrictLevelEnum.Strict)
+        { // 严格模式，抛异常
+            AddAlert(Error, string.Format(Locale.RecoverInlineMissingTokenStrict, ErrorListener.GetTokenErrorDisplay(nextToken), missingStr));
+            throw new ConversionException(alerts);
+        }
+        else AddAlert(Warning, string.Format(Locale.RecoverInlineMissingToken, ErrorListener.GetTokenErrorDisplay(nextToken), missingStr));
+    }
 
     private void AlertIfMoreThanOneTokens(IList<IToken> ps)
     {

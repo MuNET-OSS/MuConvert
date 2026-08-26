@@ -120,9 +120,9 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
         public new string GetTokenErrorDisplay(IToken t) => base.GetTokenErrorDisplay(t);
         public new string EscapeWSAndQuote(string s) => base.EscapeWSAndQuote(s);
     }
-    private _ES _es = new(); // 仅用作调用里面的方法
-    private string GetTokenErrorDisplay(IToken t) => _es.GetTokenErrorDisplay(t);
-    private string EscapeWSAndQuote(string s) => _es.EscapeWSAndQuote(s);
+    private static _ES _es = new(); // 仅用作调用里面的方法
+    internal static string GetTokenErrorDisplay(IToken t) => _es.GetTokenErrorDisplay(t);
+    private static string EscapeWSAndQuote(string s) => _es.EscapeWSAndQuote(s);
     # endregion
 }
 
@@ -203,8 +203,11 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
     {
         var ctx = parser.Context;
         var rule = ctx.RuleIndex;
+        var expected = e.GetExpectedTokens()?.ToSet();
+        if (expected == null) return false;
+        
         if (rule == P.RULE_beats && e is InputMismatchException && 
-            e.OffendingToken.Text == "-" && e.GetExpectedTokens().Contains(Utils.TokenType(":")))
+            e.OffendingToken.Text == "-" && expected.Contains(Utils.TokenType(":")))
         { // [4:1]中，错把:打成-了
             simaiParser.alerts.Last().Level = Warning; // Error改为Warning，因为恢复了
             simaiParser.alerts.Last().Description += Locale.Fixed;

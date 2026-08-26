@@ -483,6 +483,15 @@ namespace MuConvert {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Missing token {1} before {0} (typo?).
+        /// </summary>
+        public static string RecoverInlineMissingTokenStrict {
+            get {
+                return ResourceManager.GetString("RecoverInlineMissingTokenStrict", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Failed to parse simai syntax! .
         /// </summary>
         public static string SimaiGrammarFailed {

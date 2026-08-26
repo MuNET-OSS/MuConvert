@@ -252,6 +252,9 @@
   <data name="RecoverInlineMissingToken" xml:space="preserve">
     <value>{0} の前にトークン {1} が不足しています（入力ミス？）。自動挿入しました。</value>
   </data>
+  <data name="RecoverInlineMissingTokenStrict" xml:space="preserve">
+    <value>{0} の前にトークン {1} が不足しています（入力ミス？）</value>
+  </data>
   <data name="InputMismatchException" xml:space="preserve">
     <value>予期しないトークン：{0}。期待：{1}</value>
   </data>

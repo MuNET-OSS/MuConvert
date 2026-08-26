@@ -193,6 +193,9 @@
   <data name="RecoverInlineMissingToken" xml:space="preserve">
     <value>在 {0} 前似乎缺失了符號 {1}（是否漏打？），已嘗試為您補全。</value>
   </data>
+  <data name="RecoverInlineMissingTokenStrict" xml:space="preserve">
+    <value>在 {0} 前似乎缺失了符號 {1}（是否漏打？）</value>
+  </data>
   <data name="InputMismatchException" xml:space="preserve">
     <value>遇到了不應在這裡出現的符號: {0} ，這裡應該出現的是 {1} </value>
   </data>

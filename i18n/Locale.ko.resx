@@ -252,6 +252,9 @@
   <data name="RecoverInlineMissingToken" xml:space="preserve">
     <value>{0} 앞에 토큰 {1}이(가) 누락되었습니다(오타?). 자동으로 삽입했습니다.</value>
   </data>
+  <data name="RecoverInlineMissingTokenStrict" xml:space="preserve">
+    <value>{0} 앞에 토큰 {1}이(가) 누락되었습니다(오타?)</value>
+  </data>
   <data name="InputMismatchException" xml:space="preserve">
     <value>예상치 못한 토큰: {0}. 예상: {1}</value>
   </data>
