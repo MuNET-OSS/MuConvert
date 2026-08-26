@@ -1,4 +1,6 @@
 using Antlr4.Runtime;
+using Antlr4.Runtime.Atn;
+using Antlr4.Runtime.Dfa;
 using Antlr4.Runtime.Misc;
 using MuConvert.utils;
 using static MuConvert.utils.Alert.LEVEL;
@@ -259,4 +261,43 @@ public class ModerateErrorStrategy(SimaiParser simaiParser) : LaxErrorStrategy(s
 public class FixedBailErrorStrategy : BailErrorStrategy
 {
     public override IToken RecoverInline(Parser recognizer) => throw new InputMismatchException(recognizer);
+}
+
+/**
+ * 用于覆盖ANTLR Parser中的分支预测逻辑，实现更可控的分支导向和异常处理/修复。
+ * 目前实现的内容：
+ * - 对于缺少h的hold note，如`7[4:1]`，确保它能被分支预测成hold note，而不是tap note。
+ */
+public class PatchedATNSimulator : ParserATNSimulator
+{
+    public PatchedATNSimulator(Parser parser, ATN atn, DFA[] decisionToDfa, PredictionContextCache sharedContextCache)
+        : base(parser, atn, decisionToDfa, sharedContextCache) { }
+
+    public override int AdaptivePredict(ITokenStream input, int decision, ParserRuleContext outerContext)
+    {
+        int la = input.LA(1);
+        if (outerContext?.RuleIndex == P.RULE_note && la is P.KEY or P.TOUCH_AREA)
+        { // 对 note() 的分支预测进行修复，确保缺少h的hold note也能被正确预测为hold而不是tap
+            // 跳过所有的modifiers，找modifiers的下一个token
+            int i;
+            for (i = 2; Utils.IsModifier(input.LA(i)); i++) {}
+            int tk = input.LA(i);
+            // 如果是 '[' ，则一定是缺少h的hold note的情况。只有这种情况需要特判
+            // （不然的话，如果是tap则是逗号，如果是slide则是'-'等星星类型符号，如果是'h'则是正常没有缺少'h'的hold。这些情况都不需要特殊处理，正常走原逻辑即可。）
+            if (tk == Utils.TokenType("["))
+            {
+                return la == P.TOUCH_AREA ? 6 : 4; // 6是touch hold，4是hold
+            }
+        }
+        
+        return base.AdaptivePredict(input, decision, outerContext);
+    }
+}
+
+class PatchedAntlrSimaiParser : P
+{
+    public PatchedAntlrSimaiParser(ITokenStream input) : base(input)
+    {
+        Interpreter = new PatchedATNSimulator(this, _ATN, decisionToDFA, sharedContextCache);
+    }
 }

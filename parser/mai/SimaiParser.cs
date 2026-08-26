@@ -132,7 +132,7 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
             var tokens = new CommonTokenStream(lexer);
             if (StrictLevel != StrictLevelEnum.Strict) tokens = TokenProcess(tokens);
             
-            var parser = new P(tokens) { ErrorHandler = ErrorStrategy() }; // MuConvert.Antlr.SimaiParser
+            var parser = new PatchedAntlrSimaiParser(tokens) { ErrorHandler = ErrorStrategy() };
             parser.RemoveErrorListeners();
             parser.AddErrorListener(new ErrorListener(this));
             root = parser.chart();
