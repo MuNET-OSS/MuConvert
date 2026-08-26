@@ -1,3 +1,4 @@
+using System.Text;
 using MuConvert.chu;
 using MuConvert.utils;
 using Rationals;
@@ -147,6 +148,79 @@ public class ChuTests
         $"{n.Type} t={n.Time} start=({n.Cell},{n.Width}) dur={n.Duration} end=({n.EndCell},{n.EndWidth}) " +
         $"tag={n.Tag} tgt={n.TargetNote} h=({n.Height},{n.EndHeight}) crush={n.CrushInterval}";
 
+    /// <summary>
+    /// 比较两份 C2S 文本：各行按字典序排序后逐行匹配（允许原始行序不同）。
+    /// </summary>
+    private static void AssertC2sTextEqual(string expected, string actual)
+    {
+        var expectedLines = SplitC2sLines(expected);
+        var actualLines = SplitC2sLines(actual);
+        AssertSortedLinesEqual(expectedLines, actualLines, "C2S");
+    }
+
+    /// <summary>
+    /// 比较两份 UGC 文本：每个主行及其跟随行组成一个条目，条目按主行字典序排序后逐条匹配（允许条目顺序不同）。
+    /// </summary>
+    private static void AssertUgcTextEqual(string expected, string actual)
+    {
+        var expectedEntries = SplitUgcEntries(expected);
+        var actualEntries = SplitUgcEntries(actual);
+        AssertSortedLinesEqual(expectedEntries, actualEntries, "UGC");
+    }
+
+    private static List<string> SplitC2sLines(string text) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.TrimEnd('\r'))
+            .OrderBy(line => line, StringComparer.Ordinal)
+            .ToList();
+
+    private static List<string> SplitUgcEntries(string text)
+    {
+        var entries = new List<string>();
+        StringBuilder? current = null;
+
+        foreach (var rawLine in text.Split('\n'))
+        {
+            var line = rawLine.TrimEnd('\r');
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith('\'') || line.StartsWith('@'))
+                continue;
+
+            if (IsUgcMainLine(line))
+            {
+                if (current != null) entries.Add(current.ToString());
+                current = new StringBuilder(line);
+            }
+            else if (current != null)
+            {
+                current.Append('\n').Append(line);
+            }
+        }
+
+        if (current != null) entries.Add(current.ToString());
+        return entries.OrderBy(entry => entry, StringComparer.Ordinal).ToList();
+    }
+
+    private static bool IsUgcMainLine(string line)
+    {
+        if (!line.StartsWith('#')) return false;
+        var colonIdx = line.IndexOf(':');
+        if (colonIdx < 0) return false;
+        return line[..colonIdx].Contains('\'');
+    }
+
+    private static void AssertSortedLinesEqual(IReadOnlyList<string> expected, IReadOnlyList<string> actual, string label)
+    {
+        const string EOF = "<EOF>";
+        for (var i = 0; i < Math.Max(expected.Count, actual.Count); i++)
+        {
+            if (i < expected.Count && i < actual.Count && expected[i] == actual[i]) continue;
+            Assert.Fail(
+                $"{label} mismatch at sorted index {i}:{Environment.NewLine}" +
+                $"EXPECTED: {(i < expected.Count ? expected[i] : EOF)}{Environment.NewLine}" +
+                $"ACTUAL  : {(i < actual.Count ? actual[i] : EOF)}");
+        }
+    }
+
     [Theory]
     [MemberData(nameof(CustomUgcChartPaths))]
     public void UgcToC2sViaGenerator(string ugcPath)
@@ -159,9 +233,18 @@ public class ChuTests
         Assert.Contains("TAP\t", c2sText);
 
         // 再把转出来的c2s，parse回去，比较是否和一开始的ugc等价（注意不是文本 round-trip，而是 IR 等价，允许字段重排但不允许信息丢失）
-        var (c2sChart, _) = new C2sParser().Parse(c2sText);
-        Assert.NotEmpty(c2sChart.Notes);
-        AssertNotesEqual(ugc.Notes.Where(n => n.Type != "CLICK").ToList(), c2sChart.Notes);
+        var (c2sReparsed, _) = new C2sParser().Parse(c2sText);
+        Assert.NotEmpty(c2sReparsed.Notes);
+        AssertNotesEqual(ugc.Notes.Where(n => n.Type != "CLICK").ToList(), c2sReparsed.Notes);
+
+        // 如果同目录下有 ground truth 的 c2s 文件，则再和 ground truth 比较一遍
+        var groundTruthC2sPath = Directory.EnumerateFiles(Path.GetDirectoryName(ugcPath)!, "*.c2s")
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        if (groundTruthC2sPath is not null)
+        {
+            AssertC2sTextEqual(File.ReadAllText(groundTruthC2sPath), c2sText);
+        }
     }
 
     [Theory]
@@ -179,5 +262,14 @@ public class ChuTests
         var (ugcReparsed, _) = new UgcParser().Parse(ugcText);
         Assert.NotEmpty(ugcReparsed.Notes);
         AssertNotesEqual(c2s.Notes, ugcReparsed.Notes.Where(n => n.Type != "CLICK").ToList(), allowExDiff: true);
+
+        // 如果同目录下有 ground truth 的 ugc 文件，则再和 ground truth 比较一遍
+        var groundTruthUgcPath = Directory.EnumerateFiles(Path.GetDirectoryName(c2sPath)!, "*.ugc")
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+        if (groundTruthUgcPath is not null)
+        {
+            AssertUgcTextEqual(File.ReadAllText(groundTruthUgcPath), ugcText);
+        }
     }
 }
