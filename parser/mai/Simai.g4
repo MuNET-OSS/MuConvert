@@ -40,7 +40,8 @@ modifiers: (MODIFIER | TAP_TO_STAR | STAR_TO_TAP | NO_STAR)*;
 // 语法
 // ---------------------------------------------------------------------------
 
-chart: (notations COMMA)* CHART_END? EOF;
+chart: notationsAndComma* CHART_END? EOF;
+notationsAndComma: notations COMMA; // 之所以要拆开写，是为了解决Lax模式下，一个notation崩掉，异常栈直接跳回chart()层造成整个解析停止的问题
 
 // 同一时刻的所有标记，包括note标记、bpm标记等等
 notations: (bpmTag | absulouteStepTag | metTag)* noteGroup?;
@@ -80,7 +81,7 @@ asBpm: number;
 slide: tap slideBody;
 sharedHeadSlide: '*' slideBody;
 
-slideBody // 根据Simai文档规定，分为两种情况
-    : slideType KEY (slideType KEY)* modifiers slideDuration modifiers // 只有最后一段星星有时间指定
-    | slideType KEY (slideDuration slideType KEY)* modifiers slideDuration modifiers // 每一段星星都有独立的时间指定
-    ;
+slideBody: slideType KEY ( // 接下来的部分，根据Simai文档规定，分为两种情况
+        (slideType KEY)* // 只有最后一段星星有时间指定
+        | (slideDuration slideType KEY)* // 每一段星星都有独立的时间指定
+    ) modifiers slideDuration modifiers;

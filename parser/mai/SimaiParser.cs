@@ -182,16 +182,20 @@ public partial class SimaiParser : SimaiBaseVisitor<object>, IParser<MaiChart>
 
     public sealed override object VisitChart(P.ChartContext context)
     {
-        foreach (var notations in context.notations())
+        foreach (var item in context.notationsAndComma())
         {
-            VisitNotations(notations);
+            VisitNotations(item.notations());
             if (chart.BpmList.Count == 0) AddDefaultBpm();
-            if (extendedFalseEach > 0)
-            { // 如果之前的解析过程中，触发了extendedFalseEach的话。则要把被额外增加的时间扣回来。
-                now -= extendedFalseEach;
-                extendedFalseEach = 0;
+            if (item.COMMA() != null)
+            { // 根据notationsAndComma的定义，正常情况下一定是有逗号的。因此万一没有逗号，那就是lax模式错误恢复的结果。
+              // 此时，时间轴不应自增，以确保整个谱面的时间轴仍然大部分准确。
+                if (extendedFalseEach > 0)
+                { // 如果之前的解析过程中，触发了extendedFalseEach的话。则要把被额外增加的时间扣回来。
+                    now -= extendedFalseEach;
+                    extendedFalseEach = 0;
+                }
+                now = (now + step).CanonicalForm;   
             }
-            now = (now + step).CanonicalForm;
         }
         return true;
     }
