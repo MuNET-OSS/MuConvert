@@ -78,6 +78,11 @@ public abstract class BaseChuParser : IParser<ChuChart>
             result.AddRange(candidates.Where(n => IsAirSlide(n.Type)));
             result.AddRange(candidates.Where(n => !IsAirSlide(n.Type) && IsLegalPreviousForAir(n.Type)));
         }
+        else if (IsAirHold(cur.Type))
+        { // Air Hold：优先匹配“上一段airhold”，其次匹配“上一段其他
+            result.AddRange(candidates.Where(n => IsAirHold(n.Type)));
+            result.AddRange(candidates.Where(n => !IsAirHold(n.Type) && IsLegalPreviousForAir(n.Type)));
+        }
         else if (IsAir(cur.Type) || IsAirHold(cur.Type))
         { // Air 系列：依附在一个“非广义Air”的音符上
             result.AddRange(candidates.Where(n => IsLegalPreviousForAir(n.Type)).ToList());

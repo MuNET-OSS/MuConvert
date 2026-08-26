@@ -102,17 +102,18 @@ public class UgcGenerator : IGenerator<ChuChart>
 
         var notes = SortedNotesForConnectingPrevious(ugc);
 
-        // UGC Slide / AIR-SLIDE (v8):
+        // UGC Slide / AIR-SLIDE / AIR-HOLD (v8):
         // - Chains (ChuNote.Previous) serialize as ONE parent line + follower lines (#OffsetTick from parent time).
         // - Ground slide: parent `s`, followers `>s` / `>c` + end cell/width.
-        // - Air slide: parent `S` + cell/width + hh (base-36 ×2, C2S/UGC height units) + N/I; followers `>s`/`>c` + xw + hh.
+        // - Air slide: parent `S` + cell/width + hh + N/I; followers `>s`/`>c` + xw + hh.
+        // - Air hold: parent `H` + cell/width + color; followers `>s` / `>c` only.
         // - First segment may attach to TAP/HLD via Previous; only skip emit when Previous is another segment of the same chain.
         var slideChains = BuildSlideChains(notes);
 
         foreach (var n in notes)
         {
-            if (IsSlideChainNote(n.Type) && IsSlideContinueSegments(n))
-                continue; // 是Slide且不是第一段Slide，则应当已经被处理过了，直接跳过
+            if (IsSlideChainNote(n.Type) && IsChainContinueSegments(n))
+                continue; // 是链式音符且不是第一段，则应当已经被处理过了，直接跳过
 
             var (m, o) = Utils.BarAndTick(n.Time, RSL);
             var ucode = UCode(n);
@@ -128,15 +129,16 @@ public class UgcGenerator : IGenerator<ChuChart>
             {
                 if (slideChains.TryGetValue(n, out var segments))
                 {
-                    var isAir = IsAirSlide(n.Type);
                     foreach (var seg in segments)
                     {
                         var endTicks = Utils.Tick(seg.EndTime - n.Time, RSL);
                         if (endTicks <= 0) continue;
-                        if (isAir)
+                        if (IsAirSlide(n.Type))
                             sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}{EncodeAirHeight(seg.EndHeight)}");
-                        else
+                        else if (IsSlide(n.Type))
                             sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}");
+                        else
+                            sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}");
                     }
                 }
                 continue;
@@ -145,11 +147,6 @@ public class UgcGenerator : IGenerator<ChuChart>
             var durTicks = Utils.Tick(n.Duration, RSL);
             if (n.Type is "HLD" or "HXD" && durTicks > 0)
                 sb.AppendLine($"#{durTicks}>s");
-            else if (n.Type is "AHD" or "AHX" && durTicks > 0)
-            {
-                var marker = (n.Type == "AHX") ? 'c' : 's';
-                sb.AppendLine($"#{durTicks}>{marker}");
-            }
             else if (n.Type is "ALD" && durTicks > 0)
                 sb.AppendLine($"#{durTicks}>c{IToH36(n.EndCell)}{IToH36(n.EndWidth)}{EncodeAirHeight(n.EndHeight)}");
         }
@@ -192,14 +189,16 @@ public class UgcGenerator : IGenerator<ChuChart>
     private static ChuNote GetSlideHead(ChuNote n)
     {
         var cur = n;
-        while (IsSlideContinueSegments(cur)) cur = cur.Previous!;
+        while (IsChainContinueSegments(cur)) cur = cur.Previous!;
         return cur;
     }
     
-    private static bool IsSlideChainNote(string t) => IsSlide(t) || IsAirSlide(t);
-    // 返回true表示，当前ChuNote对应的Slide Segment，是第二段之后（也就是接在别的segment之后）的segment，而不是首段segment，
-    private static bool IsSlideContinueSegments(ChuNote n) // Air Slide的前驱只能是Air Slide，反之亦然。
-        => (IsSlide(n) && IsSlide(n.Previous)) || (IsAirSlide(n) && IsAirSlide(n.Previous));
+    private static bool IsSlideChainNote(string t) => IsSlide(t) || IsAirSlide(t) || IsAirHold(t);
+    // 返回 true 表示当前 segment 接在同类型链的上一段之后，而非首段。
+    private static bool IsChainContinueSegments(ChuNote n)
+        => (IsSlide(n) && IsSlide(n.Previous))
+        || (IsAirSlide(n) && IsAirSlide(n.Previous))
+        || (IsAirHold(n) && IsAirHold(n.Previous));
     private static char SlideFollowerMarker(string t) => t is "SLC" or "SXC" or "ASC" ? 'c' : 's';
 
     private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(C2U_Height(value) * 10), 0, 1295)).PadLeft(2, '0');

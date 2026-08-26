@@ -276,19 +276,11 @@ public class UgcParser: BaseChuParser
                 break;
 
             case 'h':
-                idx = ParseHoldNote(false, lines, idx, code, note, alerts, chart);
-                break;
             case 'H': // Air Hold
-                idx = ParseHoldNote(true, lines, idx, code, note, alerts, chart);
-                break;
-
             case 's':
-                idx = ParseSlideNote(false, lines, idx, code, note, alerts, chart);
-                note = null; // ParseSlideNote中，会自己构造note并自己添加进chart。因此这里默认的统一note不应被添加进chart。
-                break;
             case 'S': // Air Slide
-                idx = ParseSlideNote(true, lines, idx, code, note, alerts, chart);
-                note = null;
+                idx = ParseHoldOrSlideNote(typeChar, lines, idx, code, note, alerts, chart);
+                note = null; // ParseHoldOrSlideNote中，会自己构造note并自己添加进chart。因此这里默认的统一note不应被添加进chart。
                 break;
 
             case 'a':
@@ -382,33 +374,6 @@ public class UgcParser: BaseChuParser
             else alerts.Add(new Alert(Warning, "解析Air系列音符的高度属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
         }
     }
-
-    private int ParseHoldNote(bool isAirHold, string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
-    {
-        note.Type = isAirHold ? "AHD" : "HLD";
-        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
-        if (isAirHold) ParseHeightAndColor(note, code[3..], alerts, idx+1, "H");
-
-        bool foundFirst = false;
-        while (idx + 1 < lines.Length)
-        {
-            var nextLine = lines[idx + 1].Trim();
-            if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out _, out _, out _, false))
-            {
-                if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
-                break;
-            }
-
-            note.Duration = new Rational(endTick, RSL);
-            if (isAirHold && marker == "c") note.Type = "AHX"; // 可能是对应于UMIGURI文档中的 AirHold的 AIR-ACTION 无し终点
-            idx++;
-            foundFirst = true;
-        }
-
-        if (!foundFirst)
-            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
-        return idx;
-    }
     
     // UGC中约定Air系列音符都一定紧跟在其Previous的后面。
     // 所以我们直接用上一个解析出的note就可以立即确定前驱了，无需再等到最后集中FillPrevious，而且等到最后集中FillPrevious时的结果也可能是错的。
@@ -427,12 +392,14 @@ public class UgcParser: BaseChuParser
         return false;
     }
 
-    private int ParseSlideNote(bool isAirSlide, string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
+    private int ParseHoldOrSlideNote(char noteType, string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
     {
+        bool isAir = noteType is 'S' or 'H';
+        bool isSlide = noteType is 'S' or 's';
         // 注：一开始从外面传进来的previousNote，最后并不会被添加进chart里，只是作为第一段的起点参照而已。
         var startTime = previousNote.Time;
         ParseCellWidth(code, 1, previousNote, alerts, idx + 1, chart);
-        if (isAirSlide) ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, "S");
+        if (isAir) ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, noteType.ToString());
         previousNote.EndCell = previousNote.Cell;
         previousNote.EndWidth = previousNote.Width;
         previousNote.EndHeight = previousNote.Height;
@@ -441,26 +408,42 @@ public class UgcParser: BaseChuParser
         while (idx + 1 < lines.Length)
         { // 循环处理所有的跟随行。idx始终指向上一条已经处理完的行。
             var nextLine = lines[idx + 1].Trim();
-            if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, true))
+            if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, isSlide))
             {
                 if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
                 break;
             }
 
-            var type = isAirSlide ? (marker == "s" ? "ASD" : "ASC") : (marker == "s" ? "SLD" : "SLC");
+            var type = noteType switch
+            {
+                's' => marker == "s" ? "SLD" : "SLC",
+                'S' => marker == "s" ? "ASD" : "ASC",
+                'h' => "HLD",
+                'H' => marker == "s" ? "AHD" : "AHX",
+                _ => throw new Exception($"未知的noteType: {noteType}"),
+            };
+            if (noteType == 'h' && marker == "c") alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, previousNote.Time), idx + 1, lines[idx]));
 
             var segmentEnd = startTime + new Rational(endTick, RSL);
             var note = new ChuNote
             {
                 Type = type, Time = previousNote.EndTime, 
-                Cell = previousNote.EndCell, Width = previousNote.EndWidth, Height = previousNote.EndHeight,
+                Cell = previousNote.EndCell, Width = previousNote.EndWidth,
                 Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
-                EndCell = endCell!.Value, EndWidth = endWidth!.Value, 
-                EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : previousNote.EndHeight,
                 Previous = foundFirst ? previousNote : null,
             };
+            if (isSlide)
+            {
+                note.EndCell = endCell!.Value;
+                note.EndWidth = endWidth!.Value;
+                if (isAir)
+                {
+                    note.Height = previousNote.EndHeight;
+                    note.EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : note.Height;
+                }
+            }
 
-            if (isAirSlide && !foundFirst)
+            if (isAir && !foundFirst)
             {
                 if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
                     alerts.Add(new Alert(Warning, $"无法找到 Air Slide 的前驱音符", (chart, note.Time), idx + 1, lines[idx]));
