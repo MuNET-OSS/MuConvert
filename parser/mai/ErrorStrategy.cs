@@ -174,6 +174,37 @@ public class LaxErrorStrategy(SimaiParser simaiParser) : DefaultErrorStrategy
         catch (InputMismatchException) {} // ignored 
     }
 
+    protected bool inSevereError = false; // 记录当前错误是不是严重错误。只有触发ReportError的才是严重错误，触发ReportMissingToken和ReportUnwantedToken的不是严重错误。
+    // 错误报告时的规则：多个严重错误不报告后面的，但如果前面的是非严重错误、后面遇到严重错误，则还是需要报告。
+    protected override void EndErrorCondition(Parser recognizer)
+    {
+        base.EndErrorCondition(recognizer);
+        inSevereError = false;
+    }
+    
+    public override void ReportError(Parser recognizer, RecognitionException e)
+    {
+        if (inSevereError) return; // 如果前面已经有严重错误了，则不再报告后续的严重错误；但如果前面是非严重错误，则还是得报告
+        this.BeginErrorCondition(recognizer);
+        inSevereError = true;
+        switch (e)
+        {
+            case NoViableAltException _:
+                this.ReportNoViableAlternative(recognizer, (NoViableAltException) e);
+                break;
+            case InputMismatchException _:
+                this.ReportInputMismatch(recognizer, (InputMismatchException) e);
+                break;
+            case FailedPredicateException _:
+                this.ReportFailedPredicate(recognizer, (FailedPredicateException) e);
+                break;
+            default:
+                Console.Error.WriteLine("unknown recognition error type: " + e.GetType().FullName);
+                this.NotifyErrorListeners(recognizer, e.Message, e);
+                break;
+        }
+    }
+
     private List<int> recoverySetAllowed = [
         L.COMMA, L.FALSE_EACH, Utils.TokenType("/"), Utils.TokenType("("), Utils.TokenType("{")
     ]; // recover时，为了确保整个吞掉不合法的音符，而不是出现残缺的东西导致parser报错，只准同步到上面这些字符当中
