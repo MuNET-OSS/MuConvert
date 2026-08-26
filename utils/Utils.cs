@@ -40,6 +40,8 @@ public static class Utils
     internal static int TokenType(string str) => _simaiLexerMap[str];
     
     internal static bool IsModifier(int tokenType) => tokenType is L.MODIFIER or L.TAP_TO_STAR or L.STAR_TO_TAP or L.NO_STAR;
+    
+    internal static bool IsBoundaryToken(int type) => type is L.COMMA or L.FALSE_EACH or L.CHART_END || type == TokenType("/");
 
     public static (int, int) BarAndTick(Rational time, int resolution, int extraTicks = 0)
     {

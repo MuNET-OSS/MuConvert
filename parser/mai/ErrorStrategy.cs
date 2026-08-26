@@ -86,16 +86,15 @@ public class ErrorListener(SimaiParser simaiParser): BaseErrorListener, IAntlrEr
             // 从offendingSymbol的位置向前、后分别找边界（逗号、双押/、伪双`），取中间的内容作为relevantNote
             int left = i-1, right = i+1;
             string RegionText() => stream.GetText(new Interval(left + 1, right - 1));
-            bool IsBoundary(int type) => type == L.COMMA || type == L.FALSE_EACH || type == Utils.TokenType("/");
             
-            while (left >= 0 && !IsBoundary(stream.Get(left).Type)) left--;
+            while (left >= 0 && !Utils.IsBoundaryToken(stream.Get(left).Type)) left--;
             while (left >= 0 || right < stream.Size) // 防止两边都到头了之后，死循环
             {
-                while (right < stream.Size && !IsBoundary(stream.Get(right).Type)) right++;
+                while (right < stream.Size && !Utils.IsBoundaryToken(stream.Get(right).Type)) right++;
                 if (RegionText().Length > 5) break; // 相关区域中至少应该大于5个字符，否则不准break
                 else if (left >= 0) left--; // 此时应强制left向左动一格，再继续向左找逗号
                 
-                while (left >= 0 && !IsBoundary(stream.Get(left).Type)) left--;
+                while (left >= 0 && !Utils.IsBoundaryToken(stream.Get(left).Type)) left--;
                 if (RegionText().Length > 5) break;
                 else if (right < stream.Size) right++;
             }
@@ -286,7 +285,17 @@ public class PatchedATNSimulator : ParserATNSimulator
             // （不然的话，如果是tap则是逗号，如果是slide则是'-'等星星类型符号，如果是'h'则是正常没有缺少'h'的hold。这些情况都不需要特殊处理，正常走原逻辑即可。）
             if (tk == Utils.TokenType("["))
             {
-                return la == P.TOUCH_AREA ? 6 : 4; // 6是touch hold，4是hold
+                // 查看后面的所有token，只有形如一个完整的duration中括号序列的情况，才算是按照hold处理。
+                bool t = false;
+                for (i++; !Utils.IsBoundaryToken(input.LA(i)); i++)
+                {
+                    if (!t && (input.LA(i) == Utils.TokenType(":") || input.LA(i) == Utils.TokenType("#"))) t = true;
+                    else if (t && input.LA(i) == Utils.TokenType("]"))
+                    { // 在一开始的[之后，陆续匹配到了:或#，然后匹配到了]，说明是一个完整的duration中括号序列。
+                        // 只有在此时，才强行修正分支预测的结果。
+                        return la == P.TOUCH_AREA ? 6 : 4; // 6是touch hold，4是hold
+                    }
+                }
             }
         }
         
