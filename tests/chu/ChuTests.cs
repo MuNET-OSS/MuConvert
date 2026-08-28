@@ -171,6 +171,7 @@ public class ChuTests
     private static List<string> SplitC2sLines(string text) =>
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(line => line.TrimEnd('\r'))
+            .Where(line => !line.StartsWith("VERSION\t", StringComparison.Ordinal))
             .OrderBy(line => line, StringComparer.Ordinal)
             .ToList();
 

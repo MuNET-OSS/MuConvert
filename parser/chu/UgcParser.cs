@@ -16,11 +16,16 @@ public class UgcParser: BaseChuParser
 {
     private int RSL = 480 * 4;
     private int Version = 8;
+    
+    // 保存UGC中，原始的 @FLAG 信息，供一些特性的支持和外部的读取
+    private Dictionary<string, bool> _ugcFlags = new();
+    public IReadOnlyDictionary<string, bool> UgcFlags => _ugcFlags;
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
         var chart = new ChuChart();
         var alerts = new List<Alert>();
+        _ugcFlags = new();
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var inHeader = true;
 
@@ -50,6 +55,10 @@ public class UgcParser: BaseChuParser
         FinalizeUgcSflDurations(chart);
         FillAllPrevious(chart, alerts);
         chart.Sort();
+        if (UgcFlags.GetValueOrDefault("SOFFSET"))
+        { // 根据UGC文档，@FLAG SOFFSET 表示应该给谱面开头添加一个小节的空白（“頭に 1 小節分の空白を挿入するかどうか”）
+            chart.Shift(1);
+        }
         return (chart, alerts);
     }
 
@@ -178,11 +187,21 @@ public class UgcParser: BaseChuParser
             case "@VER":
                 Version = int.Parse(value);
                 break;
+
+            case "@FLAG":
+            {
+                var parts = value.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length >= 2 && bool.TryParse(parts[1], out var flagValue))
+                    _ugcFlags[parts[0]] = flagValue;
+                else
+                    alerts.Add(new Alert(Warning, $"@FLAG 格式错误: {line}") { Line = lineNum });
+                break;
+            }
             
             // silently ignored metadata tags
             case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
-            case "@FLAG": case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
+            case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
             case "@MAINTIL": case "@TIL": case "@USETIL":
             case "@MAINBPM":
             case "@BGSCENE": case "@FLDSCENE": case "@RLDATE": case "@CMT":

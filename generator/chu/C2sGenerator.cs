@@ -29,12 +29,12 @@ public class C2sGenerator : IGenerator<ChuChart>
         sb.AppendLine("LEVEL\t0.0");
         sb.AppendLine($"CREATOR\t{chart.Designer}");
         var bpm_def = chart.BpmList.BPM_DEF();
-        sb.AppendLine(FormattableString.Invariant($"BPM_DEF\t{bpm_def.Item1}\t{bpm_def.Item2}\t{bpm_def.Item3}\t{bpm_def.Item4}"));
+        sb.AppendLine(FormattableString.Invariant($"BPM_DEF\t{bpm_def.Item1:F3}\t{bpm_def.Item2:F3}\t{bpm_def.Item3:F3}\t{bpm_def.Item4:F3}"));
         sb.AppendLine("MET_DEF\t4\t4");
         sb.AppendLine($"RESOLUTION\t{RSL}");
         sb.AppendLine($"CLK_DEF\t{RSL}");
         sb.AppendLine("PROGJUDGE_BPM\t240.000");
-        sb.AppendLine("PROGJUDGE_AER\t0.999");
+        sb.AppendLine("PROGJUDGE_AER\t  0.999");
         sb.AppendLine("TUTORIAL\t0");
         sb.AppendLine();
 
