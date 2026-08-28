@@ -15,7 +15,7 @@ public static class StatisticsUtils
         while (now < end || isFirstRange) 
         { 
             var bpmIdx = chart.BpmList.FindIndex(now); 
-            var curBpmRangeEnd = bpmIdx < chart.BpmList.Count - 1 ? chart.BpmList[bpmIdx + 1].Time : 999999; // 当前BPM区间的结束时刻
+            var curBpmRangeEnd = bpmIdx < chart.BpmList.Count - 1 ? chart.BpmList[bpmIdx + 1].Time : 9999999; // 当前BPM区间的结束时刻
             var len = Utils.Min(end, curBpmRangeEnd) - now; // 音符落在本区间内的长度为，从当前时刻开始，到（本区间结束或音符结束的较早者）
             result.Add((bpmIdx, chart.BpmList[bpmIdx].Bpm, now, len.CanonicalForm)); 
             now = (now + len).CanonicalForm; 

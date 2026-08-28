@@ -1,4 +1,5 @@
 using System.Text;
+using MuConvert.chart;
 using MuConvert.generator;
 using MuConvert.utils;
 using Rationals;
@@ -54,9 +55,67 @@ public class UgcGenerator : IGenerator<ChuChart>
         }
     }
 
+    // 从C2S时间轴/chart标准时间轴，到UGC时间轴的换算
+    // UGC中的小节和tick，和C2S中，并不是一一对应的。因为C2S永远假设一小节由4拍构成，MET的值不会影响整张谱的时间轴；
+    // 但UGC中的小节号，每一小节有多长/有几拍，是由 @BEAT 字段直接控制的，并不是保证一小节总是4拍/1920tick的。
+    // 因此必须在两者之间进行换算。
+    protected (int, int) T(Rational time)
+    {
+        int resBar = 0;
+        for (int i = 0; i < _ugcBeats.Count; i++)
+        {
+            var b = _ugcBeats[i];
+            var ratio = new Rational(b.Item2, b.Item3);
+            var rangeLen = i == _ugcBeats.Count - 1 ? 9999999 : (_ugcBeats[i + 1].Item1 - b.Item1) * ratio;
+            if (rangeLen < time)
+            { // 整个区间花完了
+                resBar = _ugcBeats[i + 1].Item1;
+                time -= rangeLen;
+            }
+            else
+            {
+                var extra = time / ratio;
+                resBar += (int)extra.WholePart;
+                int resTick = (int)(extra.FractionPart * ratio * RSL).Round();
+                return (resBar, resTick);
+            }
+        }
+        throw Utils.Fail();
+    }
+    // 为了实现从上述 T函数 中的换算，所必要的信息。可通过CalcUgcBeats函数算出。
+    private List<(int, int, int)> _ugcBeats = [];
+    
+    private void FillUgcBeats(List<MET> metList)
+    {
+        _ugcBeats = [];
+        foreach (var met in metList)
+        {
+            if (_ugcBeats.Count == 0)
+            {
+                if (met.Time > 0) _ugcBeats.Add((0, 4, 4)); // 鲁棒性，补 @BEAT 0 4 4。不能continue，因为马上还要添加显式的那一条。
+                else
+                { // met.Time == 0，把这条添加进去后直接continue
+                    _ugcBeats.Add((0, met.Numerator, met.Denominator));
+                    continue;
+                }
+            }
+            // 到此处，_ugcBeats.Count一定>0了，所以可以调用T函数了
+            var (ugcBar, ugcTick) = T(met.Time);
+            if (ugcTick > 0)
+            { // 如有残余部分，直接组织成一个新的@BEAT
+                var extra = new Rational(ugcTick, RSL).CanonicalForm;
+                _ugcBeats.Add((ugcBar, (int)extra.Numerator, (int)extra.Denominator));
+                (ugcBar, ugcTick) = T(met.Time);
+                Utils.Assert(ugcTick == 0);
+            }
+            _ugcBeats.Add((ugcBar, met.Numerator, met.Denominator));
+        }
+    }
+
     private string Serialize(ChuChart ugc)
     {
         ugc.Sort();
+        FillUgcBeats(ugc.MetList);
         var extraHeaderKeys = ExtraHeaders.Select(x => x.Item1).ToHashSet();
         
         var sb = new StringBuilder();
@@ -78,21 +137,20 @@ public class UgcGenerator : IGenerator<ChuChart>
         }
         sb.AppendLine("@FLAG\tHIPRECISION\tTRUE"); // 表明，谱面中的高度使用的是两位高度而不是一位高度
         sb.AppendLine($"@TICKS\t{RSL / 4}");
-        foreach (var met in ugc.MetList)
+        foreach (var (bar, num, deno) in _ugcBeats)
         {
-            var (m, _) = Utils.BarAndTick(met.Time, RSL);
-            sb.AppendLine($"@BEAT\t{m}\t{met.Numerator}\t{met.Denominator}");
+            sb.AppendLine($"@BEAT\t{bar}\t{num}\t{deno}");
         }
         foreach (var b in ugc.BpmList)
         {
-            var (m, o) = Utils.BarAndTick(b.Time, RSL);
+            var (m, o) = T(b.Time);
             sb.AppendLine(FormattableString.Invariant($"@BPM\t{m}'{o}\t{b.Bpm:F5}"));
         }
         if (!extraHeaderKeys.Contains("TIL")) sb.AppendLine("@TIL\t0\t0'0\t1.00000"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
 
         foreach (var s in ugc.SflList.OrderBy(x => x.Time)) 
         { 
-            var (m, o) = Utils.BarAndTick(s.Time, RSL); 
+            var (m, o) = T(s.Time); 
             sb.AppendLine(FormattableString.Invariant($"@SPDMOD\t{m}'{o}\t{s.Multiplier:0.00000}"));
         }
 
@@ -115,7 +173,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             if (IsSlideChainNote(n.Type) && IsChainContinueSegments(n))
                 continue; // 是链式音符且不是第一段，则应当已经被处理过了，直接跳过
 
-            var (m, o) = Utils.BarAndTick(n.Time, RSL);
+            var (m, o) = T(n.Time);
             var ucode = UCode(n);
             if (ucode == "")
             {

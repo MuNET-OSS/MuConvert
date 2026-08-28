@@ -20,12 +20,33 @@ public class UgcParser: BaseChuParser
     // 保存UGC中，原始的 @FLAG 信息，供一些特性的支持和外部的读取
     private Dictionary<string, bool> _ugcFlags = new();
     public IReadOnlyDictionary<string, bool> UgcFlags => _ugcFlags;
+    
+    // 从UGC时间轴到C2S时间轴/chart标准时间轴的换算
+    // UGC中的小节和tick，和C2S中，并不是一一对应的。因为C2S永远假设一小节由4拍构成，MET的值不会影响整张谱的时间轴；
+    // 但UGC中的小节号，每一小节有多长/有几拍，是由 @BEAT 字段直接控制的，并不是保证一小节总是4拍/1920tick的。
+    // 因此必须在两者之间进行换算。
+    protected Rational T(int ugcBar, int ugcTick)
+    {
+        Rational result = 0;
+        for (int i = 0; i < _ugcBeats.Count; i++)
+        {
+            var end = i == _ugcBeats.Count - 1 ? 9999999 : _ugcBeats[i + 1].Item1; 
+            var barCount = Math.Min(end, ugcBar) - _ugcBeats[i].Item1;
+            if (barCount <= 0) break;
+            result += barCount * _ugcBeats[i].Item2;
+        }
+        result += new Rational(ugcTick, RSL);
+        return result;
+    }
+    // 为了实现从上述 T函数 中的换算，所必要的信息。来自于ugc文件中的 @BEAT 字段
+    private List<(int, Rational)> _ugcBeats = [];
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
         var chart = new ChuChart();
         var alerts = new List<Alert>();
         _ugcFlags = new();
+        _ugcBeats = [];
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var inHeader = true;
 
@@ -153,7 +174,8 @@ public class UgcParser: BaseChuParser
                     && int.TryParse(beatParts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatNum)
                     && int.TryParse(beatParts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var beatDen))
                 {
-                    chart.MetList.Add(new MET(beatMeasure, beatNum, beatDen));
+                    _ugcBeats.Add((beatMeasure, new Rational(beatNum, beatDen)));
+                    chart.MetList.Add(new MET(T(beatMeasure, 0), beatNum, beatDen));
                 }
                 else
                 {
@@ -171,7 +193,7 @@ public class UgcParser: BaseChuParser
                     if (TryParseUgcMeasureTick(measureOffset, out var bpmMeasure, out var bpmOffset)
                         && decimal.TryParse(bpmValueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var bpmValue))
                     {
-                        chart.BpmList.Add(new BPM(bpmMeasure + new Rational(bpmOffset, RSL), bpmValue));
+                        chart.BpmList.Add(new BPM(T(bpmMeasure, bpmOffset), bpmValue));
                     }
                     else
                     {
@@ -214,7 +236,7 @@ public class UgcParser: BaseChuParser
                     && TryParseUgcMeasureTick(parts[0], out var meas, out var tick)
                     && decimal.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var mult))
                 {
-                    chart.SflList.Add((meas + new Rational(tick, RSL), Rational.Zero, mult));
+                    chart.SflList.Add((T(meas, tick), Rational.Zero, mult));
                 }
                 else
                     alerts.Add(new Alert(Warning, $"@SPDMOD 格式错误: {line}") { Line = lineNum });
@@ -280,7 +302,7 @@ public class UgcParser: BaseChuParser
 
         ChuNote? note = new ChuNote
         {
-            Time = measure + new Rational(tick, RSL),
+            Time = T(measure, tick),
         };
 
         var typeChar = code[0];
