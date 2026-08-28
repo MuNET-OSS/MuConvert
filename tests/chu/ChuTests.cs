@@ -155,7 +155,57 @@ public class ChuTests
     {
         var expectedLines = SplitC2sLines(expected);
         var actualLines = SplitC2sLines(actual);
-        AssertSortedLinesEqual(expectedLines, actualLines, "C2S");
+        AssertSortedC2sLinesEqual(expectedLines, actualLines);
+    }
+
+    private static void AssertSortedC2sLinesEqual(IReadOnlyList<string> expected, IReadOnlyList<string> actual)
+    {
+        const string EOF = "<EOF>";
+        const string label = "C2S";
+        for (var i = 0; i < Math.Max(expected.Count, actual.Count); i++)
+        {
+            if (i < expected.Count && i < actual.Count && C2sLinesEquivalent(expected[i], actual[i])) continue;
+            Assert.Fail(
+                $"{label} mismatch at sorted index {i}:{Environment.NewLine}" +
+                $"EXPECTED: {(i < expected.Count ? expected[i] : EOF)}{Environment.NewLine}" +
+                $"ACTUAL  : {(i < actual.Count ? actual[i] : EOF)}");
+        }
+    }
+
+    /// <summary>除 ALD interval 的 `$` 宽松规则外，要求整行一致。</summary>
+    private static bool C2sLinesEquivalent(string expected, string actual)
+    {
+        if (expected == actual) return true;
+        if (!TryParseAldFields(expected, out var e) || !TryParseAldFields(actual, out var a)) return false;
+
+        for (var i = 0; i < e.Length; i++)
+        {
+            if (i == 5) continue;
+            if (e[i] != a[i]) return false;
+        }
+
+        if (!int.TryParse(e[7], out var durTicks)) return false;
+        return AldIntervalsEquivalent(e[5], a[5], durTicks);
+    }
+
+    private static bool TryParseAldFields(string line, out string[] fields)
+    {
+        fields = line.Split('\t');
+        return fields.Length >= 8
+            && fields[0] == "ALD"
+            && int.TryParse(fields[5], out _)
+            && int.TryParse(fields[7], out _);
+    }
+
+    /// <summary>UGC `$` 在 C2S 中编码为 38400；此时另一边 interval 只需大于持续时长。</summary>
+    private static bool AldIntervalsEquivalent(string intervalA, string intervalB, int durTicks)
+    {
+        if (intervalA == intervalB) return true;
+        if (!int.TryParse(intervalA, out var a) || !int.TryParse(intervalB, out var b)) return false;
+
+        if (a == 38400) return b > durTicks || (b == durTicks && b == 0);
+        if (b == 38400) return a > durTicks || (a == durTicks && a == 0);
+        return false;
     }
 
     /// <summary>
