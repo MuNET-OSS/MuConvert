@@ -80,7 +80,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
         }
         else if (IsAirSlide(cur.Type))
         { // Air Slide：优先匹配“上一段airslide”，其次匹配“上一段其他
-            result.AddRange(candidates.Where(n => IsAirSlide(n.Type)));
+            result.AddRange(candidates.Where(n => IsAirSlide(n.Type) && n.EndHeight == cur.Height));
             result.AddRange(candidates.Where(n => !IsAirSlide(n.Type) && IsLegalPreviousForAir(n.Type)));
         }
         else if (IsAirHold(cur.Type))
@@ -90,7 +90,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
         }
         else if (IsAirCrush(cur.Type))
         { // Air Crush：只匹配“上一段aircrush”（且上一段必须具有正 duration）
-            result.AddRange(candidates.Where(n => IsAirCrush(n.Type) && n.Tag == cur.Tag));
+            result.AddRange(candidates.Where(n => IsAirCrush(n.Type) && n.Tag == cur.Tag && n.EndHeight == cur.Height));
         }
         else if (IsAir(cur.Type))
         { // Air 系列：依附在一个“非广义Air”的音符上
