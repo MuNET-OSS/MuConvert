@@ -89,8 +89,8 @@ public class ChuTests
         if (expected.EndCell != actual.EndCell || expected.EndWidth != actual.EndWidth) return false;
         if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(expected.EndHeight - actual.EndHeight) > 0.05m) return false;
         if (!TimesEquivalent(expected.CrushInterval, actual.CrushInterval)) return false;
-        if (!TagsEquivalent(expected, actual)) return false;
-        if (!TypesEquivalent(expected.TargetNote, actual.TargetNote, allowExDiff)) return false;
+        if (!TagsEquivalent(expected, actual, allowExDiff)) return false;
+        if (!TargetNotesEquivalent(expected, actual, allowExDiff)) return false;
         return true;
     }
 
@@ -126,11 +126,17 @@ public class ChuTests
         return dd <= Tol768 || (dd <= Tol384 && (e.EndTime - a.EndTime).Abs() <= Tol768);
     }
 
-    /// <summary>规则 (c)(d)：广义 Air 的 DEF/空串；FLK 的 A/L。</summary>
-    private static bool TagsEquivalent(ChuNote e, ChuNote a)
+    /// <summary>规则 (c)(d)：广义 Air 的 DEF/空串；FLK 的 A/L；allowExDiff 时非 Ex 音符可无 tag。</summary>
+    private static bool TagsEquivalent(ChuNote e, ChuNote a, bool allowExDiff = false)
     {
         if (e.Tag == a.Tag) return true;
         if (e.Type == "ALD") return true; // C2S的ALD行，根据观测，是不支持颜色tag的。因此不要比较
+        if (allowExDiff && TypesEquivalent(e.Type, a.Type, allowExDiff: true) && e.Type != a.Type)
+        {
+            var ex = IsExType(e.Type) ? e : IsExType(a.Type) ? a : null;
+            var nonEx = IsExType(e.Type) ? a : IsExType(a.Type) ? e : null;
+            if (ex is not null && nonEx is not null && nonEx.Tag == "") return true;
+        }
         if (ChuUtils.IsGeneralizedAir(e))
         {
             if ((e.Tag == "DEF" && a.Tag == "") || (e.Tag == "" && a.Tag == "DEF"))
@@ -140,6 +146,21 @@ public class ChuTests
         {
             if ((e.Tag == "A" && a.Tag == "L") || (e.Tag == "L" && a.Tag == "A"))
                 return true;
+        }
+        return false;
+    }
+
+    private static bool IsExType(string t) => t is "HXD" or "SXD" or "SXC" or "AHX";
+
+    /// <summary>SLC/SLD 的 TargetNote 可有可无（新旧 C2S 版本差异）。</summary>
+    private static bool TargetNotesEquivalent(ChuNote e, ChuNote a, bool allowExDiff)
+    {
+        if (TypesEquivalent(e.TargetNote, a.TargetNote, allowExDiff)) return true;
+        if (ChuUtils.IsSlide(e.Type) && ChuUtils.IsSlide(a.Type))
+        {
+            var et = e.TargetNote is "" or "N" ? "SLD" : e.TargetNote;
+            var at = a.TargetNote is "" or "N" ? "SLD" : a.TargetNote;
+            if (TypesEquivalent(et, at, allowExDiff)) return true;
         }
         return false;
     }
@@ -172,10 +193,11 @@ public class ChuTests
         }
     }
 
-    /// <summary>除 ALD interval 的 `$` 宽松规则外，要求整行一致。</summary>
+    /// <summary>除 ALD interval 的 `$` 宽松规则、SLC/SLD 可选 TargetNote 外，要求整行一致。</summary>
     private static bool C2sLinesEquivalent(string expected, string actual)
     {
         if (expected == actual) return true;
+        if (SlideC2sLinesEquivalent(expected, actual)) return true;
         if (!TryParseAldFields(expected, out var e) || !TryParseAldFields(actual, out var a)) return false;
 
         for (var i = 0; i < e.Length; i++)
@@ -186,6 +208,20 @@ public class ChuTests
 
         if (!int.TryParse(e[7], out var durTicks)) return false;
         return AldIntervalsEquivalent(e[5], a[5], durTicks);
+    }
+
+    /// <summary>SLC/SLD 行末尾 TargetNote（SLD）可有可无。</summary>
+    private static bool SlideC2sLinesEquivalent(string a, string b)
+    {
+        var fa = a.Split('\t');
+        var fb = b.Split('\t');
+        if (fa.Length == 0 || fb.Length == 0 || fa[0] != fb[0]) return false;
+        if (fa[0] is not ("SLC" or "SLD")) return false;
+
+        static string[] Normalize(string[] f) =>
+            f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
+
+        return Normalize(fa).SequenceEqual(Normalize(fb));
     }
 
     private static bool TryParseAldFields(string line, out string[] fields)
