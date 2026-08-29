@@ -36,6 +36,7 @@ public class C2sGenerator : IGenerator<ChuChart>
         sb.AppendLine("PROGJUDGE_BPM\t240.000");
         sb.AppendLine("PROGJUDGE_AER\t  0.999");
         sb.AppendLine("TUTORIAL\t0");
+        sb.AppendLine($"GENERATED_BY\tMuConvert v{Utils.AppVersion}");
         sb.AppendLine();
 
         foreach (var b in chart.BpmList)
