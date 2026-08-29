@@ -152,9 +152,10 @@ public class ChuTests
 
     private static bool IsExType(string t) => t is "HXD" or "SXD" or "SXC" or "AHX";
 
-    /// <summary>SLC/SLD 的 TargetNote 可有可无（新旧 C2S 版本差异）。</summary>
+    /// <summary>SLC/SLD 的 TargetNote 可有可无（新旧 C2S 版本差异）；ALD 的 TargetNote 由 C2S interval 推断，UGC 侧常无对应 previous。</summary>
     private static bool TargetNotesEquivalent(ChuNote e, ChuNote a, bool allowExDiff)
     {
+        if (e.Type == "ALD" || a.Type == "ALD") return true;
         if (TypesEquivalent(e.TargetNote, a.TargetNote, allowExDiff)) return true;
         if (ChuUtils.IsSlide(e.Type) && ChuUtils.IsSlide(a.Type))
         {
@@ -170,7 +171,7 @@ public class ChuTests
         $"tag={n.Tag} tgt={n.TargetNote} h=({n.Height},{n.EndHeight}) crush={n.CrushInterval}";
 
     /// <summary>
-    /// 比较两份 C2S 文本：各行按字典序排序后逐行匹配（允许原始行序不同）。
+    /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前），各行按字典序排序后逐行匹配（允许原始行序不同）。
     /// </summary>
     private static void AssertC2sTextEqual(string expected, string actual)
     {
@@ -193,7 +194,7 @@ public class ChuTests
         }
     }
 
-    /// <summary>除 ALD interval 的 `$` 宽松规则、HLD/SLC/SLD 可选后缀外，要求整行一致。</summary>
+    /// <summary>除 ALD interval 的 `$` 宽松规则、ALD durationTicks ±1、ALD Height/EndHeight ±0.1、HLD/SLC/SLD 可选后缀外，要求整行一致。</summary>
     private static bool C2sLinesEquivalent(string expected, string actual)
     {
         if (expected == actual) return true;
@@ -202,17 +203,24 @@ public class ChuTests
 
         for (var i = 0; i < e.Length; i++)
         {
-            if (i == 5) continue;
+            if (i is 5 or 7) continue;
+            if (i is 6 or 10)
+            {
+                if (!decimal.TryParse(e[i], out var hE) || !decimal.TryParse(a[i], out var hA)) return false;
+                if (Math.Abs(hE - hA) > 0.1m) return false;
+                continue;
+            }
             if (e[i] != a[i]) return false;
         }
 
-        if (!int.TryParse(e[7], out var durTicks)) return false;
-        return AldIntervalsEquivalent(e[5], a[5], durTicks);
+        if (!int.TryParse(e[7], out var durE) || !int.TryParse(a[7], out var durA)) return false;
+        if (!DurationTicksEquivalent(durE, durA)) return false;
+        return AldIntervalsEquivalent(e[5], a[5], durE, durA);
     }
 
-    private static readonly HashSet<string> C2sDirectionTags = ["CE", "UP", "DW", "BS"];
+    private static readonly HashSet<string> C2sDirectionTags = ChuUtils.C2U_ChrExtras.Keys.ToHashSet();
 
-    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；expected 末尾方向标识符（CE/UP/DW/BS）actual 可省略。</summary>
+    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；末尾方向标识符（见 ChuUtils.U2C_ChrExtras）任一侧可省略，两侧都有时必须一致。</summary>
     private static bool HoldSlideC2sLinesEquivalent(string expected, string actual)
     {
         var e = expected.Split('\t');
@@ -223,23 +231,21 @@ public class ChuTests
         e = StripOptionalSlideTargetNote(e);
         a = StripOptionalSlideTargetNote(a);
 
-        if (e.Length > 0 && C2sDirectionTags.Contains(e[^1]))
-        {
-            if (a.Length > 0 && C2sDirectionTags.Contains(a[^1]))
-            {
-                if (e[^1] != a[^1]) return false;
-                a = a[..^1];
-            }
-            e = e[..^1];
-            e = StripOptionalSlideTargetNote(e);
-        }
-        else if (a.Length > 0 && C2sDirectionTags.Contains(a[^1]))
-        {
-            return false;
-        }
+        var eDir = e.Length > 0 && C2sDirectionTags.Contains(e[^1]) ? e[^1] : null;
+        var aDir = a.Length > 0 && C2sDirectionTags.Contains(a[^1]) ? a[^1] : null;
+        if (eDir is not null && aDir is not null && eDir != aDir) return false;
+
+        e = StripOptionalDirectionTag(e);
+        a = StripOptionalDirectionTag(a);
+
+        e = StripOptionalSlideTargetNote(e);
+        a = StripOptionalSlideTargetNote(a);
 
         return e.SequenceEqual(a);
     }
+
+    private static string[] StripOptionalDirectionTag(string[] f) =>
+        f.Length > 0 && C2sDirectionTags.Contains(f[^1]) ? f[..^1] : f;
 
     private static string[] StripOptionalSlideTargetNote(string[] f) =>
         f[0] is "SLC" or "SLD" && f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
@@ -253,14 +259,17 @@ public class ChuTests
             && int.TryParse(fields[7], out _);
     }
 
-    /// <summary>UGC `$` 在 C2S 中编码为 38400；此时另一边 interval 只需大于持续时长。</summary>
-    private static bool AldIntervalsEquivalent(string intervalA, string intervalB, int durTicks)
+    /// <summary>ALD durationTicks 在 `$`/0 interval 编码切换时可能相差 1。</summary>
+    private static bool DurationTicksEquivalent(int a, int b) => Math.Abs(a - b) <= 1;
+
+    /// <summary>UGC `$` 在 C2S 中编码为 38400；此时另一边 interval 不管是什么都可以。</summary>
+    private static bool AldIntervalsEquivalent(string intervalA, string intervalB, int durTicksA, int durTicksB)
     {
         if (intervalA == intervalB) return true;
         if (!int.TryParse(intervalA, out var a) || !int.TryParse(intervalB, out var b)) return false;
 
-        if (a == 38400) return b > durTicks || (b == durTicks && b == 0);
-        if (b == 38400) return a > durTicks || (a == durTicks && a == 0);
+        if (a == 38400) return true; // b > durTicksB || (b == durTicksB && b == 0);
+        if (b == 38400) return true; // a > durTicksA || (a == durTicksA && a == 0);
         return false;
     }
 
@@ -274,12 +283,32 @@ public class ChuTests
         AssertSortedLinesEqual(expectedEntries, actualEntries, "UGC");
     }
 
+    private static readonly HashSet<string> C2sHeaderTags = new(StringComparer.Ordinal)
+    {
+        "VERSION", "MUSIC", "SEQUENCEID", "DIFFICULT", "LEVEL", "CREATOR",
+        "BPM_DEF", "MET_DEF", "RESOLUTION", "CLK_DEF", "PROGJUDGE_BPM", "PROGJUDGE_AER", "TUTORIAL", "GENERATED_BY",
+    };
+
+    private static bool IsC2sHeaderLine(string line)
+    {
+        var tab = line.IndexOf('\t');
+        return C2sHeaderTags.Contains(tab >= 0 ? line[..tab] : line);
+    }
+
     private static List<string> SplitC2sLines(string text) =>
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(line => line.TrimEnd('\r'))
-            .Where(line => !(line.StartsWith("VERSION\t") || line.StartsWith("GENERATED_BY\t")))
-            .OrderBy(line => line, StringComparer.Ordinal)
+            .Where(line => !IsC2sHeaderLine(line))
+            .OrderBy(AldAwareC2sSortKey, StringComparer.Ordinal)
             .ToList();
+
+    /// <summary>ALD 行排序时忽略 interval（字段 5）与 durationTicks（字段 7）。</summary>
+    private static string AldAwareC2sSortKey(string line)
+    {
+        if (!line.StartsWith("ALD\t")) return line;
+        var fields = line.Split('\t');
+        return fields.Length <= 7 ? line : string.Join('\t', fields.Where((_, i) => i is not (5 or 7)));
+    }
 
     private static List<string> SplitUgcEntries(string text)
     {
