@@ -94,22 +94,35 @@ public class C2sParser: BaseChuParser
 
     private void ParseNote(string[] p, ChuChart chart, List<Alert> alerts, int lineNum)
     {
-        var tag = p[0].ToUpperInvariant();
-        var note = new ChuNote { Type = tag, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
+        var type = p[0].ToUpperInvariant();
+        var note = new ChuNote { Type = type, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
         string? targetNote = null;
 
-        switch (tag)
+        switch (type)
         {
             case "TAP": case "MNE":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); break;
             case "CHR":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
-            case "HLD": case "HXD":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Duration = new Rational(Int(p, 5), RSL); break;
-            case "SLD": case "SLC": case "SXD": case "SXC":
+            case "HLD":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); 
+                note.Duration = new Rational(Int(p, 5), RSL); 
+                break;
+            case "HXD":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); 
+                note.Duration = new Rational(Int(p, 5), RSL); 
+                note.Tag = Str(p, 6);
+                break;
+            case "SLD": case "SLC":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
                 note.Duration = new Rational(Int(p, 5), RSL);
                 note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
+                break;
+            case "SXD": case "SXC":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
+                note.Duration = new Rational(Int(p, 5), RSL);
+                note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
+                note.Tag = Str(p, 9);
                 break;
             case "FLK":
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
@@ -126,7 +139,7 @@ public class C2sParser: BaseChuParser
                 // 文档：M O Cell Width | TargetNote | 未知 | Duration | EndCell | EndWidth | 未知 | Tag
                 if (p.Length < 12)
                 {
-                    alerts.Add(new Alert(Warning, $"{tag} 列数不足（期望至少 12 列）") { Line = lineNum });
+                    alerts.Add(new Alert(Warning, $"{type} 列数不足（期望至少 12 列）") { Line = lineNum });
                     return;
                 }
                 note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
@@ -151,7 +164,7 @@ public class C2sParser: BaseChuParser
                 note.Tag = Str(p, 11);
                 break;
             default:
-                alerts.Add(new Alert(Warning, string.Format(Locale.C2SUnknownNoteType, tag)) { Line = lineNum }); return;
+                alerts.Add(new Alert(Warning, string.Format(Locale.C2SUnknownNoteType, type)) { Line = lineNum }); return;
         }
 
         if (targetNote != null) _rawTargetNote[note] = targetNote;

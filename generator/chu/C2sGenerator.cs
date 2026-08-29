@@ -22,7 +22,7 @@ public class C2sGenerator : IGenerator<ChuChart>
         
         int.TryParse(chart.MusicId, out var musicId);
         var sb = new StringBuilder();
-        sb.AppendLine($"VERSION\t1.08.00\t1.08.00");
+        sb.AppendLine($"VERSION\t1.14.00\t1.14.00");
         sb.AppendLine($"MUSIC\t{musicId}");
         sb.AppendLine("SEQUENCEID\t0");
         sb.AppendLine($"DIFFICULT\t{chart.Difficulty:D2}");
@@ -99,12 +99,11 @@ public class C2sGenerator : IGenerator<ChuChart>
             (m, o) = Utils.BarAndTick(n.Previous!.EndTime, tpm);
             durTicks = Utils.Tick(n.EndTime, tpm) - Utils.Tick(n.Previous!.EndTime, tpm);
         }
-        return n.Type switch
+        var result = n.Type switch
         {
-            "TAP" => $"TAP\t{m}\t{o}\t{n.Cell}\t{n.Width}",
-            "CHR" => $"CHR\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.Tag}",
+            "TAP" or "CHR" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}",
             "HLD" or "HXD" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}",
-            "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}",
+            "SLD" or "SLC" or "SXD" or "SXC" => $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{durTicks}\t{n.EndCell}\t{n.EndWidth}\tSLD",
             "FLK" => $"FLK\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{FLKTag(n)}",
             "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" =>
                     $"{n.Type}\t{m}\t{o}\t{n.Cell}\t{n.Width}\t{n.TargetNote}\t{AirColorTag(n, alerts)}",
@@ -114,6 +113,8 @@ public class C2sGenerator : IGenerator<ChuChart>
             "MNE" => $"MNE\t{m}\t{o}\t{n.Cell}\t{n.Width}",
             _ => alert(),
         };
+        if (n.Type is "CHR" or "HXD" or "SXD" or "SXC") result += $"\t{n.Tag}";
+        return result;
 
         string? alert()
         {
