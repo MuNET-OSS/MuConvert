@@ -378,6 +378,8 @@ public class UgcParser: BaseChuParser
             note.Tag = U2C_ChrExtras.GetValueOrDefault(extraRaw, extraRaw);
         }
     }
+    
+    private const int CrushInterval_Dollar_Value = 100;
 
     private void ParseHeightAndColor(ChuNote n, string str, List<Alert> alerts, int lineNum, string noteType="") // 需要传入noteType是因为，不同版本的不同类型note在实现上还略有区别的。
     {
@@ -395,7 +397,7 @@ public class UgcParser: BaseChuParser
         {
             var intervalStr = str[(posOfComma+1)..];
             str = str[..posOfComma];
-            if (intervalStr == "$") n.CrushInterval = 100;
+            if (intervalStr == "$") n.CrushInterval = CrushInterval_Dollar_Value;
             else if (int.TryParse(intervalStr, out var interval)) n.CrushInterval = new Rational(interval, RSL);
             else alerts.Add(new Alert(Warning, "解析Air-Crush的interval属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
         }
@@ -463,7 +465,7 @@ public class UgcParser: BaseChuParser
                 'H' => marker == "s" ? "AHD" : "AHX",
                 _ => throw new Exception($"未知的noteType: {noteType}"),
             };
-            if (noteType == 'h' && marker == "c") alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, previousNote.Time), idx + 1, lines[idx]));
+            if (noteType == 'h' && marker == "c") alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, previousNote.EndTime), idx + 1, lines[idx]));
 
             var segmentEnd = startTime + new Rational(endTick, RSL);
             var note = new ChuNote
@@ -577,17 +579,22 @@ public class UgcParser: BaseChuParser
             alerts.Add(new Alert(Warning, $"无法找到 Air 的前驱音符", (chart, note.Time), lineNum + 1, code));
     }
 
-    private int ParseAirCrushNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
+    private int ParseAirCrushNote(string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
     {
-        note.Type = "ALD";
-        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
-        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, note.Time), idx+1, lines[idx]));
-        else ParseHeightAndColor(note, code[3..], alerts, idx+1, "C");
+        // 注：一开始从外面传进来的previousNote，最后并不会被添加进chart里，只是作为第一段的起点参照而已。
+        var startTime = previousNote.Time;
+        ParseCellWidth(code, 1, previousNote, alerts, idx + 1, chart);
+        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, previousNote.Time), idx+1, lines[idx]));
+        else ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, "C");
+        previousNote.EndCell = previousNote.Cell;
+        previousNote.EndWidth = previousNote.Width;
+        previousNote.EndHeight = previousNote.Height;
         
         bool foundFirst = false;
-        bool intervalSet = Version >= 8;
+        Rational? crushInterval = Version >= 8 ? previousNote.CrushInterval : null;
+        List<ChuNote> resultNotes = [];
         while (idx + 1 < lines.Length)
-        {
+        { // 循环处理所有的跟随行。idx始终指向上一条已经处理完的行。
             var nextLine = lines[idx + 1].Trim();
             if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, Version >= 8))
             {
@@ -596,24 +603,45 @@ public class UgcParser: BaseChuParser
             }
             
             if (Version >= 8 && marker != "c")
-                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, note.Time), idx + 1, nextLine));
-
-            if (Version <= 6 && !intervalSet && marker == "s")
+                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, previousNote.EndTime), idx + 1, nextLine));
+            if (Version <= 6 && marker == "s")
             {
-                note.CrushInterval = new Rational(endTick, RSL);
-                intervalSet = true;
+                crushInterval ??= new Rational(endTick, RSL);
+                if (endWidth == null)
+                {
+                    idx++;
+                    continue; // 老版本当中，>s跟随行是用来记载interval的，此时没有endWidth是正常的，说明这个只是interval标记，解析interval后忽略即可，不用再管
+                }
             }
-            
-            note.Duration = new Rational(endTick, RSL);
-            if (endCell != null) note.EndCell = endCell.Value;
-            if (endWidth != null) note.EndWidth = endWidth.Value;
-            if (endHeight != null) note.EndHeight = U2C_Height(endHeight.Value);
 
+            var segmentEnd = startTime + new Rational(endTick, RSL);
+            var note = new ChuNote
+            {
+                Type = "ALD", Time = previousNote.EndTime, 
+                Cell = previousNote.EndCell, Width = previousNote.EndWidth, Height = previousNote.EndHeight, 
+                Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
+                EndCell = endCell!.Value, EndWidth = endWidth!.Value, EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : previousNote.EndHeight,
+                Previous = foundFirst ? previousNote : null
+            };
+            
+            resultNotes.Add(note);
+            previousNote = note;
             idx++;
             foundFirst = true;
         }
-        chart.Notes.Add(note);
 
+        if (crushInterval == null)
+        {
+            crushInterval = CrushInterval_Dollar_Value; // 相当于$
+            if (Version >= 8) alerts.Add(new Alert(Warning, $"Air-Crush（v8）缺少crushInterval", (chart, startTime), idx + 1)); // v8以上，按说是不应该这样的，所以给个警告
+        }
+        
+        foreach (var note in resultNotes)
+        {
+            note.CrushInterval = crushInterval.Value;
+            chart.Notes.Add(note);
+        }
+        
         if (!foundFirst)
             alerts.Add(new Alert(Warning, $"air-crush 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
         return idx;

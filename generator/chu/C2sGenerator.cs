@@ -89,14 +89,11 @@ public class C2sGenerator : IGenerator<ChuChart>
 
     private static string FLKTag(ChuNote n) => n.Tag is "L" or "R" ? n.Tag : "L";
     
-    private static bool IsSlideContinueSegments(ChuNote n) // Air Slide的前驱只能是Air Slide，反之亦然。
-        => (IsSlide(n) && IsSlide(n.Previous)) || (IsAirSlide(n) && IsAirSlide(n.Previous));
-    
     private static string? FormatNote(ChuNote n, int tpm, List<Alert> alerts)
     {
         var (m, o) = Utils.BarAndTick(n.Time, tpm);
         var durTicks = Utils.Tick(n.Duration, tpm);
-        if (IsSlideContinueSegments(n))
+        if (IsChainContinueSegments(n))
         { // 特殊地，对于slide的后续段：为了保证能接上，必须保证start tick接在前一个音符的endTime的后面，duration也采用end-start的方式计算durTicks。否则可能会，因为舍入的误差，造成没有办法接起来。
             (m, o) = Utils.BarAndTick(n.Previous!.EndTime, tpm);
             durTicks = Utils.Tick(n.EndTime, tpm) - Utils.Tick(n.Previous!.EndTime, tpm);

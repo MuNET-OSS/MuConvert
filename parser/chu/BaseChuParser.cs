@@ -30,6 +30,11 @@ public abstract class BaseChuParser : IParser<ChuChart>
         foreach (var n in chart.Notes)
         {
             endDict.Add((n.EndTime, n.EndCell, n.EndWidth), n);
+            if (n.Previous != null)
+            { // 每个note最多只能成为一个其他note的previous，因此若某个note已经被预先标记为其他note的previous了，则它不能再被纳入考虑。
+                var p = n.Previous;
+                endDict.GetValueOrDefault((p.EndTime, p.EndCell, p.EndWidth))?.Remove(p);
+            }
         }
 
         foreach (var cur in chart.Notes)
@@ -61,7 +66,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
 
     private static bool NeedsPrevious(ChuNote n)
     {
-        return IsSlide(n.Type) || IsAir(n.Type) || IsAirHold(n.Type) || IsAirSlide(n.Type);
+        return IsSlide(n.Type) || IsAir(n.Type) || IsAirHold(n.Type) || IsAirSlide(n.Type) || IsAirCrush(n.Type);
     }
     
     protected static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
@@ -83,7 +88,11 @@ public abstract class BaseChuParser : IParser<ChuChart>
             result.AddRange(candidates.Where(n => IsAirHold(n.Type)));
             result.AddRange(candidates.Where(n => !IsAirHold(n.Type) && IsLegalPreviousForAir(n.Type)));
         }
-        else if (IsAir(cur.Type) || IsAirHold(cur.Type))
+        else if (IsAirCrush(cur.Type))
+        { // Air Crush：只匹配“上一段aircrush”（且上一段必须具有正 duration）
+            result.AddRange(candidates.Where(n => IsAirCrush(n.Type) && n.Tag == cur.Tag));
+        }
+        else if (IsAir(cur.Type))
         { // Air 系列：依附在一个“非广义Air”的音符上
             result.AddRange(candidates.Where(n => IsLegalPreviousForAir(n.Type)).ToList());
         }

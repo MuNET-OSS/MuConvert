@@ -96,6 +96,13 @@ public class ChuUtils
     public static bool IsAirCrush(ChuNote? n) => IsAirCrush(n?.Type!);
     // 是否是广义的air音符（Air/Air Hold/Air Slide/Air Crush）
     public static bool IsGeneralizedAir(ChuNote? n) => IsGeneralizedAir(n?.Type!);
+    
+    public static bool IsSlideChainNote(string t) => IsSlide(t) || IsAirSlide(t) || IsAirHold(t) || IsAirCrush(t);
+    public static bool IsChainContinueSegments(ChuNote n) // 返回 true 表示当前 segment 接在同类型链的上一段之后，而非首段。
+        => (IsSlide(n) && IsSlide(n.Previous))
+           || (IsAirSlide(n) && IsAirSlide(n.Previous))
+           || (IsAirHold(n) && IsAirHold(n.Previous))
+           || (IsAirCrush(n) && IsAirCrush(n.Previous));
 
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
     public static string IToH36(int value) => Utils.IToH(value, 36);

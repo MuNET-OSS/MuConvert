@@ -160,11 +160,12 @@ public class UgcGenerator : IGenerator<ChuChart>
 
         var notes = SortedNotesForConnectingPrevious(ugc);
 
-        // UGC Slide / AIR-SLIDE / AIR-HOLD (v8):
+        // UGC Slide / AIR-SLIDE / AIR-HOLD / AIR-CRUSH (v8):
         // - Chains (ChuNote.Previous) serialize as ONE parent line + follower lines (#OffsetTick from parent time).
         // - Ground slide: parent `s`, followers `>s` / `>c` + end cell/width.
         // - Air slide: parent `S` + cell/width + hh + N/I; followers `>s`/`>c` + xw + hh.
         // - Air hold: parent `H` + cell/width + color; followers `>s` / `>c` only.
+        // - Air crush: parent `C` + cell/width + hh + color,interval; followers `>c` + xw + hh.
         // - First segment may attach to TAP/HLD via Previous; only skip emit when Previous is another segment of the same chain.
         var slideChains = BuildSlideChains(notes);
 
@@ -191,7 +192,7 @@ public class UgcGenerator : IGenerator<ChuChart>
                     {
                         var endTicks = Utils.Tick(seg.EndTime - n.Time, RSL);
                         if (endTicks <= 0) continue;
-                        if (IsAirSlide(n.Type))
+                        if (IsAirSlide(n.Type) || IsAirCrush(n.Type))
                             sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}{EncodeAirHeight(seg.EndHeight)}");
                         else if (IsSlide(n.Type))
                             sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}");
@@ -205,8 +206,6 @@ public class UgcGenerator : IGenerator<ChuChart>
             var durTicks = Utils.Tick(n.Duration, RSL);
             if (n.Type is "HLD" or "HXD" && durTicks > 0)
                 sb.AppendLine($"#{durTicks}>s");
-            else if (n.Type is "ALD" && durTicks > 0)
-                sb.AppendLine($"#{durTicks}>c{IToH36(n.EndCell)}{IToH36(n.EndWidth)}{EncodeAirHeight(n.EndHeight)}");
         }
         return sb.ToString();
     }
@@ -251,13 +250,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         return cur;
     }
     
-    private static bool IsSlideChainNote(string t) => IsSlide(t) || IsAirSlide(t) || IsAirHold(t);
-    // 返回 true 表示当前 segment 接在同类型链的上一段之后，而非首段。
-    private static bool IsChainContinueSegments(ChuNote n)
-        => (IsSlide(n) && IsSlide(n.Previous))
-        || (IsAirSlide(n) && IsAirSlide(n.Previous))
-        || (IsAirHold(n) && IsAirHold(n.Previous));
-    private static char SlideFollowerMarker(string t) => t is "SLC" or "SXC" or "ASC" ? 'c' : 's';
+    private static char SlideFollowerMarker(string t) => t is "SLC" or "SXC" or "ASC" or "ALD" ? 'c' : 's';
 
     private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(C2U_Height(value) * 10), 0, 1295)).PadLeft(2, '0');
     
