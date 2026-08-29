@@ -106,4 +106,13 @@ public class ChuUtils
 
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
     public static string IToH36(int value) => Utils.IToH(value, 36);
+
+    public static string? AsTargetType(ChuNote? n) => n?.Type switch
+    {
+        null => null,
+        "HXD" => "HLD",
+        "SLC" or "SXD" or "SXC" => "SLD",
+        "AHX" => "AHD",
+        _ => n.Type
+    };
 }

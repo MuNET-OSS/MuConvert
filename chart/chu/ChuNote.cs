@@ -1,4 +1,5 @@
 using MuConvert.chart;
+using MuConvert.utils;
 using Rationals;
 
 namespace MuConvert.chu;
@@ -53,7 +54,7 @@ public class ChuNote: BaseNote
     
     public override Rational EndTime => (Time + Duration).CanonicalForm;
     /** Air系列音符/Slide系列音符的 关联的目标音符类型。仅供向前兼容使用。 */
-    public string TargetNote => Previous?.Type ?? "N";
+    public string TargetNote => ChuUtils.AsTargetType(Previous) ?? "N";
 
     private int? _endCell;
     private int? _endWidth;

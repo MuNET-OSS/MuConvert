@@ -48,7 +48,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
 
             if (rawTargetNote != null && rawTargetNote.TryGetValue(cur, out var target) && !string.IsNullOrEmpty(target))
             {
-                var filteredByRaw = filtered.Where(x=>x.Type == target).ToList();
+                var filteredByRaw = filtered.Where(x=>AsTargetType(x) == target).ToList();
                 if (filteredByRaw.Count == 0)
                 {
                     alerts.Add(new Alert(Alert.LEVEL.Warning, "未找到声明的前驱/依附音符", (chart, cur.Time)));
