@@ -41,12 +41,15 @@ public class UgcParser: BaseChuParser
     // 为了实现从上述 T函数 中的换算，所必要的信息。来自于ugc文件中的 @BEAT 字段
     private List<(int, Rational)> _ugcBeats = [];
 
+    private Dictionary<(Rational, int, int), ChuNote[]> _HXD_Dict = new();
+
     public override (ChuChart, List<Alert>) Parse(string text)
     {
         var chart = new ChuChart();
         var alerts = new List<Alert>();
         _ugcFlags = new();
         _ugcBeats = [];
+        _HXD_Dict = new();
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var inHeader = true;
 
@@ -376,6 +379,18 @@ public class UgcParser: BaseChuParser
             note.Type = "CHR";
             var extraRaw = code.Length > 3 ? code[3..] : "";
             note.Tag = U2C_ChrExtras.GetValueOrDefault(extraRaw, extraRaw);
+            
+            // HXD等于:h加上同位置的:x，因此需要检查有没有同位置的:x，如果有，则修改它的属性同时，不要添加我们自己
+            if (_HXD_Dict.Remove((note.Time, note.Cell, note.Width), out var dictNotes) && dictNotes.Length > 0 && dictNotes[0].Type is "HLD") // or "SLD" or "SLC")
+            {
+                foreach (var hldNote in dictNotes)
+                {
+                    hldNote.Type = ToExType(hldNote.Type);
+                    hldNote.Tag = note.Tag;
+                }
+                return null; // 告诉上层，不要添加我们自己
+            }
+            else _HXD_Dict[(note.Time, note.Cell, note.Width)] = [note];
         }
         return note;
     }
@@ -444,11 +459,13 @@ public class UgcParser: BaseChuParser
         var startTime = previousNote.Time;
         ParseCellWidth(code, 1, previousNote, alerts, idx + 1, chart);
         if (isAir) ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, noteType.ToString());
+        var startPos = (startTime, previousNote.Cell, previousNote.Width);
         previousNote.EndCell = previousNote.Cell;
         previousNote.EndWidth = previousNote.Width;
         previousNote.EndHeight = previousNote.Height;
 
         bool foundFirst = false;
+        List<ChuNote> resultNotes = [];
         while (idx + 1 < lines.Length)
         { // 循环处理所有的跟随行。idx始终指向上一条已经处理完的行。
             var nextLine = lines[idx + 1].Trim();
@@ -493,6 +510,7 @@ public class UgcParser: BaseChuParser
                     alerts.Add(new Alert(Warning, $"无法找到 Air Slide 的前驱音符", (chart, note.Time), idx + 1, lines[idx]));
             }
             
+            resultNotes.Add(note);
             chart.Notes.Add(note);
             previousNote = note;
             idx++;
@@ -502,6 +520,21 @@ public class UgcParser: BaseChuParser
         if (!foundFirst)
             alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
 
+        if (noteType is 'h') // or 's')
+        { // HXD等于:h加上同位置的:x，因此需要检查有没有同位置的:x，如果有，应该删除之
+            if (_HXD_Dict.Remove(startPos, out var dictNotes) && dictNotes is [{ Type: "CHR" }])
+            {
+                var chrNote = dictNotes[0];
+                foreach (var note in resultNotes)
+                {
+                    note.Type = ToExType(note.Type);
+                    note.Tag = chrNote.Tag;
+                }
+                chart.Notes.Remove(chrNote);
+            }
+            else _HXD_Dict[startPos] = resultNotes.ToArray();
+        }
+        
         return idx;
     }
     

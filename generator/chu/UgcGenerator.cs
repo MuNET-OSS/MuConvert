@@ -207,6 +207,9 @@ public class UgcGenerator : IGenerator<ChuChart>
                 if (n.Type is "HLD" or "HXD" && durTicks > 0)
                     sb.AppendLine($"#{durTicks}>s");
             }
+            
+            if (n.Type is "HXD") // or "SXD" or "SXC") // HXD等于:h加上同位置的:x，因此需要单独emit一个:x主行
+                sb.AppendLine($"#{m}'{o}:x{ucode[1..3]}{C2U_ChrExtras.GetValueOrDefault(n.Tag, "C")}");
         }
         return sb.ToString();
     }

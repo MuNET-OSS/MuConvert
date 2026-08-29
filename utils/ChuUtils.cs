@@ -115,4 +115,13 @@ public class ChuUtils
         "AHX" => "AHD",
         _ => n.Type
     };
+    
+    public static string ToExType(string type) => type switch
+    {
+        "HLD" => "HXD",
+        "SLD" => "SXD",
+        "SLC" => "SXC",
+        // "AHD" => "AHX",
+        _ => throw Utils.Fail()
+    };
 }
