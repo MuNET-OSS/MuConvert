@@ -310,10 +310,10 @@ public class UgcParser: BaseChuParser
         switch (typeChar)
         {
             case 't':
-                ParseTapNote(code, note, alerts, lineNum, chart, false);
+                note = ParseTapNote(code, note, alerts, lineNum, chart, false);
                 break;
             case 'x':
-                ParseTapNote(code, note, alerts, lineNum, chart, true);
+                note = ParseTapNote(code, note, alerts, lineNum, chart, true);
                 break;
 
             case 'h':
@@ -367,7 +367,7 @@ public class UgcParser: BaseChuParser
         return idx;
     }
 
-    private void ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart, bool isCHR)
+    private ChuNote? ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart, bool isCHR)
     {
         note.Type = "TAP";
         ParseCellWidth(code, 1, note, alerts, lineNum, chart);
@@ -377,6 +377,7 @@ public class UgcParser: BaseChuParser
             var extraRaw = code.Length > 3 ? code[3..] : "";
             note.Tag = U2C_ChrExtras.GetValueOrDefault(extraRaw, extraRaw);
         }
+        return note;
     }
     
     private const int CrushInterval_Dollar_Value = 100;

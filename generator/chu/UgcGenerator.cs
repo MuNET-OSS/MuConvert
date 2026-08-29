@@ -200,12 +200,13 @@ public class UgcGenerator : IGenerator<ChuChart>
                             sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}");
                     }
                 }
-                continue;
             }
-
-            var durTicks = Utils.Tick(n.Duration, RSL);
-            if (n.Type is "HLD" or "HXD" && durTicks > 0)
-                sb.AppendLine($"#{durTicks}>s");
+            else
+            {
+                var durTicks = Utils.Tick(n.Duration, RSL);
+                if (n.Type is "HLD" or "HXD" && durTicks > 0)
+                    sb.AppendLine($"#{durTicks}>s");
+            }
         }
         return sb.ToString();
     }
