@@ -193,11 +193,11 @@ public class ChuTests
         }
     }
 
-    /// <summary>除 ALD interval 的 `$` 宽松规则、SLC/SLD 可选 TargetNote 外，要求整行一致。</summary>
+    /// <summary>除 ALD interval 的 `$` 宽松规则、HLD/SLC/SLD 可选后缀外，要求整行一致。</summary>
     private static bool C2sLinesEquivalent(string expected, string actual)
     {
         if (expected == actual) return true;
-        if (SlideC2sLinesEquivalent(expected, actual)) return true;
+        if (HoldSlideC2sLinesEquivalent(expected, actual)) return true;
         if (!TryParseAldFields(expected, out var e) || !TryParseAldFields(actual, out var a)) return false;
 
         for (var i = 0; i < e.Length; i++)
@@ -210,19 +210,39 @@ public class ChuTests
         return AldIntervalsEquivalent(e[5], a[5], durTicks);
     }
 
-    /// <summary>SLC/SLD 行末尾 TargetNote（SLD）可有可无。</summary>
-    private static bool SlideC2sLinesEquivalent(string a, string b)
+    private static readonly HashSet<string> C2sDirectionTags = ["CE", "UP", "DW", "BS"];
+
+    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；expected 末尾方向标识符（CE/UP/DW/BS）actual 可省略。</summary>
+    private static bool HoldSlideC2sLinesEquivalent(string expected, string actual)
     {
-        var fa = a.Split('\t');
-        var fb = b.Split('\t');
-        if (fa.Length == 0 || fb.Length == 0 || fa[0] != fb[0]) return false;
-        if (fa[0] is not ("SLC" or "SLD")) return false;
+        var e = expected.Split('\t');
+        var a = actual.Split('\t');
+        if (e.Length == 0 || a.Length == 0 || e[0] != a[0]) return false;
+        if (e[0] is not ("HLD" or "SLC" or "SLD")) return false;
 
-        static string[] Normalize(string[] f) =>
-            f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
+        e = StripOptionalSlideTargetNote(e);
+        a = StripOptionalSlideTargetNote(a);
 
-        return Normalize(fa).SequenceEqual(Normalize(fb));
+        if (e.Length > 0 && C2sDirectionTags.Contains(e[^1]))
+        {
+            if (a.Length > 0 && C2sDirectionTags.Contains(a[^1]))
+            {
+                if (e[^1] != a[^1]) return false;
+                a = a[..^1];
+            }
+            e = e[..^1];
+            e = StripOptionalSlideTargetNote(e);
+        }
+        else if (a.Length > 0 && C2sDirectionTags.Contains(a[^1]))
+        {
+            return false;
+        }
+
+        return e.SequenceEqual(a);
     }
+
+    private static string[] StripOptionalSlideTargetNote(string[] f) =>
+        f[0] is "SLC" or "SLD" && f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
 
     private static bool TryParseAldFields(string line, out string[] fields)
     {
