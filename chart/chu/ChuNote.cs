@@ -18,6 +18,9 @@ public class ChuNote: BaseNote
     /** HLD/SLD/AHD/ASD等的 持续时长 */
     public Rational Duration { get; set => field = value.CanonicalForm; } = 0;
 
+    /** 音符所在的速度组。默认情况下都为0（默认组） */
+    public int SpeedGroup { get; set; } = 0;
+
     /** SLD 终点列 */
     public int EndCell
     {

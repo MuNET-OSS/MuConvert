@@ -12,6 +12,8 @@ public class UgcGenerator : IGenerator<ChuChart>
     private int RSL = 480 * 4;
     private List<Alert> alerts = [];
     public List<(string, string)> ExtraHeaders = [];
+    
+    private int useTil = 0; // 当前的 @USETIL 值
 
     /**
      * <param name="extraHeaders">在生成的UGC的HEAD区域，添加上额外的字段。</param>
@@ -146,15 +148,30 @@ public class UgcGenerator : IGenerator<ChuChart>
             var (m, o) = T(b.Time);
             sb.AppendLine(FormattableString.Invariant($"@BPM\t{m}'{o}\t{b.Bpm:F5}"));
         }
-        if (!extraHeaderKeys.Contains("TIL")) sb.AppendLine("@TIL\t0\t0'0\t1.00000"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
 
-        foreach (var s in ugc.SflList.OrderBy(x => x.Time)) 
-        { 
-            var (m, o) = T(s.Time); 
-            sb.AppendLine(FormattableString.Invariant($"@SPDMOD\t{m}'{o}\t{s.Multiplier:0.00000}"));
+        #region 生成TIL
+        Dictionary<(Rational time, int groupId), decimal> tilList = new()
+        {
+            [(0, 0)] = 1,
+        };
+        foreach (var (groupId, list) in ugc.SpeedGroups)
+        {
+            foreach (var t in list)
+            {
+                tilList[(t.Time.CanonicalForm, groupId)] = t.Multiplier;
+                tilList[((t.Time + t.Duration).CanonicalForm, groupId)] = 1;
+            }
         }
-
-        if (!extraHeaderKeys.Contains("MAINTIL")) sb.AppendLine("@MAINTIL\t0"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
+        
+        foreach (var s in tilList.ToList()
+                     .OrderBy(x=>(x.Key.time, x.Key.groupId)))
+        { 
+            var (m, o) = T(s.Key.time); 
+            sb.AppendLine(FormattableString.Invariant($"@TIL\t{s.Key.groupId}\t{m}'{o}\t{s.Value:0.00000}"));
+        }
+        #endregion
+        
+        sb.AppendLine("@MAINTIL\t0"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
 
@@ -173,6 +190,12 @@ public class UgcGenerator : IGenerator<ChuChart>
         {
             if (IsSlideChainNote(n.Type) && IsChainContinueSegments(n))
                 continue; // 是链式音符且不是第一段，则应当已经被处理过了，直接跳过
+
+            if (n.SpeedGroup != useTil)
+            {
+                useTil = n.SpeedGroup;
+                sb.AppendLine($"@USETIL\t{useTil}");
+            }
 
             var (m, o) = T(n.Time);
             var ucode = UCode(n);

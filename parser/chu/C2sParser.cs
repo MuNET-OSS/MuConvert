@@ -17,10 +17,11 @@ public class C2sParser: BaseChuParser
     private static readonly HashSet<string> HeadTags = new(StringComparer.OrdinalIgnoreCase)
         { "VERSION", "MUSIC", "SEQUENCEID", "DIFFICULT", "LEVEL", "CREATOR", "BPM_DEF", "MET_DEF", "RESOLUTION", "CLK_DEF", "PROGJUDGE_BPM", "PROGJUDGE_AER", "TUTORIAL" };
     private static readonly HashSet<string> TimingTags = new(StringComparer.OrdinalIgnoreCase)
-        { "BPM", "MET", "SFL" };
+        { "BPM", "MET", "SFL", "SLP" };
 
     // C2S 会原始记录 targetNote 字符串；用于在 Previous 推断有多个候选时优先匹配。
     private readonly Dictionary<ChuNote, string> _rawTargetNote = new();
+    private readonly Dictionary<(Rational Time, int Cell, int Width), int> _slaRecords = new();
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
@@ -55,8 +56,18 @@ public class C2sParser: BaseChuParser
         }
 
         FillAllPrevious(chart, alerts, _rawTargetNote);
+        ProcessSLA(chart);
         chart.Sort();
         return (chart, alerts);
+    }
+
+    private void ProcessSLA(ChuChart chart)
+    {
+        foreach (var note in chart.Notes)
+        {
+            var t = (note.Time, note.Cell, note.Width);
+            if (_slaRecords.TryGetValue(t, out var groupId)) note.SpeedGroup = groupId;
+        }
     }
 
     private void ParseHeader(string[] p, ChuChart chart)
@@ -90,13 +101,19 @@ public class C2sParser: BaseChuParser
                     new Rational(Int(p, 3), RSL),
                     decimal.Parse(p[4], CultureInfo.InvariantCulture)));
                 break;
+            case "SLP":
+                chart.SpeedGroups.Add(Int(p, 5), (
+                    Int(p, 1) + new Rational(Int(p, 2), RSL),
+                    new Rational(Int(p, 3), RSL),
+                    decimal.Parse(p[4], CultureInfo.InvariantCulture)));
+                break;
         }
     }
 
     private void ParseNote(string[] p, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         var type = p[0].ToUpperInvariant();
-        var note = new ChuNote { Type = type, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
+        ChuNote? note = new ChuNote { Type = type, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
         string? targetNote = null;
 
         switch (type)
@@ -164,10 +181,19 @@ public class C2sParser: BaseChuParser
                 note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
                 note.Tag = Str(p, 11);
                 break;
+            
+            case "SLA":
+                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
+                var groupId = Int(p, 6);
+                _slaRecords[(note.Time, note.Cell, note.Width)] = groupId;
+                note = null;
+                break;
+                
             default:
                 alerts.Add(new Alert(Warning, string.Format(Locale.C2SUnknownNoteType, type)) { Line = lineNum }); return;
         }
 
+        if (note == null) return;
         if (targetNote != null) _rawTargetNote[note] = targetNote;
         chart.Notes.Add(note);
     }

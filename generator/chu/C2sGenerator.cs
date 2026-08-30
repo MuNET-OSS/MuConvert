@@ -8,6 +8,8 @@ namespace MuConvert.chu;
 public class C2sGenerator : IGenerator<ChuChart>
 {
     private const int RSL = 384;
+
+    private HashSet<string> slaLines = [];
     
     public (string, List<Alert>) Generate(ChuChart chart)
     {
@@ -51,22 +53,38 @@ public class C2sGenerator : IGenerator<ChuChart>
             sb.AppendLine($"MET\t{m}\t{o}\t{met.Denominator}\t{met.Numerator}");
         }
 
-        foreach (var s in chart.SflList.OrderBy(s => s.Time))
+        // 生成SLP
+        foreach (var (sfl, groupId) in chart.SpeedGroups
+                     .SelectMany(x=>x.Value, (x, sfl) => (sfl, x.Key))
+                     .OrderBy(x=>(x.sfl.Time, x.Key)))
         {
-            var (m, o) = Utils.BarAndTick(s.Time, RSL);
-            var durTicks = Utils.Tick(s.Duration, RSL);
-            sb.AppendLine(FormattableString.Invariant($"SFL\t{m}\t{o}\t{durTicks}\t{s.Multiplier:0.000000}"));
+            var (m, o) = Utils.BarAndTick(sfl.Time, RSL);
+            var durTicks = Utils.Tick(sfl.Duration, RSL);
+            sb.AppendLine(FormattableString.Invariant($"SLP\t{m}\t{o}\t{durTicks}\t{sfl.Multiplier:0.000000}\t{groupId}"));
         }
+        
         sb.AppendLine();
 
+        slaLines = [];
+        List<string> resultLines = [];
         foreach (var n in chart.Notes)
         {
-            var line = FormatNote(n, RSL, alerts);
-            if (line != null) sb.AppendLine(line);
+            var line = FormatNote(n, alerts);
+            if (line != null) resultLines.Add(line);
         }
 
+        foreach (var line in resultLines.Concat(slaLines).OrderBy(_lineOrder))
+        {
+            sb.AppendLine(line);
+        }
         sb.AppendLine();
         return sb.ToString();
+
+        (int, int) _lineOrder(string line)
+        {
+            var s = line.Split('\t');
+            return (int.Parse(s[1]), int.Parse(s[2]));
+        }
     }
 
     private static string AirColorTag(ChuNote n, List<Alert> alerts)
@@ -90,14 +108,14 @@ public class C2sGenerator : IGenerator<ChuChart>
 
     private static string FLKTag(ChuNote n) => n.Tag is "L" or "R" ? n.Tag : "L";
     
-    private static string? FormatNote(ChuNote n, int tpm, List<Alert> alerts)
+    private string? FormatNote(ChuNote n, List<Alert> alerts)
     {
-        var (m, o) = Utils.BarAndTick(n.Time, tpm);
-        var durTicks = Utils.Tick(n.Duration, tpm);
+        var (m, o) = Utils.BarAndTick(n.Time, RSL);
+        var durTicks = Utils.Tick(n.Duration, RSL);
         if (IsChainContinueSegments(n))
         { // 特殊地，对于slide的后续段：为了保证能接上，必须保证start tick接在前一个音符的endTime的后面，duration也采用end-start的方式计算durTicks。否则可能会，因为舍入的误差，造成没有办法接起来。
-            (m, o) = Utils.BarAndTick(n.Previous!.EndTime, tpm);
-            durTicks = Utils.Tick(n.EndTime, tpm) - Utils.Tick(n.Previous!.EndTime, tpm);
+            (m, o) = Utils.BarAndTick(n.Previous!.EndTime, RSL);
+            durTicks = Utils.Tick(n.EndTime, RSL) - Utils.Tick(n.Previous!.EndTime, RSL);
         }
         var result = n.Type switch
         {
@@ -113,7 +131,22 @@ public class C2sGenerator : IGenerator<ChuChart>
             "MNE" => $"MNE\t{m}\t{o}\t{n.Cell}\t{n.Width}",
             _ => alert(),
         };
+        if (result == null) return null;
         if (n.Type is "CHR" or "HXD" or "SXD" or "SXC") result += $"\t{n.Tag}";
+
+        #region 分音符变速组 SLA 的处理
+        if (n.SpeedGroup != 0)
+        {
+            slaLines.Add($"SLA\t{m}\t{o}\t{n.Cell}\t{n.Width}\t1\t{n.SpeedGroup}");
+            if (durTicks > 0)
+            {
+                var (endM, endO) = Utils.BarAndTick(n.EndTime, RSL);
+                var (endC, endW) = IsSlide(n) || IsAirSlide(n) || IsAirCrush(n) ? (n.EndCell, n.EndWidth) : (n.Cell, n.Width);
+                slaLines.Add($"SLA\t{endM}\t{endO}\t{endC}\t{endW}\t1\t{n.SpeedGroup}");
+            }
+        }
+        #endregion
+        
         return result;
 
         string? alert()

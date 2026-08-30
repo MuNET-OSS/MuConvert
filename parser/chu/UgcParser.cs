@@ -20,6 +20,8 @@ public class UgcParser: BaseChuParser
     // 保存UGC中，原始的 @FLAG 信息，供一些特性的支持和外部的读取
     private Dictionary<string, bool> _ugcFlags = new();
     public IReadOnlyDictionary<string, bool> UgcFlags => _ugcFlags;
+
+    private int useTil = 0; // 当前的 @USETIL 值
     
     // 从UGC时间轴到C2S时间轴/chart标准时间轴的换算
     // UGC中的小节和tick，和C2S中，并不是一一对应的。因为C2S永远假设一小节由4拍构成，MET的值不会影响整张谱的时间轴；
@@ -85,20 +87,37 @@ public class UgcParser: BaseChuParser
 
     private static void FinalizeUgcSflDurations(ChuChart chart)
     {
-        if (chart.SflList.Count == 0) return;
-        chart.SflList = chart.SflList.OrderBy(s => s.Time).ToList();
-        var endTime = Utils.Max(chart.SflList[^1].Time, chart.Notes.Max(x=>x.EndTime));
-        
-        for (var i = 0; i < chart.SflList.Count; i++)
+        var endTime = chart.Notes.Max(x => x.EndTime);
+        foreach (var k in chart.SpeedGroups.Keys)
         {
-            var t = chart.SflList[i].Time;
-            var dur = (i < chart.SflList.Count - 1 ? chart.SflList[i+1].Time : endTime) - t;
-            chart.SflList[i] = chart.SflList[i] with { Duration = dur.CanonicalForm };
+            chart.SpeedGroups[k] = FinalizeUgcSflDurations(chart.SpeedGroups[k], endTime);
+        }
+    }
+    private static List<SFL> FinalizeUgcSflDurations(List<SFL> sflList, Rational endTime)
+    {
+        if (sflList.Count == 0) return sflList;
+        sflList = sflList.OrderBy(s => s.Time).ToList();
+        endTime = Max(sflList[^1].Time, endTime);
+        
+        for (var i = 0; i < sflList.Count; i++)
+        {
+            var t = sflList[i].Time;
+            var dur = (i < sflList.Count - 1 ? sflList[i+1].Time : endTime) - t;
+            sflList[i] = sflList[i] with { Duration = dur.CanonicalForm };
         }
 
-        chart.SflList = chart.SflList.Where(x => x.Multiplier != 1).ToList(); // 倍率为1的，没必要放进来的
+        sflList = sflList.Where(x => x.Multiplier != 1).ToList(); // 倍率为1的，没必要放进来的
+        return sflList;
     }
 
+    private static (string, string) SplitDirective(string line)
+    {
+        var spaceIdx = line.IndexOf('\t');
+        var tag = spaceIdx > 0 ? line[..spaceIdx] : line;
+        var value = spaceIdx > 0 ? line[(spaceIdx + 1)..].Trim() : "";
+        return (tag, value);
+    }
+    
     private void ParseHeaderLine(string line, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         if (!line.StartsWith('@'))
@@ -107,10 +126,7 @@ public class UgcParser: BaseChuParser
             return;
         }
 
-        var spaceIdx = line.IndexOf('\t');
-        var tag = spaceIdx > 0 ? line[..spaceIdx] : line;
-        var value = spaceIdx > 0 ? line[(spaceIdx + 1)..].Trim() : "";
-
+        var (tag, value) = SplitDirective(line);
         switch (tag)
         {
             case "@TITLE":
@@ -224,10 +240,36 @@ public class UgcParser: BaseChuParser
             case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
-            case "@MAINTIL": case "@TIL": case "@USETIL":
             case "@MAINBPM":
             case "@BGSCENE": case "@FLDSCENE": case "@RLDATE": case "@CMT":
                 break;
+            
+            case "@MAINTIL":
+                if (int.Parse(value) != 0)
+                {
+                    alerts.Add(new Alert(Error, "暂不支持 @MAINTIL 不为0的谱面！"));
+                    throw new ConversionException(alerts);
+                }
+                break;
+            
+            case "@USETIL":
+                useTil = int.Parse(value);
+                break;
+
+            case "@TIL":
+            {
+                var parts = value.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length >= 3
+                    && int.TryParse(parts[0], out var groupId)
+                    && TryParseUgcMeasureTick(parts[1], out var meas, out var tick)
+                    && decimal.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var mult))
+                {
+                    chart.SpeedGroups.Add(groupId, (T(meas, tick), Rational.Zero, mult));
+                }
+                else
+                    alerts.Add(new Alert(Warning, $"@TIL 格式错误: {line}") { Line = lineNum });
+                break;
+            }
 
             case "@SPDMOD":
             {
@@ -263,14 +305,24 @@ public class UgcParser: BaseChuParser
             && int.TryParse(measureTick[(ap + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out tick);
     }
 
+    private bool ProcessDirective(string line)
+    {
+        if (line.StartsWith('\'')) return true; // 注释行
+        else if (line.StartsWith('@'))
+        {
+            var (tag, value) = SplitDirective(line);
+            if (tag == "@USETIL") useTil = int.Parse(value);
+            return true;
+        }
+        else return false;
+    } 
+    
     private int ParseNoteLine(string[] lines, int idx, ChuChart chart, List<Alert> alerts)
     {
         var line = lines[idx];
         var lineNum = idx + 1;
 
-        // skip comment lines and inline directives
-        if (line.StartsWith('\'') || line.StartsWith('@'))
-            return idx;
+        if (ProcessDirective(line)) return idx;
 
         var colonIdx = line.IndexOf(':');
         if (colonIdx < 0)
@@ -303,6 +355,7 @@ public class UgcParser: BaseChuParser
         ChuNote? note = new ChuNote
         {
             Time = T(measure, tick),
+            SpeedGroup = useTil,
         };
 
         var typeChar = code[0];
@@ -355,7 +408,7 @@ public class UgcParser: BaseChuParser
                     var nextLine = lines[idx + 1].Trim();
                     if (!TryParseFollowerLine(nextLine, out _, out _, out _, out _, out _, false))
                     {
-                        if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
+                        if (ProcessDirective(nextLine)) { idx++; continue; }
                         break;
                     }
                     idx++;
@@ -454,7 +507,7 @@ public class UgcParser: BaseChuParser
             var nextLine = lines[idx + 1].Trim();
             if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, isSlide))
             {
-                if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
+                if (ProcessDirective(nextLine)) { idx++; continue; }
                 break;
             }
 
@@ -471,7 +524,7 @@ public class UgcParser: BaseChuParser
             var segmentEnd = startTime + new Rational(endTick, RSL);
             var note = new ChuNote
             {
-                Type = type, Time = previousNote.EndTime, 
+                Type = type, Time = previousNote.EndTime, SpeedGroup = previousNote.SpeedGroup,
                 Cell = previousNote.EndCell, Width = previousNote.EndWidth,
                 Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
                 Previous = foundFirst ? previousNote : null,
@@ -599,7 +652,7 @@ public class UgcParser: BaseChuParser
             var nextLine = lines[idx + 1].Trim();
             if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, Version >= 8))
             {
-                if (nextLine.StartsWith('\'') || nextLine.StartsWith('@')) { idx++; continue; }
+                if (ProcessDirective(nextLine)) { idx++; continue; }
                 break;
             }
             
@@ -618,7 +671,7 @@ public class UgcParser: BaseChuParser
             var segmentEnd = startTime + new Rational(endTick, RSL);
             var note = new ChuNote
             {
-                Type = "ALD", Time = previousNote.EndTime, 
+                Type = "ALD", Time = previousNote.EndTime, SpeedGroup = previousNote.SpeedGroup,
                 Cell = previousNote.EndCell, Width = previousNote.EndWidth, Height = previousNote.EndHeight, 
                 Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
                 EndCell = endCell!.Value, EndWidth = endWidth!.Value, EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : previousNote.EndHeight,

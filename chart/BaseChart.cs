@@ -1,4 +1,5 @@
-﻿using MuConvert.utils;
+﻿global using SFL = (Rationals.Rational Time, Rationals.Rational Duration, decimal Multiplier);
+using MuConvert.utils;
 using Rationals;
 
 namespace MuConvert.chart;
@@ -41,7 +42,7 @@ public abstract class BaseChart<TNote>: IBaseChart where TNote: BaseNote
      *
      * maimai不会用到，ongeki和chunithm才会用到。
      */
-    public List<(Rational Time, Rational Duration, decimal Multiplier)> SflList = [];
+    public virtual List<SFL> SflList { get; set; } = [];
     
     /**
      * 谱面开头的“哒哒哒哒”声音的个数。
