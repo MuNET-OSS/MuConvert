@@ -26,7 +26,7 @@ public class C2sGenerator : IGenerator<ChuChart>
         sb.AppendLine($"MUSIC\t{musicId}");
         sb.AppendLine("SEQUENCEID\t0");
         sb.AppendLine($"DIFFICULT\t{chart.Difficulty:D2}");
-        sb.AppendLine("LEVEL\t0.0");
+        sb.AppendLine($"LEVEL\t{chart.Level:F1}");
         sb.AppendLine($"CREATOR\t{chart.Designer}");
         var bpm_def = chart.BpmList.BPM_DEF();
         sb.AppendLine(FormattableString.Invariant($"BPM_DEF\t{bpm_def.Item1:F3}\t{bpm_def.Item2:F3}\t{bpm_def.Item3:F3}\t{bpm_def.Item4:F3}"));

@@ -66,6 +66,7 @@ public class C2sParser: BaseChuParser
         {
             case "MUSIC": chart.MusicId = Int(p, 1).ToString(); break;
             case "DIFFICULT": chart.Difficulty = Int(p, 1); break;
+            case "LEVEL": chart.Level = Decimal(p, 1); break;
             case "CREATOR": chart.Designer = Str(p, 1); break;
             case "RESOLUTION": RSL = Math.Max(1, Int(p, 1, 384)); break;
         }
