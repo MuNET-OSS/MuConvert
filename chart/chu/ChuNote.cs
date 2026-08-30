@@ -39,11 +39,14 @@ public class ChuNote: BaseNote
     public override Rational EndTime => (Time + Duration).CanonicalForm;
     
     /**
-     * 仅Air和Air Slide适用，记录它所依附的音符（Tap/Flick/Hold/Slide等）。C2S中需要用到。
+     * 仅Air、Air Hold和Air Slide适用，记录它所依附的音符（Tap/Flick/Hold/Slide等）。C2S中需要用到。
      * 不难分析出，在完成整个chart之后，这个属性其实可以根据完整chart的列表动态推断的。
      * 因此，在BaseChuParser类中提供了FillAllPrevious方法，该方法应该在所有Note被正常解析完成后调用，填充所有上述类型的音符的targetNote信息。这样就不用每个Parser都写一段相似的逻辑。
      */
     public ChuNote? TargetNote;
+
+    public int EndCell => Segments.Count > 0 ? Segments.Last().EndCell : Cell;
+    public int EndWidth => Segments.Count > 0 ? Segments.Last().EndWidth : Width;
 }
 
 public class ChuSegment(ChuNote note)

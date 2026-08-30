@@ -21,7 +21,7 @@ public class UgcParser: BaseChuParser
     private Dictionary<string, bool> _ugcFlags = new();
     public IReadOnlyDictionary<string, bool> UgcFlags => _ugcFlags;
 
-    private int useTil = 0; // 当前的 @USETIL 值
+    private int useTil; // 当前的 @USETIL 值
     
     // 从UGC时间轴到C2S时间轴/chart标准时间轴的换算
     // UGC中的小节和tick，和C2S中，并不是一一对应的。因为C2S永远假设一小节由4拍构成，MET的值不会影响整张谱的时间轴；
@@ -363,41 +363,27 @@ public class UgcParser: BaseChuParser
         switch (typeChar)
         {
             case 't':
-                note = ParseTapNote(code, note, alerts, lineNum, chart, false);
-                break;
             case 'x':
-                note = ParseTapNote(code, note, alerts, lineNum, chart, true);
+            case 'f':
+            case 'd':
+                note = ParseTapNote(code, note, alerts, lineNum, chart, typeChar, line);
                 break;
 
             case 'h':
             case 'H': // Air Hold
             case 's':
             case 'S': // Air Slide
-                idx = ParseHoldOrSlideNote(typeChar, lines, idx, code, note, alerts, chart);
-                note = null; // ParseHoldOrSlideNote中，会自己构造note并自己添加进chart。因此这里默认的统一note不应被添加进chart。
+                (idx, note) = ParseHoldOrSlideNote(typeChar, lines, idx, code, note, alerts, chart);
                 break;
 
             case 'a':
-                ParseAirNote(code, note, alerts, lineNum, chart);
+                note = ParseAirNote(code, note, alerts, lineNum, chart);
                 break;
             case 'C': // Air Crush
-                idx = ParseAirCrushNote(lines, idx, code, note, alerts, chart);
-                note = null;
+                (idx, note) = ParseAirCrushNote(lines, idx, code, note, alerts, chart);
                 break;
 
-            case 'f':
-                note.Type = "FLK";
-                ParseCellWidth(code, 1, note, alerts, lineNum, chart);
-                if (code.Length > 3) note.Tag = code[3..];
-                break;
-
-            case 'c': // Umiguri的CLICK音符，疑似在C2s中是没有对应的。这个音符没有Cell和Width，除了Type什么都没有，所以直接存下来就可以了。
-                note.Type = "CLICK";
-                break;
-
-            case 'd':
-                note.Type = "MNE";
-                ParseCellWidth(code, 1, note, alerts, lineNum, chart);
+            case 'c': // Umiguri的CLICK音符，疑似在C2s中是没有对应的。这个音符没有Cell和Width，除了Type什么都没有，所以直接忽略就可以了。
                 break;
 
             default:
@@ -420,54 +406,62 @@ public class UgcParser: BaseChuParser
         return idx;
     }
 
-    private ChuNote? ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart, bool isCHR)
+    private ChuNote ParseTapNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart, char noteType, string line)
     {
-        note.Type = "TAP";
+        note.Type = ChuNoteType.Tap;
         ParseCellWidth(code, 1, note, alerts, lineNum, chart);
-        if (isCHR)
+        var directionStr = code.Length > 3 ? code[3..] : "";
+        if (noteType == 'x')
         {
-            note.Type = "CHR";
-            var extraRaw = code.Length > 3 ? code[3..] : "";
-            note.Tag = U2C_ChrExtras.GetValueOrDefault(extraRaw, extraRaw);
+            if (ExDirections_FromUgc.TryGetValue(directionStr, out var r)) note.Ex = r;
+            else alerts.Add(new Alert(Warning, "ExTap/CHR音符的方向无效", (chart, note.Time), lineNum, line));
         }
+        else if (noteType == 'f')
+        {
+            note.Type = ChuNoteType.Flick;
+            if (directionStr is "L" or "R") note.Ex = ExDirections_FromUgc[directionStr];
+            else alerts.Add(new Alert(Warning, "Flick音符的方向无效", (chart, note.Time), lineNum, line));
+        } 
+        else if (noteType == 'd') note.Type = ChuNoteType.Mine;
         return note;
     }
     
-    private const int CrushInterval_Dollar_Value = 100;
-
     private void ParseHeightAndColor(ChuNote n, string str, List<Alert> alerts, int lineNum, string noteType="") // 需要传入noteType是因为，不同版本的不同类型note在实现上还略有区别的。
     {
         if (string.IsNullOrEmpty(str)) return;
         if (str.Length == 1 && noteType is "H" or "S" && Version < 6)
         { // 老版本的:H和:S，单独的一位是height而不是颜色，因此不能套用下面的逻辑
-            if (TryH36ToI(str, out var height)) n.Height = U2C_Height(height);
+            if (TryH36ToI(str, out var height)) n.Height = Height_FromUgc(height);
             else alerts.Add(new Alert(Warning, "解析Air系列音符的高度属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
             return;
         }
-        
-        // 先尝试解析interval
-        var posOfComma = str.IndexOf(',');
-        if (posOfComma >= 0)
+
+        if (noteType == "C")
         {
-            var intervalStr = str[(posOfComma+1)..];
-            str = str[..posOfComma];
-            if (intervalStr == "$") n.CrushInterval = CrushInterval_Dollar_Value;
-            else if (int.TryParse(intervalStr, out var interval)) n.CrushInterval = new Rational(interval, RSL);
-            else alerts.Add(new Alert(Warning, "解析Air-Crush的interval属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
+            // 先尝试解析interval
+            var posOfComma = str.IndexOf(',');
+            if (posOfComma >= 0)
+            {
+                var intervalStr = str[(posOfComma + 1)..];
+                str = str[..posOfComma];
+                if (intervalStr == "$") n.CrushInterval = null;
+                else if (int.TryParse(intervalStr, out var interval)) n.CrushInterval = new Rational(interval, RSL);
+                else alerts.Add(new Alert(Warning, "解析Air-Crush的interval属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
+            }
+            else if (Version >= 8) alerts.Add(new Alert(Warning, $"Air-Crush（v8）缺少crushInterval", n.Time, null, lineNum, FormatNoteRef(n, str))); // v8以上，按说是不应该这样的，所以给个警告
         }
 
         // 剩的部分都满足：最后一位是颜色，前面是高度
         if (str.Length > 0)
         { // 解析颜色
             var rawColorStr = str.Last().ToString();
-            if (noteType == "C") n.Tag = U2C_AirCrushColor.GetValueOrDefault(rawColorStr, rawColorStr); // Air Crush
-            else n.Tag = Try_U2C_AirColor(n, rawColorStr, out var color) ? color : rawColorStr;
+            if (AirColor_FromUgc(n, rawColorStr, out var r)) n.Color = r;
         }
         if (str.Length > 1)
         { // 解析高度
             var heightStr = str[..^1];
             if (TryH36ToI(str[..^1], out var height)) 
-                n.Height = U2C_Height(heightStr.Length == 1 ? height : height / 10m); // 一位时不用除以10，两位时需要除以10
+                n.Height = Height_FromUgc(heightStr.Length == 1 ? height : height / 10m); // 一位时不用除以10，两位时需要除以10
             else alerts.Add(new Alert(Warning, "解析Air系列音符的高度属性失败！", n.Time, null, lineNum, FormatNoteRef(n, str)));
         }
     }
@@ -482,80 +476,56 @@ public class UgcParser: BaseChuParser
             var filtered = FilterPreviousCandidates(note, [chart.Notes.Last()]); // 仅传入一个元素到FilterPreviousCandidates，因此返回结果最多一个元素
             if (filtered.Count > 0)
             {
-                note.Previous = filtered[0];
+                note.TargetNote = filtered[0];
                 return true;
             }
         }
         return false;
     }
 
-    private int ParseHoldOrSlideNote(char noteType, string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
-    {
-        bool isAir = noteType is 'S' or 'H';
-        bool isSlide = noteType is 'S' or 's';
-        // 注：一开始从外面传进来的previousNote，最后并不会被添加进chart里，只是作为第一段的起点参照而已。
-        var startTime = previousNote.Time;
-        ParseCellWidth(code, 1, previousNote, alerts, idx + 1, chart);
-        if (isAir) ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, noteType.ToString());
-        previousNote.EndCell = previousNote.Cell;
-        previousNote.EndWidth = previousNote.Width;
-        previousNote.EndHeight = previousNote.Height;
+    private (int, ChuNote?) ParseHoldOrSlideNote(char noteType, string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
+    { 
+        note.IsAir = noteType is 'S' or 'H';
+        note.Type = noteType is 'S' or 's' ? ChuNoteType.Slide : ChuNoteType.Hold;
+        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
+        if (note.IsAir) ParseHeightAndColor(note, code[3..], alerts, idx+1, noteType.ToString());
 
         bool foundFirst = false;
+        int lastSegTick = 0;
         while (idx + 1 < lines.Length)
         { // 循环处理所有的跟随行。idx始终指向上一条已经处理完的行。
             var nextLine = lines[idx + 1].Trim();
-            if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, out var endHeight, isSlide))
+            if (!TryParseFollowerLine(nextLine, out var marker, out var endTick, out var endCell, out var endWidth, 
+                    out var endHeight, note.Type == ChuNoteType.Slide))
             {
                 if (ProcessDirective(nextLine)) { idx++; continue; }
                 break;
             }
 
-            var type = noteType switch
-            {
-                's' => marker == "s" ? "SLD" : "SLC",
-                'S' => marker == "s" ? "ASD" : "ASC",
-                'h' => "HLD",
-                'H' => marker == "s" ? "AHD" : "AHX",
-                _ => throw new Exception($"未知的noteType: {noteType}"),
-            };
-            if (noteType == 'h' && marker == "c") alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, previousNote.EndTime), idx + 1, lines[idx]));
-
-            var segmentEnd = startTime + new Rational(endTick, RSL);
-            var note = new ChuNote
-            {
-                Type = type, Time = previousNote.EndTime, SpeedGroup = previousNote.SpeedGroup,
-                Cell = previousNote.EndCell, Width = previousNote.EndWidth,
-                Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
-                Previous = foundFirst ? previousNote : null,
-            };
-            if (isSlide)
-            {
-                note.EndCell = endCell!.Value;
-                note.EndWidth = endWidth!.Value;
-                if (isAir)
-                {
-                    note.Height = previousNote.EndHeight;
-                    note.EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : note.Height;
-                }
-            }
-
-            if (isAir && !foundFirst)
-            {
-                if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
-                    alerts.Add(new Alert(Warning, $"无法找到 Air Slide 的前驱音符", (chart, note.Time), idx + 1, lines[idx]));
-            }
+            var segment = new ChuSegment(note) { C = marker == "c" };
+            segment.Length = new Rational(endTick - lastSegTick, RSL);
+            lastSegTick = endTick;
+            if (endCell != null) segment.EndCell = endCell.Value;
+            if (endWidth != null) segment.EndWidth = endWidth.Value;
+            if (endHeight != null) segment.EndHeight = endHeight.Value;
+            note.Segments.Add(segment);
             
-            chart.Notes.Add(note);
-            previousNote = note;
+            if (noteType == 'h' && segment.C) alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, note.EndTime), idx + 1, lines[idx]));
             idx++;
             foundFirst = true;
         }
 
         if (!foundFirst)
+        {
             alerts.Add(new Alert(Warning, $"SLD 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
-
-        return idx;
+            return (idx, null);
+        }
+        if (note.IsAir)
+        {
+            if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
+                alerts.Add(new Alert(Warning, $"无法找到 Air Slide 的前驱音符", (chart, note.Time), idx + 1, lines[idx]));
+        }
+        return (idx, note);
     }
     
     private static bool TryParseFollowerLine(string line, out string marker, out int endTick, out int? endCell, out int? endWidth, out decimal? height, bool requireEndCellWidth)
@@ -610,43 +580,39 @@ public class UgcParser: BaseChuParser
         }
     }
 
-    private void ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart)
+    private ChuNote? ParseAirNote(string code, ChuNote note, List<Alert> alerts, int lineNum, ChuChart chart)
     {
-        note.Type = "AIR"; // 出错情况下的缺省值
-        if (code.Length < 5)
-        {
-            alerts.Add(new Alert(Warning, $"AIR 音符代码过短: {code}") { Line = lineNum });
-            return;
-        }
-
+        note.Type = ChuNoteType.Tap; // 出错情况下的缺省值
+        note.IsAir = true;
         ParseCellWidth(code, 1, note, alerts, lineNum, chart);
         var mainPart = code[3..];
+        if (mainPart.Length < 2)
+        {
+            alerts.Add(new Alert(Warning, $"AIR 音符代码过短: {code}") { Line = lineNum });
+            return null;
+        }
 
         // 解析方向
         var direction = mainPart[..2];
-        if (U2C_AirDirections.TryGetValue(direction, out var airType)) note.Type = airType;
+        if (AirDirections_FromUgc.TryGetValue(direction, out var airType)) note.AirDirection = airType;
         else alerts.Add(new Alert(Warning, $"未知的 AIR 方向: {direction}") { Line = lineNum, RelevantNote = FormatNoteRef(note, code) });
         // 解析颜色
         ParseHeightAndColor(note, mainPart[2..], alerts, lineNum, "a");
         
         if (!AddAirPreviousFromLastNote(note, chart)) // 尝试直接从上一个note添加前驱。如果失败了报警告。
             alerts.Add(new Alert(Warning, $"无法找到 Air 的前驱音符", (chart, note.Time), lineNum + 1, code));
+        return note;
     }
 
-    private int ParseAirCrushNote(string[] lines, int idx, string code, ChuNote previousNote, List<Alert> alerts, ChuChart chart)
+    private (int, ChuNote?) ParseAirCrushNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
     {
-        // 注：一开始从外面传进来的previousNote，最后并不会被添加进chart里，只是作为第一段的起点参照而已。
-        var startTime = previousNote.Time;
-        ParseCellWidth(code, 1, previousNote, alerts, idx + 1, chart);
-        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, previousNote.Time), idx+1, lines[idx]));
-        else ParseHeightAndColor(previousNote, code[3..], alerts, idx+1, "C");
-        previousNote.EndCell = previousNote.Cell;
-        previousNote.EndWidth = previousNote.Width;
-        previousNote.EndHeight = previousNote.Height;
+        note.Type = ChuNoteType.Crush;
+        ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
+        if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, note.Time), idx+1, lines[idx]));
+        else ParseHeightAndColor(note, code[3..], alerts, idx+1, "C");
         
         bool foundFirst = false;
-        Rational? crushInterval = Version >= 8 ? previousNote.CrushInterval : null;
-        List<ChuNote> resultNotes = [];
+        int lastSegTick = 0;
         while (idx + 1 < lines.Length)
         { // 循环处理所有的跟随行。idx始终指向上一条已经处理完的行。
             var nextLine = lines[idx + 1].Trim();
@@ -657,48 +623,26 @@ public class UgcParser: BaseChuParser
             }
             
             if (Version >= 8 && marker != "c")
-                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, previousNote.EndTime), idx + 1, nextLine));
-            if (Version <= 6 && marker == "s")
-            {
-                crushInterval ??= new Rational(endTick, RSL);
-                if (endWidth == null)
-                {
-                    idx++;
-                    continue; // 老版本当中，>s跟随行是用来记载interval的，此时没有endWidth是正常的，说明这个只是interval标记，解析interval后忽略即可，不用再管
-                }
-            }
-
-            var segmentEnd = startTime + new Rational(endTick, RSL);
-            var note = new ChuNote
-            {
-                Type = "ALD", Time = previousNote.EndTime, SpeedGroup = previousNote.SpeedGroup,
-                Cell = previousNote.EndCell, Width = previousNote.EndWidth, Height = previousNote.EndHeight, 
-                Duration = segmentEnd - previousNote.EndTime, Tag = previousNote.Tag,
-                EndCell = endCell!.Value, EndWidth = endWidth!.Value, EndHeight = endHeight != null ? U2C_Height(endHeight.Value) : previousNote.EndHeight,
-                Previous = foundFirst ? previousNote : null
-            };
+                alerts.Add(new Alert(Warning, $"Air-Crush（v8）子行标记应为 'c'，实际为 '{marker}'", (chart, note.EndTime), idx + 1, nextLine));
+            if (Version <= 6 && marker == "s") note.CrushInterval ??= new Rational(endTick, RSL);
+            if (endCell == null) { idx++; continue; } // 老版本当中，>s跟随行是用来记载interval的，此时没有endWidth是正常的，说明这个只是interval标记，解析interval后忽略即可，不用再管
             
-            resultNotes.Add(note);
-            previousNote = note;
+            var segment = new ChuSegment(note) { C = marker == "c", EndCell = endCell.Value, EndWidth = endWidth!.Value };
+            segment.Length = new Rational(endTick - lastSegTick, RSL);
+            lastSegTick = endTick;
+            if (endHeight != null) segment.EndHeight = endHeight.Value;
+            note.Segments.Add(segment);
+            
             idx++;
             foundFirst = true;
         }
 
-        if (crushInterval == null)
-        {
-            crushInterval = CrushInterval_Dollar_Value; // 相当于$
-            if (Version >= 8) alerts.Add(new Alert(Warning, $"Air-Crush（v8）缺少crushInterval", (chart, startTime), idx + 1)); // v8以上，按说是不应该这样的，所以给个警告
-        }
-        
-        foreach (var note in resultNotes)
-        {
-            note.CrushInterval = crushInterval.Value;
-            chart.Notes.Add(note);
-        }
-        
         if (!foundFirst)
+        {
             alerts.Add(new Alert(Warning, $"air-crush 音符缺少时长跟随行") { Line = idx + 1, RelevantNote = lines[idx] });
-        return idx;
+            return (idx, null);
+        }
+        return (idx, note);
     }
 
     // ReSharper disable once UnusedParameter.Local
