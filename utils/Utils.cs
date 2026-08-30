@@ -138,7 +138,7 @@ public static class Utils
         return new string(sb.ToString().Reverse().ToArray());
     }
     
-    public static Dictionary<string, string> ReverseDict(Dictionary<string, string> dict) =>
+    public static Dictionary<V, K> ReverseDict<K, V>(Dictionary<K, V> dict) where V : notnull =>
         dict.ToDictionary(x => x.Value, x => x.Key);
 }
 

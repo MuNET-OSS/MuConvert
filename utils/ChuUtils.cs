@@ -4,115 +4,90 @@ namespace MuConvert.utils;
 
 public class ChuUtils
 {
-    public static readonly Dictionary<string, string> U2C_AirDirections = new()
+    public static readonly Dictionary<AirDirection, string> AirDirections_ToUgc = new()
     {
-        ["UC"] = "AIR",
-        ["UR"] = "AUR",
-        ["UL"] = "AUL",
-        ["DC"] = "ADW",
-        ["DR"] = "ADR",
-        ["DL"] = "ADL",
+        [AirDirection.AIR] = "UC",
+        [AirDirection.AUR] = "UR",
+        [AirDirection.AUL] = "UL",
+        [AirDirection.ADW] = "DC",
+        [AirDirection.ADR] = "DR",
+        [AirDirection.ADL] = "DL",
     };
-    public static readonly Dictionary<string, string> C2U_AirDirections = Utils.ReverseDict(U2C_AirDirections);
+    public static readonly Dictionary<string, AirDirection> AirDirections_FromUgc = Utils.ReverseDict(AirDirections_ToUgc);
 
-    public static readonly Dictionary<string, string> U2C_ChrExtras = new()
+    public static readonly Dictionary<ExDirection, string> ExDirections_ToUgc = new()
     {
-        ["U"] = "UP",
-        ["D"] = "DW",
-        ["C"] = "CE",
-        ["L"] = "LS",
-        ["R"] = "RS",
-        ["A"] = "RC",
-        ["W"] = "LC",
-        ["I"] = "BS",
+        [ExDirection.UP] = "U",
+        [ExDirection.DW] = "D",
+        [ExDirection.CE] = "C",
+        [ExDirection.LS] = "L",
+        [ExDirection.RS] = "R",
+        [ExDirection.RC] = "A",
+        [ExDirection.LC] = "W",
+        [ExDirection.BS] = "I",
     };
-    public static readonly Dictionary<string, string> C2U_ChrExtras = Utils.ReverseDict(U2C_ChrExtras);
+    public static readonly Dictionary<string, ExDirection> ExDirections_FromUgc = Utils.ReverseDict(ExDirections_ToUgc);
     
-    public static bool Try_U2C_AirColor(ChuNote n, string rawColorStr, out string color)
+    public static readonly Dictionary<NoteColor, string> AirCrush_Color_ToUgc = new()
     {
-        color = rawColorStr switch
-        {
-            "N" => "DEF",
-            "I" => IsAirDown(n) ? "GRN" : "PPL",
-            _ => "",
-        };
-        return color != "";
-    }
-    public static bool Try_C2U_AirColor(ChuNote n, out string color)
-    {
-        color = n.Tag switch
-        {
-            "DEF" => "N",
-            "" => "N",
-            "GRN" => IsAirDown(n) ? "I" : "N",
-            "PPL" => IsAirDown(n) ? "N" : "I",
-            _ => "",
-        };
-        return color != "";
-    }
-    public static readonly HashSet<string> C2sAllowedColors = ["DEF", "GRN", "PPL"];
-    
-    public static readonly Dictionary<string, string> U2C_AirCrushColor = new()
-    {
-        ["0"] = "DEF", // Normal / 通常
-        ["Z"] = "NON", // Transparent / 透明
-        ["1"] = "RED", // Red / 赤
-        ["2"] = "ORN", // Orange / 橙
-        ["3"] = "YEL", // Yellow / 黄
-        ["4"] = "LIM", // Grass / 黄緑
-        ["5"] = "GRN", // Green / 緑
-        ["6"] = "AQA", // Sky / 水
-        ["7"] = "CYN", // Sky blue / 空
-        ["8"] = "DGR", // （存疑，不确定） Cobalt blue / 天（DGR ≈ Dark GRay？）
-        ["9"] = "BLU", // Blue / 青
-        ["A"] = "VLT", // Violet / 青紫
-        ["Y"] = "PPL", // Purple / 赤紫
-        ["B"] = "PNK", // Pink / 桃
-        ["C"] = "GRY", // （有点存疑，略微不确定） White / 白
-        ["D"] = "BLK", // Black / 黒
+        [NoteColor.DEF] = "0", // Normal / 通常
+        [NoteColor.NON] = "Z", // Transparent / 透明
+        [NoteColor.RED] = "1", // Red / 赤
+        [NoteColor.ORN] = "2", // Orange / 橙
+        [NoteColor.YEL] = "3", // Yellow / 黄
+        [NoteColor.LIM] = "4", // Grass / 黄緑
+        [NoteColor.GRN] = "5", // Green / 緑
+        [NoteColor.AQA] = "6", // Sky / 水
+        [NoteColor.CYN] = "7", // Sky blue / 空
+        [NoteColor.DGR] = "8", // （存疑，不确定） Cobalt blue / 天（DGR ≈ Dark GRay？）
+        [NoteColor.BLU] = "9", // Blue / 青
+        [NoteColor.VLT] = "A", // Violet / 青紫
+        [NoteColor.PPL] = "Y", // Purple / 赤紫
+        [NoteColor.PNK] = "B", // Pink / 桃
+        [NoteColor.GRY] = "C", // （有点存疑，略微不确定） White / 白
+        [NoteColor.BLK] = "D", // Black / 黒
     };
-    public static readonly Dictionary<string, string> C2U_AirCrushColor = Utils.ReverseDict(U2C_AirCrushColor);
-    public static readonly HashSet<string> C2sAllowedCrushColors = C2U_AirCrushColor.Keys.ToHashSet();
+    public static readonly Dictionary<string, NoteColor> AirCrush_Color_FromUgc = Utils.ReverseDict(AirCrush_Color_ToUgc);
     
-    public static decimal U2C_Height(decimal input) => input / 2 + 1;
-    public static decimal C2U_Height(decimal input) => (input - 1) * 2;
+    public static string AirColor_ToUgc(ChuNote n)
+    {
+        if (n.Type == ChuNoteType.Crush) return AirCrush_Color_ToUgc[n.Color];
+        else if (IsAirDown(n))
+        {
+            if (n.Color == NoteColor.GRN) return "I";
+        }
+        else if (n.Color == NoteColor.PPL) return "I";
+        return "N";
+    }
+    public static bool AirColor_FromUgc(ChuNote n, string rawColorStr, out NoteColor color)
+    {
+        if (n.Type == ChuNoteType.Crush) return AirCrush_Color_FromUgc.TryGetValue(rawColorStr, out color);
+        
+        color = NoteColor.DEF;
+        if (rawColorStr == "N") return true;
+        else if (rawColorStr == "I")
+        {
+            color = IsAirDown(n) ? NoteColor.GRN : NoteColor.PPL;
+            return true;
+        }
+        return false;
+    }
     
-    public static bool IsHold(string t) => t is "HLD" or "HXD";
-    public static bool IsSlide(string t) => t is "SLD" or "SLC" or "SXD" or "SXC";
-    public static bool IsAirSlide(string t) => t is "ASD" or "ASC";
-    public static bool IsAir(string t) => t is "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL";
-    public static bool IsAirDown(string t) => t is "ADW" or "ADR" or "ADL";
-    public static bool IsAirHold(string t) => t is "AHD" or "AHX";
-    public static bool IsAirCrush(string t) => t is "ALD";
-    // 是否是广义的air音符（Air/Air Hold/Air Slide/Air Crush）
-    public static bool IsGeneralizedAir(string t) => IsAir(t) || IsAirHold(t) || IsAirSlide(t) || IsAirCrush(t);
+    public static decimal Height_ToUgc(decimal input) => (input - 1) * 2;
+    public static decimal Height_FromUgc(decimal input) => input / 2 + 1;
     
-    public static bool IsHold(ChuNote? n) => IsHold(n?.Type!);
-    public static bool IsSlide(ChuNote? n) => IsSlide(n?.Type!);
-    public static bool IsAirSlide(ChuNote? n) => IsAirSlide(n?.Type!);
-    public static bool IsAir(ChuNote? n) => IsAir(n?.Type!);
-    public static bool IsAirDown(ChuNote? n) => IsAirDown(n?.Type!);
-    public static bool IsAirHold(ChuNote? n) => IsAirHold(n?.Type!);
-    public static bool IsAirCrush(ChuNote? n) => IsAirCrush(n?.Type!);
-    // 是否是广义的air音符（Air/Air Hold/Air Slide/Air Crush）
-    public static bool IsGeneralizedAir(ChuNote? n) => IsGeneralizedAir(n?.Type!);
+    public static bool IsAir(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Tap };
+    public static bool IsAirDown(ChuNote? n) => IsAir(n) && n!.AirDirection >= AirDirection.ADW;
     
-    public static bool IsSlideChainNote(string t) => IsSlide(t) || IsAirSlide(t) || IsAirHold(t) || IsAirCrush(t);
-    public static bool IsChainContinueSegments(ChuNote n) // 返回 true 表示当前 segment 接在同类型链的上一段之后，而非首段。
-        => (IsSlide(n) && IsSlide(n.Previous))
-           || (IsAirSlide(n) && IsAirSlide(n.Previous))
-           || (IsAirHold(n) && IsAirHold(n.Previous))
-           || (IsAirCrush(n) && IsAirCrush(n.Previous));
-
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
     public static string IToH36(int value) => Utils.IToH(value, 36);
 
-    public static string? AsTargetType(ChuNote? n) => n?.Type switch
-    {
-        null => null,
-        "HXD" => "HLD",
-        "SLC" or "SXD" or "SXC" => "SLD",
-        "AHX" => "AHD",
-        _ => n.Type
-    };
+    // public static string? AsTargetType(ChuNote? n) => n?.Type switch
+    // {
+    //     null => null,
+    //     "HXD" => "HLD",
+    //     "SLC" or "SXD" or "SXC" => "SLD",
+    //     "AHX" => "AHD",
+    //     _ => n.Type
+    // };
 }
