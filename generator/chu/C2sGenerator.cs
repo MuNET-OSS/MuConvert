@@ -104,13 +104,13 @@ public class C2sGenerator : IGenerator<ChuChart>
             };
             List<string> r = [name, m.ToString(), o.ToString(), n.Cell.ToString(), n.Width.ToString()];
 
-            if (n.Type == ChuNoteType.Tap && n.IsEx) r.Add(ExDirections_ToUgc[n.Ex!.Value]); // CHR
+            if (n.Type == ChuNoteType.Tap && n.IsEx) r.Add(n.Ex.ToString()!); // CHR
             else if (n.Type == ChuNoteType.Flick) r.Add(n.Ex == ExDirection.RS ? "R" : "L"); // FLK
             else if (n.IsAir)
             { // AIR
                 var targetStr = AsC2sPreviousStr(n.TargetNote);
                 Utils.Assert(targetStr != null, "MuConvert内部错误：Air音符的TargetNote出现了不合法的类型！");
-                r.AddRange(targetStr!, AirColor_ToUgc(n));
+                r.AddRange(targetStr!, n.Color.ToString());
             }
             
             results.Add(r);
@@ -130,16 +130,19 @@ public class C2sGenerator : IGenerator<ChuChart>
             };
             
             var start = (n.Time, n.Cell, n.Width, n.Height);
-            foreach (var seg in n.Segments)
+            for (int idx = 0; idx < n.Segments.Count; idx++)
             {
+                var seg = n.Segments[idx];
                 // 必备的：name bar tick cell width
                 var (sB, sT) = Utils.BarAndTick(start.Time, RSL);
-                List<string> r = [name, sB.ToString(), sT.ToString(), start.Cell.ToString(), start.Width.ToString()];
+                var hereName = n.Type == ChuNoteType.Slide && seg.C ? name[..2] + "C" : name;
+                List<string> r = [hereName, sB.ToString(), sT.ToString(), start.Cell.ToString(), start.Width.ToString()];
                 
                 // 前驱targetNote 或 crushInterval
                 if (NeedsTargetNote(n))
                 {
-                    var targetStr = AsC2sPreviousStr(n.TargetNote);
+                    // 对第一段，targetStr是TargetNote；对后面的段，TargetNote应该是前一段的名字。
+                    var targetStr = idx == 0 ? AsC2sPreviousStr(n.TargetNote) : AsC2sPreviousStr(n, n.Segments[idx-1]);
                     Utils.Assert(targetStr != null, "MuConvert内部错误：Air音符的TargetNote出现了不合法的类型！");
                     r.Add(targetStr!);
                 }
@@ -166,10 +169,10 @@ public class C2sGenerator : IGenerator<ChuChart>
 
                 // 颜色
                 if (n.IsAir) r.Add(n.Color.ToString());
-                else if (n.Type == ChuNoteType.Slide) r.Add("SLD"); // C2S 1.13版本以上，Slide在最后，还需要加一个”SLD“后缀
+                else if (n.Type == ChuNoteType.Slide) r.Add("SLD"); // C2S 1.10版本以上，Slide在最后，还需要加一个”SLD“后缀
                 
                 // Ex音符的话，要加上Ex方向
-                if (n.IsEx) r.Add(ExDirections_ToUgc[n.Ex!.Value]);
+                if (n.IsEx) r.Add(n.Ex.ToString()!);
                 
                 results.Add(r);
                 start = (endTime, seg.EndCell, seg.EndWidth, seg.EndHeight);

@@ -84,14 +84,14 @@ public class ChuUtils
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
     public static string IToH36(int value) => Utils.IToH(value, 36);
 
-    public static string? AsC2sPreviousStr(ChuNote? n) => n?.Type switch
+    public static string? AsC2sPreviousStr(ChuNote? n, ChuSegment? lastSegment = null) => n?.Type switch
     {
         ChuNoteType.Tap when !n.IsAir => n.IsEx ? "CHR" : "TAP",
         ChuNoteType.Flick => "FLK",
         ChuNoteType.Mine => "MNE",
         ChuNoteType.Hold => n.IsAir ? "AHD" : "HLD",
         ChuNoteType.Slide => n.IsAir ? 
-            (n.Segments.LastOrDefault()?.C == true ? "ASC" : "ASD") : 
+            (lastSegment ?? n.Segments.LastOrDefault())?.C == true ? "ASC" : "ASD" : 
             "SLD",
         _ => null,
     };

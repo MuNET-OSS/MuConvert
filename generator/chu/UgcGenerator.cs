@@ -45,7 +45,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         // 2. 遍历 chart.Notes，对每个 ChuNote 以 DFS 方式把它本身以及它所有 Next 子孙依次加入结果。
         var result = new List<ChuNote>(chart.Notes.Count);
         var visited = new HashSet<ChuNote>();
-        foreach (var root in chart.Notes) Dfs(root);
+        foreach (var root in chart.Notes.Where(x=>x.TargetNote == null)) Dfs(root);
         return result;
 
         void Dfs(ChuNote n)

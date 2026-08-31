@@ -607,6 +607,7 @@ public class UgcParser: BaseChuParser
     private (int, ChuNote?) ParseAirCrushNote(string[] lines, int idx, string code, ChuNote note, List<Alert> alerts, ChuChart chart)
     {
         note.Type = ChuNoteType.Crush;
+        note.IsAir = true;
         ParseCellWidth(code, 1, note, alerts, idx + 1, chart);
         if (code.Length <= 3) alerts.Add(new Alert(Warning, "AirCrush缺少参数！", (chart, note.Time), idx+1, lines[idx]));
         else ParseHeightAndColor(note, code[3..], alerts, idx+1, "C");
