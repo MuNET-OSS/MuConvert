@@ -39,7 +39,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         var nextDict = new Dictionary<ChuNote, List<ChuNote>>();
         foreach (var n in chart.Notes)
         {
-            if (n.Previous != null) nextDict.Add(n.Previous, n);
+            if (n.TargetNote != null) nextDict.Add(n.TargetNote, n);
         }
 
         // 2. 遍历 chart.Notes，对每个 ChuNote 以 DFS 方式把它本身以及它所有 Next 子孙依次加入结果。
@@ -176,21 +176,8 @@ public class UgcGenerator : IGenerator<ChuChart>
         sb.AppendLine();
 
         var notes = SortedNotesForConnectingPrevious(ugc);
-
-        // UGC Slide / AIR-SLIDE / AIR-HOLD / AIR-CRUSH (v8):
-        // - Chains (ChuNote.Previous) serialize as ONE parent line + follower lines (#OffsetTick from parent time).
-        // - Ground slide: parent `s`, followers `>s` / `>c` + end cell/width.
-        // - Air slide: parent `S` + cell/width + hh + N/I; followers `>s`/`>c` + xw + hh.
-        // - Air hold: parent `H` + cell/width + color; followers `>s` / `>c` only.
-        // - Air crush: parent `C` + cell/width + hh + color,interval; followers `>c` + xw + hh.
-        // - First segment may attach to TAP/HLD via Previous; only skip emit when Previous is another segment of the same chain.
-        var slideChains = BuildSlideChains(notes);
-
         foreach (var n in notes)
         {
-            if (IsSlideChainNote(n.Type) && IsChainContinueSegments(n))
-                continue; // 是链式音符且不是第一段，则应当已经被处理过了，直接跳过
-
             if (n.SpeedGroup != useTil)
             {
                 useTil = n.SpeedGroup;
@@ -207,120 +194,59 @@ public class UgcGenerator : IGenerator<ChuChart>
             sb.Append($"#{m}'{o}:{ucode}");
             sb.AppendLine();
 
-            if (IsSlideChainNote(n.Type))
-            {
-                if (slideChains.TryGetValue(n, out var segments))
-                {
-                    foreach (var seg in segments)
-                    {
-                        var endTicks = Utils.Tick(seg.EndTime - n.Time, RSL);
-                        if (endTicks <= 0) continue;
-                        if (IsAirSlide(n.Type) || IsAirCrush(n.Type))
-                            sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}{EncodeAirHeight(seg.EndHeight)}");
-                        else if (IsSlide(n.Type))
-                            sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}");
-                        else
-                            sb.AppendLine($"#{endTicks}>{SlideFollowerMarker(seg.Type)}");
-                    }
-                }
-            }
-            else
-            {
-                var durTicks = Utils.Tick(n.Duration, RSL);
-                if (n.Type is "HLD" or "HXD" && durTicks > 0)
-                    sb.AppendLine($"#{durTicks}>s");
-            }
+            AppendFollowerLines(sb, n);
         }
         return sb.ToString();
     }
 
-    private static Dictionary<ChuNote, List<ChuNote>> BuildSlideChains(List<ChuNote> notes)
+    private void AppendFollowerLines(StringBuilder sb, ChuNote n)
     {
-        var chains = new Dictionary<ChuNote, List<ChuNote>>();
-        foreach (var n in notes)
-        {
-            if (!IsSlideChainNote(n.Type)) continue;
-            var head = GetSlideHead(n);
-            if (!chains.TryGetValue(head, out var list))
-                chains[head] = list = [];
-            list.Add(n);
-        }
+        if (n.Segments.Count == 0) return;
 
-        // Order segments by their end time so follower ticks are increasing.
-        foreach (var (_, segs) in chains)
+        Rational time = 0;
+        foreach (var seg in n.Segments)
         {
-            segs.Sort((a, b) =>
-            {
-                var t = a.EndTime.CompareTo(b.EndTime);
-                if (t != 0) return t;
-                // stable-ish tie-breakers
-                t = a.Time.CompareTo(b.Time);
-                if (t != 0) return t;
-                t = string.CompareOrdinal(a.Type, b.Type);
-                if (t != 0) return t;
-                return 0;
-            });
-        }
+            time += seg.Length;
+            var endTick = Utils.Tick(time, RSL);
 
-        // For a valid chain, follower ticks should be strictly increasing; if the chart has
-        // degenerate segments, later code simply skips non-positive offsets.
-        return chains;
+            var marker = seg.C ? 'c' : 's';
+            if (IsAirSlide(n) || n.Type == ChuNoteType.Crush)
+                sb.AppendLine($"#{endTick}>{marker}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}{EncodeAirHeight(seg.EndHeight)}");
+            else if (n.Type == ChuNoteType.Slide)
+                sb.AppendLine($"#{endTick}>{marker}{IToH36(seg.EndCell)}{IToH36(seg.EndWidth)}");
+            else
+                sb.AppendLine($"#{endTick}>{marker}");
+        }
     }
 
-    private static ChuNote GetSlideHead(ChuNote n)
-    {
-        var cur = n;
-        while (IsChainContinueSegments(cur)) cur = cur.Previous!;
-        return cur;
-    }
-    
-    private static char SlideFollowerMarker(string t) => t is "SLC" or "SXC" or "ASC" or "ALD" ? 'c' : 's';
-
-    private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(C2U_Height(value) * 10), 0, 1295)).PadLeft(2, '0');
+    private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(Height_ToUgc(value) * 10), 0, 1295)).PadLeft(2, '0');
     
     private string AirColor(ChuNote n)
     {
-        if (Try_C2U_AirColor(n, out var color)) return color;
-        else
-        {
-            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Tag), n.Time));
-            return "N";
-        }
+        var color = AirColor_ToUgc(n);
+        if (color == "N" && n.Color is not (NoteColor.DEF or NoteColor.GRN or NoteColor.PPL))
+            alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Color), n.Time));
+        return color;
     }
-    private string CrushColor(ChuNote n)
-    {
-        if (C2U_AirCrushColor.TryGetValue(n.Tag, out var color)) return color;
-        else if (n.Tag.Length == 1) return n.Tag;
-        else
-        {
-            if (n.Tag != "") alerts.Add(new Alert(Alert.LEVEL.Warning, string.Format(Locale.C2SUnsupportedAirColor, "UGC Generator", n.Type, n.Tag), n.Time));
-            return "0";
-        }
-    }
-
-    private string CrushInterval(Rational crushInterval)
-    {
-        return crushInterval > 25 ? "$" : Utils.Tick(crushInterval, RSL).ToString();
-    }
+    private string CrushColor(ChuNote n) => AirCrush_Color_ToUgc[n.Color];
+    private string CrushInterval(Rational? crushInterval) => 
+        crushInterval != null ? Utils.Tick(crushInterval.Value, RSL).ToString() : "$";
 
     private string UCode(ChuNote n)
     {
         string c = IToH36(n.Cell), w = IToH36(n.Width);
-        return n.Type switch
+        return (n.Type, n.IsAir) switch
         {
-            "TAP" => $"t{c}{w}",
-            "CHR" => $"x{c}{w}{C2U_ChrExtras.GetValueOrDefault(n.Tag, "C")}",
-            "HLD" or "HXD" => $"h{c}{w}",
-            "SLD" or "SXD" => $"s{c}{w}",
-            "SLC" or "SXC" => $"s{c}{w}",
-            "FLK" => $"f{c}{w}{n.Tag}",
-            "MNE" => $"d{c}{w}",
-            // AIR-SLIDE (v8): #BarTick:S x w hh c
-            "ASD" or "ASC" => $"S{c}{w}{EncodeAirHeight(n.Height)}{AirColor(n)}",
-            "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => $"a{c}{w}{C2U_AirDirections[n.Type]}{AirColor(n)}",
-            // AIR-HOLD (v8): #BarTick:H x w c + 子行 #OffsetTick:s / :c（见 Umiguri Chart v8 doc）
-            "AHD" or "AHX" => $"H{c}{w}{AirColor(n)}",
-            "ALD" => $"C{c}{w}{EncodeAirHeight(n.Height)}{CrushColor(n)},{CrushInterval(n.CrushInterval)}",
+            (ChuNoteType.Tap, false) when !n.IsEx => $"t{c}{w}",
+            (ChuNoteType.Tap, false) => $"x{c}{w}{ExDirections_ToUgc[n.Ex!.Value]}",
+            (ChuNoteType.Tap, true) => $"a{c}{w}{AirDirections_ToUgc[n.AirDirection]}{AirColor(n)}",
+            (ChuNoteType.Flick, _) => $"f{c}{w}{n.Ex switch { ExDirection.RS => "R", _ => "L" }}",
+            (ChuNoteType.Hold, false) => $"h{c}{w}",
+            (ChuNoteType.Hold, true) => $"H{c}{w}{AirColor(n)}",
+            (ChuNoteType.Slide, false) => $"s{c}{w}",
+            (ChuNoteType.Slide, true) => $"S{c}{w}{EncodeAirHeight(n.Height)}{AirColor(n)}",
+            (ChuNoteType.Crush, _) => $"C{c}{w}{EncodeAirHeight(n.Height)}{CrushColor(n)},{CrushInterval(n.CrushInterval)}",
+            (ChuNoteType.Mine, _) => $"d{c}{w}",
             _ => ""
         };
     }

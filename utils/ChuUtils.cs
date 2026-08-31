@@ -86,7 +86,7 @@ public class ChuUtils
 
     public static string? AsC2sPreviousStr(ChuNote? n) => n?.Type switch
     {
-        ChuNoteType.Tap => n.IsEx ? "CHR" : "TAP",
+        ChuNoteType.Tap when !n.IsAir => n.IsEx ? "CHR" : "TAP",
         ChuNoteType.Flick => "FLK",
         ChuNoteType.Mine => "MNE",
         ChuNoteType.Hold => n.IsAir ? "AHD" : "HLD",
@@ -95,4 +95,9 @@ public class ChuUtils
             "SLD",
         _ => null,
     };
+
+    public static bool NeedsTargetNote(ChuNote n)
+    {
+        return IsAir(n) || IsAirHold(n) || IsAirSlide(n);
+    }
 }

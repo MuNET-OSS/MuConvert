@@ -39,7 +39,7 @@ public abstract class BaseChuParser : IParser<ChuChart>
 
         foreach (var cur in chart.Notes)
         {
-            if (!NeedsPrevious(cur)) continue;
+            if (!NeedsTargetNote(cur)) continue;
             if (cur.TargetNote != null) continue; // 若某些 parser 已提前填了 Previous，则保留
 
             var key = (cur.Time, cur.Cell, cur.Width);
@@ -64,11 +64,6 @@ public abstract class BaseChuParser : IParser<ChuChart>
         }
     }
 
-    private static bool NeedsPrevious(ChuNote n)
-    {
-        return IsAir(n) || IsAirHold(n) || IsAirSlide(n);
-    }
-    
     protected static List<ChuNote> FilterPreviousCandidates(ChuNote cur, List<ChuNote> candidates)
     { // 注意：候选列表已满足“首尾相接”，这里仅做类型约束
         List<ChuNote> result = [];
