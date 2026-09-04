@@ -150,6 +150,18 @@ public static class ExtensionUtils
         dict[key].Add(value);
     }
 
+    internal static bool Remove<K, V>(this Dictionary<K, List<V>> dict, K key, out V value) where K : notnull
+    {
+        if (dict.TryGetValue(key, out var arr) && arr.Count > 0)
+        {
+            value = arr[0];
+            arr.RemoveAt(0);
+            return true;
+        }
+        value = default;
+        return false;
+    }
+
     internal static Dictionary<K, V> EnsureKeys<K, V>(
         this Dictionary<K, V> dict,
         IEnumerable<K> requiredKeys,

@@ -46,7 +46,8 @@ public abstract class BaseChuParser : IParser<ChuChart>
             var candidates = endDict.GetValueOrDefault(key, []);
             var filtered = FilterPreviousCandidates(cur, candidates);
 
-            if (rawTargetNote != null && rawTargetNote.TryGetValue(cur, out var target) && !string.IsNullOrEmpty(target))
+            if (filtered.Count > 0 && rawTargetNote != null && 
+                rawTargetNote.TryGetValue(cur, out var target) && !string.IsNullOrEmpty(target))
             {
                 var filteredByRaw = filtered.Where(x=>AsC2sPreviousStr(x) == target).ToList();
                 if (filteredByRaw.Count == 0)

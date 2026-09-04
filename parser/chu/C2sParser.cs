@@ -4,6 +4,7 @@ using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
+using SegDictKey = (MuConvert.chu.ChuNoteType Type, bool IsAir, Rationals.Rational Time, int Cell, int Width);
 
 namespace MuConvert.chu;
 
@@ -19,12 +20,16 @@ public class C2sParser: BaseChuParser
     private static readonly HashSet<string> TimingTags = new(StringComparer.OrdinalIgnoreCase)
         { "BPM", "MET", "SFL", "SLP" };
 
-    // C2S 会原始记录 targetNote 字符串；用于在 Previous 推断有多个候选时优先匹配。
+    private bool _used;
+    // C2S 会原始记录 targetNote 字符串；用于在 FillAllPrevious 推断有多个候选时优先匹配。
     private readonly Dictionary<ChuNote, string> _rawTargetNote = new();
-    private readonly Dictionary<(Rational Time, int Cell, int Width), int> _slaRecords = new();
+    private readonly Dictionary<(Rational Time, int Cell, int Width), List<(Rational, int)>> _slaRecords = new();
+    private readonly Dictionary<SegDictKey, List<ChuNote>> segDict = new();
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
+        if (_used) throw new Exception(Locale.InstanceMultipleUsage);
+        _used = true;
         var chart = new ChuChart();
         var alerts = new List<Alert>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
@@ -66,7 +71,11 @@ public class C2sParser: BaseChuParser
         foreach (var note in chart.Notes)
         {
             var t = (note.Time, note.Cell, note.Width);
-            if (_slaRecords.TryGetValue(t, out var groupId)) note.SpeedGroup = groupId;
+            if (_slaRecords.TryGetValue(t, out var items))
+            {
+                var item = items.FirstOrDefault(x => x.Item1 >= note.Duration);
+                if (item != default) note.SpeedGroup = item.Item2;
+            }
         }
     }
 
@@ -110,95 +119,134 @@ public class C2sParser: BaseChuParser
         }
     }
 
+    private ChuSegment ParseSegment(ChuNote note, string[] p, string type)
+    {
+        var seg = new ChuSegment(note)
+        {
+            C = note.Type == ChuNoteType.Crush || (note.Type == ChuNoteType.Slide && type[2] == 'C'),
+        };
+
+        var durationIdx = note.IsAir ? (note.Type == ChuNoteType.Hold ? 6 : 7) : 5;
+        seg.Length = new Rational(Int(p, durationIdx), RSL);
+        if (note.Type is ChuNoteType.Slide or ChuNoteType.Crush)
+        {
+            seg.EndCell = Int(p, durationIdx + 1); 
+            seg.EndWidth = Math.Max(1, Int(p, durationIdx + 2, 1));
+            if (note.IsAir) seg.EndHeight = Decimal(p, durationIdx + 3, 5);
+        }
+        
+        return seg;
+    }
+
     private void ParseNote(string[] p, ChuChart chart, List<Alert> alerts, int lineNum)
     {
         var type = p[0].ToUpperInvariant();
-        ChuNote? note = new ChuNote { Type = type, Time = Int(p, 1) + new Rational(Int(p, 2), RSL) };
-        string? targetNote = null;
-
-        switch (type)
+        ChuNote? note = new ChuNote
         {
-            case "TAP": case "MNE":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); break;
-            case "CHR":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
-            case "HLD":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); 
-                note.Duration = new Rational(Int(p, 5), RSL); 
-                break;
-            case "HXD":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); 
-                note.Duration = new Rational(Int(p, 5), RSL); 
-                note.Tag = Str(p, 6);
-                break;
-            case "SLD": case "SLC":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.Duration = new Rational(Int(p, 5), RSL);
-                note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
-                break;
-            case "SXD": case "SXC":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.Duration = new Rational(Int(p, 5), RSL);
-                note.EndCell = Int(p, 6); note.EndWidth = Math.Max(1, Int(p, 7, 1));
-                note.Tag = Str(p, 9);
-                break;
-            case "FLK":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); note.Tag = Str(p, 5); break;
-            case "AIR": case "AUR": case "AUL": case "ADW": case "ADR": case "ADL":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1)); targetNote = Str(p, 5);
-                if (p.Length >= 7) note.Tag = Str(p, 6);
-                break;
-            case "AHD": case "AHX":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                targetNote = Str(p, 5); note.Duration = new Rational(Int(p, 6), RSL);
-                if (p.Length >= 8) note.Tag = Str(p, 7);
-                break;
-            case "ASD": case "ASC":
-                // 文档：M O Cell Width | TargetNote | 未知 | Duration | EndCell | EndWidth | 未知 | Tag
-                if (p.Length < 12)
-                {
-                    alerts.Add(new Alert(Warning, $"{type} 列数不足（期望至少 12 列）") { Line = lineNum });
-                    return;
-                }
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
+            Time = Int(p, 1) + new Rational(Int(p, 2), RSL),
+            Cell = Int(p, 3), Width = Math.Max(1, Int(p, 4, 1)),
+        };
+
+        if (type == "SLA")
+        { // SLA要单独处理
+            var length = new Rational(Int(p, 5), RSL);
+            var groupId = Int(p, 6);
+            _slaRecords.Add((note.Time, note.Cell, note.Width), (length, groupId));
+            return;
+        }
+        
+        var t = type switch
+        {
+            "TAP" or "CHR" => (ChuNoteType.Tap, false),
+            "MNE" => (ChuNoteType.Mine, false),
+            "FLK" => (ChuNoteType.Flick, false),
+            "AIR" or "AUR" or "AUL" or "ADW" or "ADR" or "ADL" => (ChuNoteType.Tap, true),
+            "HLD" or "HXD" => (ChuNoteType.Hold, false),
+            "SLD" or "SLC" or "SXD" or "SXC" => (ChuNoteType.Slide, false),
+            "AHD" or "AHX" => (ChuNoteType.Hold, true),
+            "ASD" or "ASC" => (ChuNoteType.Slide, true),
+            "ALD" => (ChuNoteType.Crush, true),
+            _ => AlertUnknownType(type),
+        };
+        if (t == null) return;
+        (note.Type, note.IsAir) = t.Value;
+        
+        string? targetNote = null;
+        if (note.Type is ChuNoteType.Tap or ChuNoteType.Mine or ChuNoteType.Flick)
+        {
+            if (note.Type == ChuNoteType.Flick)
+            {
+                var flkTag = Str(p, 5);
+                note.Ex = ExDirection.LS;
+                if (flkTag == "R") note.Ex = ExDirection.RS;
+                else if (flkTag != "L") AlertTag(flkTag);
+            }
+            else if (type == "CHR") ParseEnum<ExDirection>(Str(p, 5), x=>note.Ex = x);
+            else if (note is { Type: ChuNoteType.Tap, IsAir: true })
+            {
+                ParseEnum<AirDirection>(type, x=>note.AirDirection = x);
                 targetNote = Str(p, 5);
-                note.Height = Decimal(p, 6, 5); note.EndHeight = Decimal(p, 10, 5);
-                note.Duration = new Rational(Int(p, 7), RSL);
-                note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
-                note.Tag = Str(p, 11);
-                break;
-            case "ALD":
-                // 根据 https://github.com/MuNET-OSS/MuConvert/pull/3#issuecomment-4405859671 实现
-                if (p.Length < 11)
-                {
-                    alerts.Add(new Alert(Warning, "ALD 列数不足（期望至少 11 列）") { Line = lineNum });
-                    return;
-                }
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                note.CrushInterval = new Rational(Int(p, 5), RSL);
-                note.Height = Decimal(p, 6, 5); note.EndHeight = Decimal(p, 10, 5);
-                note.Duration = new Rational(Int(p, 7), RSL);
-                note.EndCell = Int(p, 8); note.EndWidth = Math.Max(1, Int(p, 9, 1));
-                note.Tag = Str(p, 11);
-                break;
+                if (p.Length >= 7) ParseEnum<NoteColor>(Str(p, 6), x=>note.Color = x);
+            }
+        }
+        else
+        {
+            SegDictKey segKey = (note.Type, note.IsAir, note.Time, note.Cell, note.Width);
+            // 首先，对Air Hold/Air Slide，需要读取TargetNote，确定它是否是接续段；其他类型的音符，则默认允许是接续段
+            bool canConnect = true, isConnect = false;
+            if (note is { IsAir: true, Type: ChuNoteType.Hold or ChuNoteType.Slide })
+            {
+                targetNote = Str(p, 5);
+                canConnect = (note.Type == ChuNoteType.Hold && targetNote == "AHD") ||
+                             (note.Type == ChuNoteType.Slide && targetNote is "ASD" or "ASC");
+            }
             
-            case "SLA":
-                note.Cell = Int(p, 3); note.Width = Math.Max(1, Int(p, 4, 1));
-                var groupId = Int(p, 6);
-                _slaRecords[(note.Time, note.Cell, note.Width)] = groupId;
-                note = null;
-                break;
-                
-            default:
-                alerts.Add(new Alert(Warning, string.Format(Locale.C2SUnknownNoteType, type)) { Line = lineNum }); return;
+            if (canConnect && segDict.Remove(segKey, out ChuNote v))
+            { // 说明找到了前驱。则note应该改为前驱，并阻止刚才创建的伪note加入谱面（通过把isConnect设为true实现）。
+                note = v;
+                isConnect = true;
+            }
+            else 
+            { // 否则，若没找到前驱，则说明是全新的note，则应当额外设置Height、CrushInterval等属性
+                if (note is { IsAir: true, Type: ChuNoteType.Slide or ChuNoteType.Crush })
+                    note.Height = Decimal(p, 6, 5);
+                if (note.Type == ChuNoteType.Crush) note.CrushInterval = CrushInterval(p, 5);
+                if (type is "HXD" or "SXD" or "SXC") // 解析Ex
+                    ParseEnum<ExDirection>(Str(p, type == "HXD" ? 6 : 9), x=>note.Ex = x);
+                if (note.IsAir) // 解析颜色
+                    ParseEnum<NoteColor>(Str(p, note.Type == ChuNoteType.Hold ? 7 : 11), x=>note.Color = x);
+            }
+
+            note.Segments.Add(ParseSegment(note, p, type));
+            segDict.Add((note.Type, note.IsAir, note.EndTime, note.EndCell, note.EndWidth), note);
+            if (isConnect) note = null; // 阻止note加入谱面，因为现在的note是之前已经被加入过一次的那个了
         }
 
         if (note == null) return;
         if (targetNote != null) _rawTargetNote[note] = targetNote;
         chart.Notes.Add(note);
+
+        void ParseEnum<T>(string str, Action<T> assign) where T : struct, Enum
+        {
+            if (Enum.TryParse(str, out T t)) assign(t);
+            else AlertTag(str);
+        }
+        void AlertTag(string str) => alerts.Add(new Alert(Warning, $"无法识别的方向/颜色标签：{str}", (chart, note.Time), lineNum, string.Join("\t", p)));
+        (ChuNoteType, bool)? AlertUnknownType(string str)
+        {
+            alerts.Add(new Alert(Warning, $"无法识别的C2S指令：{str}", (chart, note.Time), lineNum, string.Join("\t", p)));
+            return null;
+        }
     }
 
     private static int Int(string[] p, int i, int def = 0) => i < p.Length && int.TryParse(p[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : def;
     private static decimal Decimal(string[] p, int i, decimal def = 0) => i < p.Length && decimal.TryParse(p[i], CultureInfo.InvariantCulture, out var v) ? v : def;
     private static string Str(string[] p, int i) => i < p.Length ? p[i] : "";
+
+    private Rational? CrushInterval(string[] p, int i)
+    {
+        var v = Int(p, i);
+        if (v >= 9600) return null;
+        else return new Rational(v, RSL);
+    }
 }
