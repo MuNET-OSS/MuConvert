@@ -1,6 +1,7 @@
 using System.Text;
 using MuConvert.generator;
 using MuConvert.utils;
+using static MuConvert.utils.ChuUtils;
 
 namespace MuConvert.chu;
 
@@ -11,11 +12,11 @@ public class SusGenerator : IGenerator<ChuChart>
     public (string, List<Alert>) Generate(ChuChart chart)
     {
         var alerts = new List<Alert>();
-        var text = Serialize(chart);
+        var text = Serialize(chart, alerts);
         return (text, alerts);
     }
 
-    private string Serialize(ChuChart sus)
+    private string Serialize(ChuChart sus, List<Alert> alerts)
     {
         sus.Sort();
         
@@ -29,35 +30,77 @@ public class SusGenerator : IGenerator<ChuChart>
 
         foreach (var n in sus.Notes)
         {
-            var (m, o) = Utils.BarAndTick(n.Time, RSL);
-            sb.AppendLine($"#{m:X2}{o:X3}:{FormatData(n, RSL)}");
+            foreach (var line in FormatNote(n, alerts))
+                sb.AppendLine(line);
         }
 
         return sb.ToString();
     }
 
-    private static string FormatData(ChuNote n, int tpm)
+    private List<string> FormatNote(ChuNote n, List<Alert> alerts)
     {
-        string lw = $"{n.Cell*2:X2}{n.Width*2:X2}";
-        string tc = TypeCode(n.Type);
-        var durTicks = Utils.Tick(n.Duration, tpm);
-        string dur = $"{durTicks:X4}";
-        return tc switch
+        List<string> results = [];
+
+        if (n.Type is ChuNoteType.Tap or ChuNoteType.Flick or ChuNoteType.Mine)
         {
-            "01" or "02" or "03" or "10" => $"{tc}{lw}",
-            "05" or "08" => $"{tc}{lw}{dur}",
-            "06" => $"{tc}{lw}{dur}{n.EndCell*2:X2}{n.EndWidth*2:X2}",
-            "07" or "09" => $"{tc}{lw}{n.TargetNote}",
-            _ => $"01{lw}"
-        };
+            var (m, o) = Utils.BarAndTick(n.Time, RSL);
+            var lw = $"{n.Cell * 2:X2}{n.Width * 2:X2}";
+            var tc = TypeCode(n);
+            if (n.IsAir)
+            {
+                var targetStr = AsC2sPreviousStr(n.TargetNote) ?? "N";
+                results.Add($"#{m:X2}{o:X3}:{tc}{lw}{targetStr}");
+            }
+            else
+            {
+                results.Add($"#{m:X2}{o:X3}:{tc}{lw}");
+            }
+        }
+        else if (n.Type is ChuNoteType.Hold or ChuNoteType.Slide)
+        {
+            // SUS 不支持 Air-Slide；按段展开（与 C2s 一样，多段持续性音符拆成多行）
+            if (n is { IsAir: true, Type: ChuNoteType.Slide })
+            {
+                alerts.Add(new Alert(Alert.LEVEL.Warning, "SUS 不支持 Air-Slide，已跳过", n.Time));
+                return results;
+            }
+
+            var start = (n.Time, n.Cell, n.Width);
+            foreach (var seg in n.Segments)
+            {
+                var (m, o) = Utils.BarAndTick(start.Time, RSL);
+                var lw = $"{start.Cell * 2:X2}{start.Width * 2:X2}";
+                var tc = TypeCode(n);
+                // 用 end-start 的 tick 差，避免分段舍入导致接不上
+                var endTime = start.Time + seg.Length;
+                var durTicks = Utils.Tick(endTime, RSL) - Utils.Tick(start.Time, RSL);
+                var dur = $"{durTicks:X4}";
+
+                if (n.Type == ChuNoteType.Slide)
+                    results.Add($"#{m:X2}{o:X3}:{tc}{lw}{dur}{seg.EndCell * 2:X2}{seg.EndWidth * 2:X2}");
+                else
+                    results.Add($"#{m:X2}{o:X3}:{tc}{lw}{dur}");
+
+                start = (endTime, seg.EndCell, seg.EndWidth);
+            }
+        }
+        else
+        {
+            alerts.Add(new Alert(Alert.LEVEL.Warning, $"SUS 不支持的音符类型: {n.Type}", n.Time));
+        }
+
+        return results;
     }
 
-    private static string TypeCode(string t) => t switch
+    private static string TypeCode(ChuNote n) => (n.Type, n.IsAir) switch
     {
-        "TAP" => "01", "CHR" => "02", "FLK" => "03",
-        "HLD" => "05", "SLD" => "06", "SLC" => "06",
-        "AIR" => "07", "AUR" => "07", "AUL" => "07",
-        "AHD" => "08", "AHX" => "08", "ADW" => "09", "ADR" => "09", "ADL" => "09",
-        "MNE" => "10", _ => "01"
+        (ChuNoteType.Tap, false) => n.IsEx ? "02" : "01",
+        (ChuNoteType.Flick, _) => "03",
+        (ChuNoteType.Hold, false) => "05",
+        (ChuNoteType.Slide, false) => "06",
+        (ChuNoteType.Tap, true) => IsAirDown(n) ? "09" : "07",
+        (ChuNoteType.Hold, true) => "08",
+        (ChuNoteType.Mine, _) => "10",
+        _ => "01",
     };
 }

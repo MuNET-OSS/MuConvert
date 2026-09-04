@@ -4,6 +4,7 @@ using MuConvert.parser;
 using MuConvert.utils;
 using Rationals;
 using static MuConvert.utils.Alert.LEVEL;
+using SegDictKey = (MuConvert.chu.ChuNoteType Type, bool IsAir, Rationals.Rational Time, int Cell, int Width);
 
 namespace MuConvert.chu;
 
@@ -14,19 +15,9 @@ namespace MuConvert.chu;
 public class SusParser: BaseChuParser
 {
     private int RSL = 480 * 4;
-    
-    private static readonly Dictionary<int, string> TypeMap = new()
-    {
-        [0x01] = "TAP",
-        [0x02] = "CHR",
-        [0x03] = "FLK",
-        [0x05] = "HLD",
-        [0x06] = "SLD",
-        [0x07] = "AIR",
-        [0x08] = "AHD",
-        [0x09] = "ADW",
-        [0x10] = "MNE",
-    };
+
+    private readonly Dictionary<SegDictKey, List<ChuNote>> segDict = new();
+    private readonly Dictionary<ChuNote, string> _rawTargetNote = new();
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
@@ -57,7 +48,7 @@ public class SusParser: BaseChuParser
             }
         }
 
-        FillAllPrevious(chart, alerts);
+        FillAllPrevious(chart, alerts, _rawTargetNote);
         chart.Sort();
         return (chart, alerts);
     }
@@ -134,98 +125,95 @@ public class SusParser: BaseChuParser
         var lane = HexToInt(dataStr[2..4]);
         var width = HexToInt(dataStr[4..6]);
 
-        if (!TypeMap.TryGetValue(typeCode, out var typeName))
+        ChuNote? note = new ChuNote
         {
-            alerts.Add(new Alert(Warning, $"未知的音符类型码 0x{typeCode:X2}: {content}") { Line = lineNum });
-            return;
-        }
-
-        var note = new ChuNote
-        {
-            Type = typeName,
             Time = measure + new Rational(tick, RSL),
             Cell = lane / 2,
             Width = Math.Max(1, width / 2),
         };
 
-        switch (note.Type)
+        switch (typeCode)
         {
-            case "TAP":
-            case "CHR":
-            case "FLK":
-            case "MNE":
+            case 0x01: // TAP
+                note.Type = ChuNoteType.Tap;
                 break;
 
-            case "HLD":
-                ParseHoldData(dataStr, note, RSL, alerts, lineNum);
+            case 0x02: // CHR / ExTap（SUS 不编码方向，给一个缺省 Ex）
+                note.Type = ChuNoteType.Tap;
+                note.Ex = ExDirection.UP;
                 break;
 
-            case "SLD":
-                ParseSlideData(dataStr, note, RSL, alerts, lineNum);
+            case 0x03: // FLK
+                note.Type = ChuNoteType.Flick;
                 break;
 
-            case "AIR":
-            case "ADW":
-                ParseAirTarget(dataStr, note, RSL, alerts, lineNum);
+            case 0x10: // MNE
+                note.Type = ChuNoteType.Mine;
                 break;
 
-            case "AHD":
-                ParseAhdData(dataStr, note, RSL, alerts, lineNum);
+            case 0x07: // AIR
+            case 0x09: // ADW
+                note.Type = ChuNoteType.Tap;
+                note.IsAir = true;
+                note.AirDirection = typeCode == 0x07 ? AirDirection.AIR : AirDirection.ADW;
+                if (dataStr.Length < 8)
+                    alerts.Add(new Alert(Warning, $"AIR/ADW 音符缺少目标: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note) });
+                else if (dataStr.Length > 6)
+                    _rawTargetNote[note] = dataStr[6..];
                 break;
+
+            case 0x05: // HLD
+            case 0x08: // AHD
+            case 0x06: // SLD
+                note.Type = typeCode == 0x06 ? ChuNoteType.Slide : ChuNoteType.Hold;
+                note.IsAir = typeCode == 0x08;
+                note = ParseSustainedNote(dataStr, note, alerts, lineNum);
+                break;
+
+            default:
+                alerts.Add(new Alert(Warning, $"未知的音符类型码 0x{typeCode:X2}: {content}") { Line = lineNum });
+                return;
         }
 
-        chart.Notes.Add(note);
+        if (note != null) chart.Notes.Add(note);
     }
 
-    private static void ParseHoldData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
+    /**
+     * 解析 HLD/AHD/SLD：时长写入 Segments；若与已有同类型音符首尾相接，则并入同一 ChuNote。
+     */
+    private ChuNote? ParseSustainedNote(string dataStr, ChuNote note, List<Alert> alerts, int lineNum)
     {
-        if (dataStr.Length >= 10)
+        SegDictKey segKey = (note.Type, note.IsAir, note.Time, note.Cell, note.Width);
+        bool isConnect = false;
+        if (segDict.Remove(segKey, out ChuNote existing))
         {
-            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
-        }
-        else
-        {
-            alerts.Add(new Alert(Warning, $"HLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
-        }
-    }
-
-    private static void ParseSlideData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
-    {
-        if (dataStr.Length >= 10)
-        {
-            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
-        }
-        else
-        {
-            alerts.Add(new Alert(Warning, $"SLD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
-            return;
+            note = existing;
+            isConnect = true;
         }
 
-        if (dataStr.Length >= 14)
+        if (dataStr.Length < 10)
         {
-            note.EndCell = HexToInt(dataStr[10..12]) / 2;
-            note.EndWidth = Math.Max(1, HexToInt(dataStr[12..14]) / 2);
+            alerts.Add(new Alert(Warning, $"{(note.Type == ChuNoteType.Slide ? "SLD" : note.IsAir ? "AHD" : "HLD")} 音符缺少时长: {dataStr}")
+            {
+                Line = lineNum,
+                RelevantNote = FormatNoteRef(note),
+            });
+            return isConnect ? null : note;
         }
-    }
 
-    private static void ParseAirTarget(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
-    {
-        if (dataStr.Length < 8)
+        var seg = new ChuSegment(note)
         {
-            alerts.Add(new Alert(Warning, $"AIR/ADW 音符缺少目标: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
+            Length = new Rational(HexToInt(dataStr[6..10]), RSL),
+        };
+        if (note.Type == ChuNoteType.Slide && dataStr.Length >= 14)
+        {
+            seg.EndCell = HexToInt(dataStr[10..12]) / 2;
+            seg.EndWidth = Math.Max(1, HexToInt(dataStr[12..14]) / 2);
         }
-    }
+        note.Segments.Add(seg);
+        segDict.Add((note.Type, note.IsAir, note.EndTime, note.EndCell, note.EndWidth), note);
 
-    private static void ParseAhdData(string dataStr, ChuNote note, int tpm, List<Alert> alerts, int lineNum)
-    {
-        if (dataStr.Length >= 10)
-        {
-            note.Duration = new Rational(HexToInt(dataStr[6..10]), tpm);
-        }
-        else
-        {
-            alerts.Add(new Alert(Warning, $"AHD 音符缺少时长: {dataStr}") { Line = lineNum, RelevantNote = FormatNoteRef(note, tpm) });
-        }
+        return isConnect ? null : note;
     }
 
     private static int HexToInt(string hex) =>
@@ -239,9 +227,9 @@ public class SusParser: BaseChuParser
         return trimmed;
     }
 
-    private static string FormatNoteRef(ChuNote note, int tpm)
+    private string FormatNoteRef(ChuNote note)
     {
-        var (m, o) = Utils.BarAndTick(note.Time, tpm);
+        var (m, o) = Utils.BarAndTick(note.Time, RSL);
         return $"#{m:X2}{o:X3}:{note.Type}";
     }
 }
