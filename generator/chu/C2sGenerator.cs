@@ -115,7 +115,7 @@ public class C2sGenerator : IGenerator<ChuChart>
             
             results.Add(r);
             if (n.SpeedGroup != 0) // 分音符变速组 SLA 的处理
-                results.Add(["SLA", ..r[1..5], "1", n.SpeedGroup.ToString()]);
+                results.Add(["SLA", ..r[1..5], "1", n.SpeedGroup.ToString()]); // 根据对官谱的调研，非持续性音符，SLA的duration永远写成1
         }
         else
         {
@@ -176,14 +176,12 @@ public class C2sGenerator : IGenerator<ChuChart>
                 
                 results.Add(r);
                 start = (endTime, seg.EndCell, seg.EndWidth, seg.EndHeight);
-                if (n.SpeedGroup != 0) // 分音符变速组 SLA 的处理
-                    results.Add(["SLA", ..r[1..5], "1", n.SpeedGroup.ToString()]);
-            }
-            if (n.SpeedGroup != 0)
-            { // 分音符变速组 SLA 的处理：参照PenguinTools的实现，要把最后一段的结束点，也加到SLA上
-                var (sB, sT) = Utils.BarAndTick(start.Time, RSL); // 这里的start.Time，其实是最后一段的endTime
-                List<string> sParts = [sB.ToString(), sT.ToString(), start.Cell.ToString(), start.Width.ToString()]; // start.Cell/Width，实际上也是最后一段的endCell/endWidth
-                results.Add(["SLA", ..sParts, "1", n.SpeedGroup.ToString()]);
+
+                if (idx == 0 && n.SpeedGroup != 0)
+                { // 分音符变速组 SLA 的处理：根据对官谱的调研，应该是在第一个segment之后，创建一个统一的SLA指令，覆盖整个音符的持续时间
+                    var totalLength = Math.Max((int)(n.Duration * RSL).Ceil(), 1);
+                    results.Add(["SLA", m.ToString(), o.ToString(), n.Cell.ToString(), n.Width.ToString(), totalLength.ToString(), n.SpeedGroup.ToString()]);
+                }
             }
         }
         
