@@ -184,7 +184,15 @@ public class C2sParser: BaseChuParser
         }
         else
         {
-            SegDictKey segKey = (note.Type, note.IsAir, note.Time, note.Cell, note.Width);
+            // ReSharper disable AccessToModifiedClosure
+            // 先解析数据字段
+            if (ChuUtils.ShouldHaveHeight(note)) note.Height = Decimal(p, 6, 5);
+            if (note.Type == ChuNoteType.Crush) note.CrushInterval = CrushInterval(p, 5);
+            if (note.IsAir) // 解析颜色
+                ParseEnum<NoteColor>(Str(p, note.Type == ChuNoteType.Hold ? 7 : 11), x=>note.Color = x);
+            if (type is "HXD" or "SXD" or "SXC") // 解析Ex
+                ParseEnum<ExDirection>(Str(p, type == "HXD" ? 6 : 9), x=>note.Ex = x);
+            
             // 首先，对Air Hold/Air Slide，需要读取TargetNote，确定它是否是接续段；其他类型的音符，则默认允许是接续段
             bool canConnect = true, isConnect = false;
             if (note is { IsAir: true, Type: ChuNoteType.Hold or ChuNoteType.Slide })
@@ -193,22 +201,21 @@ public class C2sParser: BaseChuParser
                 canConnect = (note.Type == ChuNoteType.Hold && targetNote == "AHD") ||
                              (note.Type == ChuNoteType.Slide && targetNote is "ASD" or "ASC");
             }
-            
-            if (canConnect && segDict.Remove(segKey, out ChuNote v))
-            { // 说明找到了前驱。则note应该改为前驱，并阻止刚才创建的伪note加入谱面（通过把isConnect设为true实现）。
-                note = v;
-                isConnect = true;
+            SegDictKey segKey = (note.Type, note.IsAir, note.Time, note.Cell, note.Width);
+            if (canConnect && segDict.TryGetValue(segKey, out var list))
+            {
+                IEnumerable<ChuNote> f = list;
+                if (note.IsAir) f = f.Where(x => x.Color == note.Color);
+                if (ChuUtils.ShouldHaveHeight(note)) f = f.Where(x => x.Segments.Last().EndHeight == note.Height);
+                var filtered = f.ToList();
+                if (filtered.Count > 0)
+                { // 说明找到了前驱。则note应该改为前驱，并阻止刚才创建的伪note加入谱面（通过把isConnect设为true实现）。
+                    note = filtered[0];
+                    Utils.Assert(list.Remove(filtered[0]));
+                    isConnect = true;
+                }
             }
-            else 
-            { // 否则，若没找到前驱，则说明是全新的note，则应当额外设置Height、CrushInterval等属性
-                if (note is { IsAir: true, Type: ChuNoteType.Slide or ChuNoteType.Crush })
-                    note.Height = Decimal(p, 6, 5);
-                if (note.Type == ChuNoteType.Crush) note.CrushInterval = CrushInterval(p, 5);
-                if (type is "HXD" or "SXD" or "SXC") // 解析Ex
-                    ParseEnum<ExDirection>(Str(p, type == "HXD" ? 6 : 9), x=>note.Ex = x);
-                if (note.IsAir) // 解析颜色
-                    ParseEnum<NoteColor>(Str(p, note.Type == ChuNoteType.Hold ? 7 : 11), x=>note.Color = x);
-            }
+            // ReSharper restore AccessToModifiedClosure
 
             note.Segments.Add(ParseSegment(note, p, type));
             segDict.Add((note.Type, note.IsAir, note.EndTime, note.EndCell, note.EndWidth), note);
@@ -221,7 +228,7 @@ public class C2sParser: BaseChuParser
 
         void ParseEnum<T>(string str, Action<T> assign) where T : struct, Enum
         {
-            if (Enum.TryParse(str, out T t)) assign(t);
+            if (Enum.TryParse(str, out T a)) assign(a);
             else AlertTag(str);
         }
         void AlertTag(string str) => alerts.Add(new Alert(Warning, $"无法识别的方向/颜色标签：{str}", (chart, note.Time), lineNum, string.Join("\t", p)));

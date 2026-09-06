@@ -81,6 +81,7 @@ public class ChuUtils
     public static bool IsAirHold(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Hold };
     public static bool IsAirCrush(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Crush };
     public static bool IsAirDown(ChuNote? n) => IsAir(n) && n!.AirDirection >= AirDirection.ADW;
+    public static bool ShouldHaveHeight(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Slide or ChuNoteType.Crush };
     
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
     public static string IToH36(int value) => Utils.IToH(value, 36);
