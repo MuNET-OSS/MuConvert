@@ -33,7 +33,7 @@ public class C2sParser: BaseChuParser
         var chart = new ChuChart();
         var alerts = new List<Alert>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
-        bool inNotes = false;
+        int phrase = 0; // 0-头，1-timing区（BPM/MET/SLP等），2-正文
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -44,19 +44,16 @@ public class C2sParser: BaseChuParser
             var parts = line.Split('\t');
             var tag = parts[0].ToUpperInvariant();
 
-            if (inNotes || !HeadTags.Contains(tag) && !TimingTags.Contains(tag))
-            {
-                inNotes = true;
-                ParseNote(parts, chart, alerts, i + 1);
-            }
-            else if (HeadTags.Contains(tag))
-            {
-                ParseHeader(parts, chart);
-            }
+            if (phrase == 0 && !TimingTags.Contains(tag)) ParseHeader(parts, chart);
             else if (TimingTags.Contains(tag))
             {
+                phrase = 1;
                 ParseTiming(parts, chart);
-                inNotes = false;
+            }
+            else if (phrase == 2 || (phrase == 1 && !HeadTags.Contains(tag) && !TimingTags.Contains(tag)))
+            {
+                phrase = 2;
+                ParseNote(parts, chart, alerts, i + 1);
             }
         }
 
