@@ -2,6 +2,7 @@ using System.Text;
 using MuConvert.chu;
 using MuConvert.utils;
 using Rationals;
+using static MuConvert.utils.ChuUtils;
 
 namespace MuConvert.Tests.chu;
 
@@ -82,39 +83,45 @@ public class ChuTests
     /// </summary>
     public static bool CompareNote(ChuNote expected, ChuNote actual, bool allowExDiff = false)
     {
-        if (!TypesEquivalent(expected.Type, actual.Type, allowExDiff)) return false;
+        if (!TypesEquivalent(expected, actual, allowExDiff)) return false;
         if (!TimesEquivalent(expected.Time, actual.Time)) return false;
         if (!DurationsEquivalent(expected, actual)) return false;
         if (expected.Cell != actual.Cell || expected.Width != actual.Width) return false;
         if (expected.EndCell != actual.EndCell || expected.EndWidth != actual.EndWidth) return false;
-        if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(expected.EndHeight - actual.EndHeight) > 0.05m) return false;
-        if (!TimesEquivalent(expected.CrushInterval, actual.CrushInterval)) return false;
-        if (!TagsEquivalent(expected, actual, allowExDiff)) return false;
+        if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(EndHeightOf(expected) - EndHeightOf(actual)) > 0.05m) return false;
+        if (!CrushIntervalsEquivalent(expected.CrushInterval, actual.CrushInterval)) return false;
+        if (!AttrsEquivalent(expected, actual, allowExDiff)) return false;
         if (!TargetNotesEquivalent(expected, actual, allowExDiff)) return false;
+        if (!SegmentsEquivalent(expected, actual)) return false;
         return true;
     }
+
+    private static decimal EndHeightOf(ChuNote n) =>
+        n.Segments.Count > 0 ? n.Segments[^1].EndHeight : n.Height;
 
     /// <summary>规则 (a)：time 相差 ≤ 1/768 视为相等。</summary>
     private static bool TimesEquivalent(Rational a, Rational b) => (a - b).Abs() <= Tol768;
 
-    /// <summary>
-    /// 类型比较。<paramref name="allowExDiff"/> 为 true 时，HLD/HXD、SLD/SXD、SLC/SXC 之间允许互相匹配
-    /// （即忽略 Ex 标志位差异）；否则要求严格相等。
-    /// </summary>
-    private static bool TypesEquivalent(string e, string a, bool allowExDiff)
+    private static bool CrushIntervalsEquivalent(Rational? e, Rational? a)
     {
-        if (e == a) return true;
-        if (!allowExDiff) return false;
-        return StripExFlag(e) == StripExFlag(a);
+        if (e is null && a is null) return true;
+        if (e is null || a is null) return false;
+        return TimesEquivalent(e.Value, a.Value);
+    }
 
-        static string StripExFlag(string t) => t switch
-        {
-            "HXD" => "HLD",
-            "SXD" => "SLD",
-            "SXC" => "SLC",
-            "AHX" => "AHD",
-            _ => t,
-        };
+    /// <summary>
+    /// 类型比较。<paramref name="allowExDiff"/> 为 true 时，Hold/Slide 的 Ex 标志位差异可忽略
+    /// （对应旧 HLD/HXD、SLD/SXD、SLC/SXC、AHD/AHX）；否则要求严格相等。
+    /// Air Tap 还需 AirDirection 一致。CHR/TAP 即使 allowExDiff 也不互通。
+    /// </summary>
+    private static bool TypesEquivalent(ChuNote e, ChuNote a, bool allowExDiff)
+    {
+        if (e.Type != a.Type || e.IsAir != a.IsAir) return false;
+        if (IsAir(e) && e.AirDirection != a.AirDirection) return false;
+        if (e.IsEx == a.IsEx) return true;
+        if (!allowExDiff) return false;
+        // 仅 Hold/Slide（含 Air Hold）允许 Ex 差异；Tap 的 CHR vs TAP 不允许
+        return e.Type is ChuNoteType.Hold or ChuNoteType.Slide;
     }
 
     /// <summary>
@@ -126,49 +133,112 @@ public class ChuTests
         return dd <= Tol768 || (dd <= Tol384 && (e.EndTime - a.EndTime).Abs() <= Tol768);
     }
 
-    /// <summary>规则 (c)(d)：广义 Air 的 DEF/空串；FLK 的 A/L；allowExDiff 时非 Ex 音符可无 tag。</summary>
-    private static bool TagsEquivalent(ChuNote e, ChuNote a, bool allowExDiff = false)
+    /// <summary>
+    /// 规则 (c)(d)：广义 Air 的 Color；Flick 方向；allowExDiff 时非 Ex 音符可无 Ex。
+    /// Crush（ALD）不比较 Color（C2S 侧观测不支持颜色 tag）。
+    /// </summary>
+    private static bool AttrsEquivalent(ChuNote e, ChuNote a, bool allowExDiff = false)
     {
-        if (e.Tag == a.Tag) return true;
-        if (e.Type == "ALD") return true; // C2S的ALD行，根据观测，是不支持颜色tag的。因此不要比较
-        if (allowExDiff && TypesEquivalent(e.Type, a.Type, allowExDiff: true) && e.Type != a.Type)
+        if (e.Type == ChuNoteType.Crush) return true;
+
+        if (e.IsAir && e.Color != a.Color)
         {
-            var ex = IsExType(e.Type) ? e : IsExType(a.Type) ? a : null;
-            var nonEx = IsExType(e.Type) ? a : IsExType(a.Type) ? e : null;
-            if (ex is not null && nonEx is not null && nonEx.Tag == "") return true;
+            // 旧 Tag 的 DEF/空串互通；新模型默认均为 DEF，一般不会走到这里
+            if (!((e.Color == NoteColor.DEF || a.Color == NoteColor.DEF) && e.Color != a.Color))
+                return false;
+            // 若一侧为 DEF、另一侧非 DEF，则不相等（上面已排除双 DEF）
+            return false;
         }
-        if (ChuUtils.IsGeneralizedAir(e))
+
+        if (e.Ex == a.Ex) return true;
+
+        if (allowExDiff && TypesEquivalent(e, a, allowExDiff: true) && e.IsEx != a.IsEx)
         {
-            if ((e.Tag == "DEF" && a.Tag == "") || (e.Tag == "" && a.Tag == "DEF"))
-                return true;
+            // 有 Ex 的一侧 vs 无 Ex 的一侧：允许
+            return true;
         }
-        if (e.Type == "FLK")
-        {
-            if ((e.Tag == "A" && a.Tag == "L") || (e.Tag == "L" && a.Tag == "A"))
-                return true;
-        }
+
+        // Flick：C2S 的方向字段恒为 L，不表示真实方向，语义等同 UGC Auto（A / Ex=null）。
+        // 因此经 C2S 往返后 Ex 会变成 null；与 UGC 侧的 L/R/A（LS/RS/null）均视为等价。
+        if (e.Type == ChuNoteType.Flick && a.Type == ChuNoteType.Flick &&
+            (e.Ex is null || a.Ex is null))
+            return true;
+
         return false;
     }
 
-    private static bool IsExType(string t) => t is "HXD" or "SXD" or "SXC" or "AHX";
-
-    /// <summary>SLC/SLD 的 TargetNote 可有可无（新旧 C2S 版本差异）；ALD 的 TargetNote 由 C2S interval 推断，UGC 侧常无对应 previous。</summary>
+    /// <summary>
+    /// TargetNote：Crush 跳过；其余比较 AsC2sPreviousStr。
+    /// 非 Air 的 Slide 通常无 TargetNote（段已合并进 Segments）。
+    /// </summary>
     private static bool TargetNotesEquivalent(ChuNote e, ChuNote a, bool allowExDiff)
     {
-        if (e.Type == "ALD" || a.Type == "ALD") return true;
-        if (TypesEquivalent(e.TargetNote, a.TargetNote, allowExDiff)) return true;
-        if (ChuUtils.IsSlide(e.Type) && ChuUtils.IsSlide(a.Type))
+        if (e.Type == ChuNoteType.Crush || a.Type == ChuNoteType.Crush) return true;
+
+        var et = AsC2sPreviousStr(e.TargetNote) ?? "N";
+        var at = AsC2sPreviousStr(a.TargetNote) ?? "N";
+        if (et == at) return true;
+
+        if (e.TargetNote != null && a.TargetNote != null &&
+            TypesEquivalent(e.TargetNote, a.TargetNote, allowExDiff))
+            return true;
+
+        // 普通 Slide：TargetNote 可有可无（新旧 C2S / 段合并后的差异）
+        if (e.Type == ChuNoteType.Slide && a.Type == ChuNoteType.Slide && !e.IsAir && !a.IsAir)
         {
-            var et = e.TargetNote is "" or "N" ? "SLD" : e.TargetNote;
-            var at = a.TargetNote is "" or "N" ? "SLD" : a.TargetNote;
-            if (TypesEquivalent(et, at, allowExDiff)) return true;
+            var etN = et is "" or "N" ? "SLD" : et;
+            var atN = at is "" or "N" ? "SLD" : at;
+            return etN == atN;
         }
+
         return false;
     }
+
+    private static bool SegmentsEquivalent(ChuNote e, ChuNote a)
+    {
+        if (e.Segments.Count != a.Segments.Count) return false;
+        for (var i = 0; i < e.Segments.Count; i++)
+        {
+            var es = e.Segments[i];
+            var @as = a.Segments[i];
+            // C 标志仅对 Slide（SLC/ASC）在 C2S 中有对应；Hold/Crush 的 s/c 在进 C2S 后会丢失
+            if (e.Type == ChuNoteType.Slide && es.C != @as.C) return false;
+            if (!TimesEquivalent(es.Length, @as.Length))
+            {
+                var dd = (es.Length - @as.Length).Abs().CanonicalForm;
+                if (dd > Tol384) return false;
+            }
+            if (es.EndCell != @as.EndCell || es.EndWidth != @as.EndWidth) return false;
+            if (Math.Abs(es.EndHeight - @as.EndHeight) > 0.05m) return false;
+        }
+        return true;
+    }
     
-    private static string FormatNote(ChuNote n) =>
-        $"{n.Type} t={n.Time} start=({n.Cell},{n.Width}) dur={n.Duration} end=({n.EndCell},{n.EndWidth}) " +
-        $"tag={n.Tag} tgt={n.TargetNote} h=({n.Height},{n.EndHeight}) crush={n.CrushInterval}";
+    private static string FormatNote(ChuNote n)
+    {
+        var type = n switch
+        {
+            { Type: ChuNoteType.Tap, IsAir: true } => n.AirDirection.ToString(),
+            { Type: ChuNoteType.Tap, IsEx: true } => "CHR",
+            { Type: ChuNoteType.Tap } => "TAP",
+            { Type: ChuNoteType.Flick } => "FLK",
+            { Type: ChuNoteType.Mine } => "MNE",
+            { Type: ChuNoteType.Hold, IsAir: true, IsEx: true } => "AHX",
+            { Type: ChuNoteType.Hold, IsAir: true } => "AHD",
+            { Type: ChuNoteType.Hold, IsEx: true } => "HXD",
+            { Type: ChuNoteType.Hold } => "HLD",
+            { Type: ChuNoteType.Slide, IsAir: true } => "ASD",
+            { Type: ChuNoteType.Slide, IsEx: true } => "SXD",
+            { Type: ChuNoteType.Slide } => "SLD",
+            { Type: ChuNoteType.Crush } => "ALD",
+            _ => n.Type.ToString(),
+        };
+        var tgt = AsC2sPreviousStr(n.TargetNote) ?? "N";
+        var segs = string.Join('+', n.Segments.Select(s =>
+            $"{(s.C ? "C" : "S")}:{s.Length}->({s.EndCell},{s.EndWidth},{s.EndHeight})"));
+        return $"{type} t={n.Time} start=({n.Cell},{n.Width}) dur={n.Duration} end=({n.EndCell},{n.EndWidth}) " +
+               $"ex={n.Ex} color={n.Color} tgt={tgt} h=({n.Height},{EndHeightOf(n)}) crush={n.CrushInterval} segs=[{segs}]";
+    }
 
     /// <summary>
     /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前），各行按字典序排序后逐行匹配（允许原始行序不同）。
@@ -218,9 +288,9 @@ public class ChuTests
         return AldIntervalsEquivalent(e[5], a[5], durE, durA);
     }
 
-    private static readonly HashSet<string> C2sDirectionTags = ChuUtils.C2U_ChrExtras.Keys.ToHashSet();
+    private static readonly HashSet<string> C2sDirectionTags = Enum.GetNames<ExDirection>().ToHashSet();
 
-    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；末尾方向标识符（见 ChuUtils.U2C_ChrExtras）任一侧可省略，两侧都有时必须一致。</summary>
+    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；末尾方向标识符（ExDirection）任一侧可省略，两侧都有时必须一致。</summary>
     private static bool HoldSlideC2sLinesEquivalent(string expected, string actual)
     {
         var e = expected.Split('\t');
@@ -369,9 +439,10 @@ public class ChuTests
         Assert.Contains("TAP\t", c2sText);
 
         // 再把转出来的c2s，parse回去，比较是否和一开始的ugc等价（注意不是文本 round-trip，而是 IR 等价，允许字段重排但不允许信息丢失）
+        // CLICK（UGC `c`）在 Parser 中已忽略，不会进入 Notes
         var (c2sReparsed, _) = new C2sParser().Parse(c2sText);
         Assert.NotEmpty(c2sReparsed.Notes);
-        AssertNotesEqual(ugc.Notes.Where(n => n.Type != "CLICK").ToList(), c2sReparsed.Notes);
+        AssertNotesEqual(ugc.Notes, c2sReparsed.Notes);
 
         // 如果同目录下有 ground truth 的 c2s 文件，则再和 ground truth 比较一遍
         var groundTruthC2sPath = Directory.EnumerateFiles(Path.GetDirectoryName(ugcPath)!, "*.c2s")
@@ -397,7 +468,7 @@ public class ChuTests
         // 再把转出来的ugc，parse回去，比较是否和一开始的c2s等价
         var (ugcReparsed, _) = new UgcParser().Parse(ugcText);
         Assert.NotEmpty(ugcReparsed.Notes);
-        AssertNotesEqual(c2s.Notes, ugcReparsed.Notes.Where(n => n.Type != "CLICK").ToList(), allowExDiff: true);
+        AssertNotesEqual(c2s.Notes, ugcReparsed.Notes, allowExDiff: true);
 
         // 如果同目录下有 ground truth 的 ugc 文件，则再和 ground truth 比较一遍
         var groundTruthUgcPath = Directory.EnumerateFiles(Path.GetDirectoryName(c2sPath)!, "*.ugc")
