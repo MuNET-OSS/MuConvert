@@ -105,7 +105,7 @@ public class C2sGenerator : IGenerator<ChuChart>
             List<string> r = [name, m.ToString(), o.ToString(), n.Cell.ToString(), n.Width.ToString()];
 
             if (n.Type == ChuNoteType.Tap && n.IsEx) r.Add(n.Ex.ToString()!); // CHR
-            else if (n.Type == ChuNoteType.Flick) r.Add(n.Ex == ExDirection.RS ? "R" : "L"); // FLK
+            else if (n.Type == ChuNoteType.Flick) r.Add("L"); // FLK
             else if (n.IsAir)
             { // AIR
                 var targetStr = AsC2sPreviousStr(n.TargetNote);

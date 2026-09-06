@@ -240,7 +240,7 @@ public class UgcGenerator : IGenerator<ChuChart>
             (ChuNoteType.Tap, false) when !n.IsEx => $"t{c}{w}",
             (ChuNoteType.Tap, false) => $"x{c}{w}{ExDirections_ToUgc[n.Ex!.Value]}",
             (ChuNoteType.Tap, true) => $"a{c}{w}{AirDirections_ToUgc[n.AirDirection]}{AirColor(n)}",
-            (ChuNoteType.Flick, _) => $"f{c}{w}{n.Ex switch { ExDirection.RS => "R", _ => "L" }}",
+            (ChuNoteType.Flick, _) => $"f{c}{w}{n.Ex switch { ExDirection.RS => "R", ExDirection.LS => "L", _ => "A" }}",
             (ChuNoteType.Hold, false) => $"h{c}{w}",
             (ChuNoteType.Hold, true) => $"H{c}{w}{AirColor(n)}",
             (ChuNoteType.Slide, false) => $"s{c}{w}",

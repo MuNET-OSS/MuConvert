@@ -419,8 +419,18 @@ public class UgcParser: BaseChuParser
         else if (noteType == 'f')
         {
             note.Type = ChuNoteType.Flick;
-            if (directionStr is "L" or "R") note.Ex = ExDirections_FromUgc[directionStr];
-            else alerts.Add(new Alert(Warning, "Flick音符的方向无效", (chart, note.Time), lineNum, line));
+            note.Ex = directionStr switch
+            {
+                "L" => ExDirection.LS,
+                "R" => ExDirection.RS,
+                "A" => null,
+                _ => alertFlickDirection(),
+            };
+            ExDirection? alertFlickDirection()
+            {
+                alerts.Add(new Alert(Warning, "Flick音符的方向无效", (chart, note.Time), lineNum, line));
+                return null;
+            }
         } 
         else if (noteType == 'd') note.Type = ChuNoteType.Mine;
         return note;

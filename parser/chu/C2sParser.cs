@@ -174,14 +174,7 @@ public class C2sParser: BaseChuParser
         string? targetNote = null;
         if (note.Type is ChuNoteType.Tap or ChuNoteType.Mine or ChuNoteType.Flick)
         {
-            if (note.Type == ChuNoteType.Flick)
-            {
-                var flkTag = Str(p, 5);
-                note.Ex = ExDirection.LS;
-                if (flkTag == "R") note.Ex = ExDirection.RS;
-                else if (flkTag != "L") AlertTag(flkTag);
-            }
-            else if (type == "CHR") ParseEnum<ExDirection>(Str(p, 5), x=>note.Ex = x);
+            if (type == "CHR") ParseEnum<ExDirection>(Str(p, 5), x=>note.Ex = x);
             else if (note is { Type: ChuNoteType.Tap, IsAir: true })
             {
                 ParseEnum<AirDirection>(type, x=>note.AirDirection = x);
