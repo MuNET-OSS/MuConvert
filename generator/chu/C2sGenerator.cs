@@ -151,7 +151,7 @@ public class C2sGenerator : IGenerator<ChuChart>
 
                 // Air且不是Air-Hold的情况，这里要加上height
                 if (n.IsAir && n.Type != ChuNoteType.Hold)
-                    r.Add($"{n.Height:F1}");
+                    r.Add($"{start.Height:F1}");
                 
                 // 持续时间
                 // 为了保持两段之间紧密相接，durTicks必须通过end和start的tick直接作差得到，不能把seg.Length直接转tick，
