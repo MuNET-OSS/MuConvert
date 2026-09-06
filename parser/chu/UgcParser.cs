@@ -517,7 +517,7 @@ public class UgcParser: BaseChuParser
             lastSegTick = endTick;
             if (endCell != null) segment.EndCell = endCell.Value;
             if (endWidth != null) segment.EndWidth = endWidth.Value;
-            if (endHeight != null) segment.EndHeight = endHeight.Value;
+            if (endHeight != null) segment.EndHeight = Height_FromUgc(endHeight.Value);
             note.Segments.Add(segment);
             
             if (noteType == 'h' && segment.C) alerts.Add(new Alert(Warning, $"Hold不应有c类型的跟随行", (chart, note.EndTime), idx + 1, lines[idx]));
@@ -641,7 +641,7 @@ public class UgcParser: BaseChuParser
             var segment = new ChuSegment(note) { C = marker == "c", EndCell = endCell.Value, EndWidth = endWidth!.Value };
             segment.Length = new Rational(endTick - lastSegTick, RSL);
             lastSegTick = endTick;
-            if (endHeight != null) segment.EndHeight = endHeight.Value;
+            if (endHeight != null) segment.EndHeight = Height_FromUgc(endHeight.Value);
             note.Segments.Add(segment);
             
             idx++;

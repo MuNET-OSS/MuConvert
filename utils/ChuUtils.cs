@@ -79,6 +79,7 @@ public class ChuUtils
     public static bool IsAir(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Tap };
     public static bool IsAirSlide(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Slide };
     public static bool IsAirHold(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Hold };
+    public static bool IsAirCrush(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Crush };
     public static bool IsAirDown(ChuNote? n) => IsAir(n) && n!.AirDirection >= AirDirection.ADW;
     
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
