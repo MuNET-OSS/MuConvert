@@ -39,43 +39,131 @@ public class ChuTests
         AssertNotesEqual(chart.Notes, reparsed.Notes);
     }
 
+    /// <summary>
+    /// 绝对坐标下的一段 Slide/Hold/Crush 路径，用于跨 note 的 segment 错配回收。
+    /// </summary>
+    private readonly record struct AbsSeg(
+        ChuNoteType Type,
+        bool IsAir,
+        bool C,
+        Rational StartTime,
+        int StartCell,
+        int StartWidth,
+        decimal StartHeight,
+        Rational Length,
+        int EndCell,
+        int EndWidth,
+        decimal EndHeight);
+
     private static void AssertNotesEqual(IReadOnlyList<ChuNote> expected_, IReadOnlyList<ChuNote> actual_, bool allowExDiff = false)
     {
         const string EOF = "<EOF>";
-        List<ChuNote> expected = expected_.ToList();
-        List<ChuNote> actual = actual_.ToList();
-        
-        for (var i = 0; i < Math.Max(expected.Count, actual.Count); i++)
+        var expected = expected_.ToList();
+        var actual = actual_.ToList();
+        var usedActual = new bool[actual.Count];
+        var expectedSegPool = new List<AbsSeg>();
+        var actualSegPool = new List<AbsSeg>();
+        string? deferredFail = null;
+
+        for (var i = 0; i < expected.Count; i++)
         {
-            bool result;
-            if (i >= expected.Count || i >= actual.Count) result = false;
-            else 
+            // 1) 优先严格全等
+            var j = FindUnusedActual(expected[i], actual, usedActual, allowExDiff, strict: true);
+            if (j >= 0)
             {
-                result = CompareNote(expected[i], actual[i], allowExDiff);
-                if (!result)
-                {
-                    // 尝试同一时刻的其他行有无相同的，如果有，交换之
-                    var j = i + 1;
-                    while (j < expected.Count && expected[j].Time == actual[i].Time)
-                    {
-                        if (CompareNote(expected[j], actual[i], allowExDiff))
-                        {
-                            (expected[j], expected[i]) = (expected[i], expected[j]);
-                            result = true;
-                            break;
-                        }
-                        j++;
-                    }
-                }
+                usedActual[j] = true;
+                continue;
             }
 
-            if (!result) {
-                Assert.Fail(
+            // 2) 起点身份相同但 segments/duration/终点因平行重连错配：暂缓，segment 进池
+            j = FindUnusedActual(expected[i], actual, usedActual, allowExDiff, strict: false);
+            if (j >= 0)
+            {
+                usedActual[j] = true;
+                DiffSegmentsToPools(expected[i], actual[j], expectedSegPool, actualSegPool);
+                deferredFail ??=
                     $"Note mismatch at index {i}:{Environment.NewLine}" +
-                    $"EXPECTED: {(i < expected.Count ? FormatNote(expected[i]) : EOF)}{Environment.NewLine}" +
-                    $"ACTUAL  : {(i < actual.Count ? FormatNote(actual[i]) : EOF)}");
+                    $"EXPECTED: {FormatNote(expected[i])}{Environment.NewLine}" +
+                    $"ACTUAL  : {FormatNote(actual[j])}";
+                continue;
+            }
+
+            // 3) 无对应 actual（例如同起点被 C2S 合并进另一条）：整 note 的 segment 进期望池
+            if (expected[i].Segments.Count > 0)
+            {
+                expectedSegPool.AddRange(ExpandSegments(expected[i]));
+                deferredFail ??=
+                    $"Note mismatch at index {i}:{Environment.NewLine}" +
+                    $"EXPECTED: {FormatNote(expected[i])}{Environment.NewLine}" +
+                    $"ACTUAL  : {EOF} (absorbed into segment pool)";
+                continue;
+            }
+
+            Assert.Fail(
+                $"Note mismatch at index {i}:{Environment.NewLine}" +
+                $"EXPECTED: {FormatNote(expected[i])}{Environment.NewLine}" +
+                $"ACTUAL  : {EOF}");
+        }
+
+        for (var j = 0; j < actual.Count; j++)
+        {
+            if (usedActual[j]) continue;
+
+            // 多余的 actual（合并/错接多出来的尾巴挂在别的起点上时也可能出现）：segment 进实际池
+            if (actual[j].Segments.Count > 0)
+            {
+                actualSegPool.AddRange(ExpandSegments(actual[j]));
+                deferredFail ??=
+                    $"Note mismatch (unmatched actual at {j}):{Environment.NewLine}" +
+                    $"EXPECTED: {EOF}{Environment.NewLine}" +
+                    $"ACTUAL  : {FormatNote(actual[j])} (absorbed into segment pool)";
+                continue;
+            }
+
+            Assert.Fail(
+                $"Note mismatch (unmatched actual at {j}):{Environment.NewLine}" +
+                $"EXPECTED: {EOF}{Environment.NewLine}" +
+                $"ACTUAL  : {FormatNote(actual[j])}");
+        }
+
+        if (deferredFail is null)
+            return;
+
+        if (MatchSegmentPools(expectedSegPool, actualSegPool))
+            return;
+
+        Assert.Fail(
+            deferredFail + Environment.NewLine +
+            $"Segment pool not cleared after cross-note matching " +
+            $"(expected leftover={expectedSegPool.Count}, actual leftover={actualSegPool.Count})." + Environment.NewLine +
+            FormatSegPool("EXPECTED leftover", expectedSegPool) + Environment.NewLine +
+            FormatSegPool("ACTUAL leftover", actualSegPool));
+    }
+
+    /// <summary>
+    /// 在尚未占用的 actual 中查找与 expected 匹配的音符。
+    /// strict：整 note 等价；否则仅起点身份等价（忽略 duration/终点）。
+    /// </summary>
+    private static int FindUnusedActual(
+        ChuNote expected,
+        List<ChuNote> actual,
+        bool[] usedActual,
+        bool allowExDiff,
+        bool strict)
+    {
+        for (var j = 0; j < actual.Count; j++)
+        {
+            if (usedActual[j]) continue;
+            if (strict)
+            {
+                if (CompareNote(expected, actual[j], allowExDiff)) return j;
+            }
+            else if (CompareNoteHead(expected, actual[j], allowExDiff, requireDuration: false))
+            {
+                return j;
             }
         }
+        return -1;
     }
 
     /// <summary>
@@ -83,16 +171,27 @@ public class ChuTests
     /// </summary>
     public static bool CompareNote(ChuNote expected, ChuNote actual, bool allowExDiff = false)
     {
+        if (!CompareNoteHead(expected, actual, allowExDiff)) return false;
+        if (expected.EndCell != actual.EndCell || expected.EndWidth != actual.EndWidth) return false;
+        if (Math.Abs(EndHeightOf(expected) - EndHeightOf(actual)) > 0.05m) return false;
+        if (!SegmentsEquivalent(expected, actual)) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Note 头部等价（不含终点位置与 Segments）。
+    /// <paramref name="requireDuration"/> 为 false 时连 duration 也不比——平行重连错配后总长常被改写。
+    /// </summary>
+    private static bool CompareNoteHead(ChuNote expected, ChuNote actual, bool allowExDiff = false, bool requireDuration = true)
+    {
         if (!TypesEquivalent(expected, actual, allowExDiff)) return false;
         if (!TimesEquivalent(expected.Time, actual.Time)) return false;
-        if (!DurationsEquivalent(expected, actual)) return false;
+        if (requireDuration && !DurationsEquivalent(expected, actual)) return false;
         if (expected.Cell != actual.Cell || expected.Width != actual.Width) return false;
-        if (expected.EndCell != actual.EndCell || expected.EndWidth != actual.EndWidth) return false;
-        if (Math.Abs(expected.Height - actual.Height) > 0.05m || Math.Abs(EndHeightOf(expected) - EndHeightOf(actual)) > 0.05m) return false;
+        if (Math.Abs(expected.Height - actual.Height) > 0.05m) return false;
         if (!CrushIntervalsEquivalent(expected.CrushInterval, actual.CrushInterval)) return false;
         if (!AttrsEquivalent(expected, actual, allowExDiff)) return false;
         if (!TargetNotesEquivalent(expected, actual, allowExDiff)) return false;
-        if (!SegmentsEquivalent(expected, actual)) return false;
         return true;
     }
 
@@ -213,7 +312,115 @@ public class ChuTests
         }
         return true;
     }
-    
+
+    private static List<AbsSeg> ExpandSegments(ChuNote n)
+    {
+        var list = new List<AbsSeg>(n.Segments.Count);
+        var t = n.Time;
+        var cell = n.Cell;
+        var width = n.Width;
+        var height = n.Height;
+        foreach (var s in n.Segments)
+        {
+            list.Add(new AbsSeg(
+                n.Type, n.IsAir, s.C,
+                t, cell, width, height,
+                s.Length, s.EndCell, s.EndWidth, s.EndHeight));
+            t = (t + s.Length).CanonicalForm;
+            cell = s.EndCell;
+            width = s.EndWidth;
+            height = s.EndHeight;
+        }
+        return list;
+    }
+
+    private static bool AbsSegsEquivalent(AbsSeg e, AbsSeg a)
+    {
+        if (e.Type != a.Type || e.IsAir != a.IsAir) return false;
+        if (e.Type == ChuNoteType.Slide && e.C != a.C) return false;
+        if (!TimesEquivalent(e.StartTime, a.StartTime)) return false;
+        if (e.StartCell != a.StartCell || e.StartWidth != a.StartWidth) return false;
+        if (Math.Abs(e.StartHeight - a.StartHeight) > 0.05m) return false;
+        if (!TimesEquivalent(e.Length, a.Length))
+        {
+            var dd = (e.Length - a.Length).Abs().CanonicalForm;
+            if (dd > Tol384) return false;
+        }
+        if (e.EndCell != a.EndCell || e.EndWidth != a.EndWidth) return false;
+        if (Math.Abs(e.EndHeight - a.EndHeight) > 0.05m) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// 将两个 note 的 segments 做多重集差分：能就地配对的消掉，剩余分别进入期望/实际池。
+    /// </summary>
+    private static void DiffSegmentsToPools(ChuNote e, ChuNote a, List<AbsSeg> expectedPool, List<AbsSeg> actualPool)
+    {
+        var eSegs = ExpandSegments(e);
+        var aSegs = ExpandSegments(a);
+        var usedA = new bool[aSegs.Count];
+        foreach (var es in eSegs)
+        {
+            var found = -1;
+            for (var j = 0; j < aSegs.Count; j++)
+            {
+                if (usedA[j]) continue;
+                if (!AbsSegsEquivalent(es, aSegs[j])) continue;
+                found = j;
+                break;
+            }
+            if (found >= 0) usedA[found] = true;
+            else expectedPool.Add(es);
+        }
+        for (var j = 0; j < aSegs.Count; j++)
+        {
+            if (!usedA[j]) actualPool.Add(aSegs[j]);
+        }
+    }
+
+    /// <summary>
+    /// 尝试消解跨 note 错配后的 segment 池；成功则两侧皆空。
+    /// </summary>
+    private static bool MatchSegmentPools(List<AbsSeg> expectedPool, List<AbsSeg> actualPool)
+    {
+        var usedA = new bool[actualPool.Count];
+        var leftoverE = new List<AbsSeg>();
+        foreach (var es in expectedPool)
+        {
+            var found = -1;
+            for (var j = 0; j < actualPool.Count; j++)
+            {
+                if (usedA[j]) continue;
+                if (!AbsSegsEquivalent(es, actualPool[j])) continue;
+                found = j;
+                break;
+            }
+            if (found >= 0) usedA[found] = true;
+            else leftoverE.Add(es);
+        }
+
+        var leftoverA = new List<AbsSeg>();
+        for (var j = 0; j < actualPool.Count; j++)
+        {
+            if (!usedA[j]) leftoverA.Add(actualPool[j]);
+        }
+
+        expectedPool.Clear();
+        expectedPool.AddRange(leftoverE);
+        actualPool.Clear();
+        actualPool.AddRange(leftoverA);
+        return expectedPool.Count == 0 && actualPool.Count == 0;
+    }
+
+    private static string FormatSegPool(string label, IReadOnlyList<AbsSeg> pool)
+    {
+        if (pool.Count == 0) return $"{label}: (empty)";
+        var lines = pool.Select(s =>
+            $"  {(s.C ? "C" : "S")}:{s.Length} @{s.StartTime} ({s.StartCell},{s.StartWidth})->({s.EndCell},{s.EndWidth}) " +
+            $"type={s.Type}/air={s.IsAir} h={s.StartHeight}->{s.EndHeight}");
+        return $"{label} ({pool.Count}):{Environment.NewLine}{string.Join(Environment.NewLine, lines)}";
+    }
+
     private static string FormatNote(ChuNote n)
     {
         var type = n switch
