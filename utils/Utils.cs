@@ -138,13 +138,19 @@ public static class Utils
         return new string(sb.ToString().Reverse().ToArray());
     }
     
-    public static Dictionary<V, K> ReverseDict<K, V>(Dictionary<K, V> dict) where V : notnull =>
+    public static Dictionary<V, K> ReverseDict<K, V>(Dictionary<K, V> dict) where V : notnull where K : notnull =>
         dict.ToDictionary(x => x.Value, x => x.Key);
 }
 
 public static class ExtensionUtils
 {
     internal static void Add<K, V>(this Dictionary<K, List<V>> dict, K key, V value) where K : notnull
+    {
+        if (!dict.ContainsKey(key)) dict[key] = [];
+        dict[key].Add(value);
+    }
+    
+    internal static void Add<K, V>(this Dictionary<K, HashSet<V>> dict, K key, V value) where K : notnull
     {
         if (!dict.ContainsKey(key)) dict[key] = [];
         dict[key].Add(value);
@@ -158,7 +164,7 @@ public static class ExtensionUtils
             arr.RemoveAt(0);
             return true;
         }
-        value = default;
+        value = default!;
         return false;
     }
 

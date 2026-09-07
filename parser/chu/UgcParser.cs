@@ -685,40 +685,36 @@ public class UgcParser: BaseChuParser
         var notes = chart.Notes;
         if (notes.Count == 0) return;
 
-        var byTime = notes
-            .GroupBy(n => n.Time)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        var byTime = notes.GroupBy(n => n.Time).ToDictionary(g => g.Key, g => g.ToList());
 
-        var airParents = notes
-            .Where(NeedsTargetNote)
-            .Select(n => n.TargetNote)
-            .OfType<ChuNote>()
-            .ToHashSet();
+        var airParents = notes.Where(NeedsTargetNote)
+            .Select(n => n.TargetNote).OfType<ChuNote>().ToHashSet();
 
-        var remove = new HashSet<ChuNote>();
+        var consumedChr = new Dictionary<ChuNote, HashSet<int>>(); // 位于 Ex Hold/Slide 的起点上的CHR。key是CHR ChuNote对象，value是它被Hold/Slide所占据的区间（仅当所有区间都被Hold/Slide消费时，才应该移除此CHR）
         foreach (var exTap in notes.Where(IsCHR))
         {
-            if (!byTime.TryGetValue(exTap.Time, out var atTick)) continue;
-
-            var exactMatch = false;
-            foreach (var note in atTick)
+            foreach (var note in byTime[exTap.Time])
             {
                 if (note is not { IsAir: false, Type: ChuNoteType.Hold or ChuNoteType.Slide }) continue;
                 if (NoteCovers(exTap, note))
                 {
                     note.Ex = exTap.Ex;
-                    if (exTap.Cell == note.Cell && exTap.Width == note.Width)
-                        exactMatch = true;
+                    for (int i = note.Cell; i < note.Cell + note.Width; i++) consumedChr.Add(exTap, i);
                 }
             }
-
-            // 仅与长条完全重合且无 AIR 挂靠时才消费；有 AIR 则保留 CHR 作父音符
-            if (exactMatch && !airParents.Contains(exTap))
-                remove.Add(exTap);
         }
 
-        if (remove.Count == 0) return;
-        notes.RemoveAll(remove.Contains);
+        bool shouldRemoveExTap(ChuNote exTap)
+        {
+            if (!consumedChr.TryGetValue(exTap, out var consumedIdx)) return false;
+            if (airParents.Contains(exTap)) return false; // 仅无 AIR 挂靠时才能消费；有 AIR 则保留 CHR 作父音符
+            for (int i = exTap.Cell; i < exTap.Cell + exTap.Width; i++)
+            {
+                if (!consumedIdx.Contains(i)) return false; // 只要有任何一列，没有被Ex Hold/Slide消费，就不能删除
+            }
+            return true; // 无Air挂靠，且所有列均已被消费（登记在consumedIdx中）
+        }
+        notes.RemoveAll(shouldRemoveExTap);
     }
 }
 
