@@ -448,7 +448,7 @@ public class ChuTests
     }
 
     /// <summary>
-    /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前），各行按字典序排序后逐行匹配（允许原始行序不同）。
+    /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前），各行按规范化排序键排序后逐行匹配（允许原始行序不同）。
     /// </summary>
     private static void AssertC2sTextEqual(string expected, string actual)
     {
@@ -471,7 +471,7 @@ public class ChuTests
         }
     }
 
-    /// <summary>除 ALD interval 的 `$` 宽松规则、ALD durationTicks ±1、ALD Height/EndHeight ±0.1、HLD/SLC/SLD 可选后缀外，要求整行一致。</summary>
+    /// <summary>除 ALD interval 的 `$` 宽松规则、ALD durationTicks ±1、ALD Height/EndHeight ±0.1、Hold/Slide 可选 SLD 后缀与 Ex 方向外，要求整行一致。</summary>
     private static bool C2sLinesEquivalent(string expected, string actual)
     {
         if (expected == actual) return true;
@@ -497,13 +497,15 @@ public class ChuTests
 
     private static readonly HashSet<string> C2sDirectionTags = Enum.GetNames<ExDirection>().ToHashSet();
 
-    /// <summary>HLD/SLC/SLD：可选 TargetNote（SLD）；末尾方向标识符（ExDirection）任一侧可省略，两侧都有时必须一致。</summary>
+    /// <summary>
+    /// HLD/HXD/SLC/SLD/SXC/SXD：可选 TargetNote 后缀（SLD）；末尾方向标识符（ExDirection）任一侧可省略，两侧都有时必须一致。
+    /// </summary>
     private static bool HoldSlideC2sLinesEquivalent(string expected, string actual)
     {
         var e = expected.Split('\t');
         var a = actual.Split('\t');
         if (e.Length == 0 || a.Length == 0 || e[0] != a[0]) return false;
-        if (e[0] is not ("HLD" or "SLC" or "SLD")) return false;
+        if (e[0] is not ("HLD" or "HXD" or "SLC" or "SLD" or "SXC" or "SXD")) return false;
 
         e = StripOptionalSlideTargetNote(e);
         a = StripOptionalSlideTargetNote(a);
@@ -525,7 +527,7 @@ public class ChuTests
         f.Length > 0 && C2sDirectionTags.Contains(f[^1]) ? f[..^1] : f;
 
     private static string[] StripOptionalSlideTargetNote(string[] f) =>
-        f[0] is "SLC" or "SLD" && f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
+        f[0] is ("SLC" or "SLD" or "SXC" or "SXD") && f.Length > 8 && f[^1] == "SLD" ? f[..^1] : f;
 
     private static bool TryParseAldFields(string line, out string[] fields)
     {
@@ -576,8 +578,28 @@ public class ChuTests
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(line => line.TrimEnd('\r'))
             .Where(line => !IsC2sHeaderLine(line))
-            .OrderBy(AldAwareC2sSortKey, StringComparer.Ordinal)
+            .OrderBy(C2sCompareSortKey, StringComparer.Ordinal)
             .ToList();
+
+    /// <summary>
+    /// 排序键：ALD 忽略 interval/durationTicks；Hold/Slide 忽略可选 SLD 后缀与 Ex 方向，避免与 PenguinTools 的后缀差异打乱对齐。
+    /// </summary>
+    private static string C2sCompareSortKey(string line)
+    {
+        if (line.StartsWith("ALD\t", StringComparison.Ordinal))
+            return AldAwareC2sSortKey(line);
+
+        var fields = line.Split('\t');
+        if (fields.Length > 0 && fields[0] is "HLD" or "HXD" or "SLC" or "SLD" or "SXC" or "SXD")
+        {
+            fields = StripOptionalDirectionTag(fields);
+            fields = StripOptionalSlideTargetNote(fields);
+            fields = StripOptionalDirectionTag(fields);
+            return string.Join('\t', fields);
+        }
+
+        return line;
+    }
 
     /// <summary>ALD 行排序时忽略 interval（字段 5）与 durationTicks（字段 7）。</summary>
     private static string AldAwareC2sSortKey(string line)
