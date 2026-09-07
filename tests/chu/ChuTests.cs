@@ -448,7 +448,8 @@ public class ChuTests
     }
 
     /// <summary>
-    /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前），各行按规范化排序键排序后逐行匹配（允许原始行序不同）。
+    /// 比较两份 C2S 文本：忽略头部元信息（TUTORIAL 及之前）与 SLA（分音符变速区时长策略与 PenguinTools 不同），
+    /// 各行按规范化排序键排序后逐行匹配（允许原始行序不同）。
     /// </summary>
     private static void AssertC2sTextEqual(string expected, string actual)
     {
@@ -577,7 +578,7 @@ public class ChuTests
     private static List<string> SplitC2sLines(string text) =>
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(line => line.TrimEnd('\r'))
-            .Where(line => !IsC2sHeaderLine(line))
+            .Where(line => !IsC2sHeaderLine(line) && !line.StartsWith("SLA\t", StringComparison.Ordinal))
             .OrderBy(C2sCompareSortKey, StringComparer.Ordinal)
             .ToList();
 
