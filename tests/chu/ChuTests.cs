@@ -694,9 +694,13 @@ public class ChuTests
         var (ugcText, _) = new UgcGenerator().Generate(c2s);
         Assert.Contains("@VER", ugcText);
         Assert.Contains("#5'0", ugcText);
-
+        
+        // Sheriruth Expert/Master 存在同位置 CHR+HLD/SLD 叠放（非 ExLong）；默认会把 CHR 消费进长条，
+        // 导致与官谱 IR 不对齐，故仅对这两张开启 NoExLong。
+        var noExLong = c2sPath.Contains("2351_02") || c2sPath.Contains("2351_03");
+        
         // 再把转出来的ugc，parse回去，比较是否和一开始的c2s等价
-        var (ugcReparsed, _) = new UgcParser().Parse(ugcText);
+        var (ugcReparsed, _) = new UgcParser(noExLong: noExLong).Parse(ugcText);
         Assert.NotEmpty(ugcReparsed.Notes);
         AssertNotesEqual(c2s.Notes, ugcReparsed.Notes, allowExDiff: true);
 

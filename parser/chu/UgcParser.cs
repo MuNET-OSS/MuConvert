@@ -14,6 +14,22 @@ namespace MuConvert.chu;
  */
 public class UgcParser: BaseChuParser
 {
+    /**
+     * 是否禁止 Ex Hold / Ex Slide (C2S中的 HXD / SXD )。
+     *
+     * 默认情况（不开启本选项时），对于同一时刻、同一位置同时有 :x (ExTap) 和 Hold或Slide 的情况，
+     * 会把它们整体解析为一个Ex Hold/Slide (对应C2S中的HXD/SXD)，同时不会再为那个ExTap生成CHR。
+     * 例如：`#1'0:x44U  #1:0:h44`，这样的两个音符会合并解析为一个ExHold（ChuNote{Type=Hold,IsAir=false,Ex=UP}）
+     *
+     * 若开启本选项，则将禁止以上行为，强制:x和:h/:s，一一对应地解析为CHR和HLD/SLD。
+     */
+    public bool NoExLong = false;
+
+    public UgcParser(bool noExLong = false)
+    {
+        NoExLong = noExLong;
+    }
+    
     private int RSL = 480 * 4;
     private int Version = 8;
     private int ExVersion = 0;
@@ -80,7 +96,7 @@ public class UgcParser: BaseChuParser
         FinalizeUgcSflDurations(chart);
         FillAllPrevious(chart, alerts);
         // EXVER>=1 等价于强制 EXLONG=TRUE（ugc 规范）；开启时把覆盖长条的 ExTap 消费进 HXD/SXD/SXC
-        if (ExVersion >= 1 || UgcFlags.GetValueOrDefault("EXLONG"))
+        if ((ExVersion >= 1 || UgcFlags.GetValueOrDefault("EXLONG")) && !NoExLong)
             ApplyExLongCarriers(chart);
         chart.Sort();
         if (UgcFlags.GetValueOrDefault("SOFFSET"))
@@ -703,7 +719,9 @@ public class UgcParser: BaseChuParser
                 }
             }
         }
-
+        
+        notes.RemoveAll(shouldRemoveExTap);
+        
         bool shouldRemoveExTap(ChuNote exTap)
         {
             if (!consumedChr.TryGetValue(exTap, out var consumedIdx)) return false;
@@ -714,7 +732,6 @@ public class UgcParser: BaseChuParser
             }
             return true; // 无Air挂靠，且所有列均已被消费（登记在consumedIdx中）
         }
-        notes.RemoveAll(shouldRemoveExTap);
     }
 }
 
