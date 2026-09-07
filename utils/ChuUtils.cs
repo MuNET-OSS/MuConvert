@@ -81,6 +81,7 @@ public class ChuUtils
     public static bool IsAirHold(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Hold };
     public static bool IsAirCrush(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Crush };
     public static bool IsAirDown(ChuNote? n) => IsAir(n) && n!.AirDirection >= AirDirection.ADW;
+    public static bool IsCHR(ChuNote? n) => n is { Type: ChuNoteType.Tap, IsAir: false, IsEx: true };
     public static bool ShouldHaveHeight(ChuNote? n) => n is { IsAir: true, Type: ChuNoteType.Slide or ChuNoteType.Crush };
     
     public static bool TryH36ToI(string str, out int result) => Utils.TryHToI(str, 36, out result);
@@ -102,4 +103,11 @@ public class ChuUtils
     {
         return IsAir(n) || IsAirHold(n) || IsAirSlide(n);
     }
+    
+    /// <summary>
+    /// <paramref name="a"/> 的音符区间（cell~width）是否完全盖住 <paramref name="b"/>
+    /// </summary>
+    public static bool NoteCovers(ChuNote a, ChuNote b) =>
+        a.Cell <= b.Cell &&
+        a.Cell + a.Width >= b.Cell + b.Width;
 }

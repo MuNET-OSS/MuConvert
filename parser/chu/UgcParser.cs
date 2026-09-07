@@ -16,6 +16,8 @@ public class UgcParser: BaseChuParser
 {
     private int RSL = 480 * 4;
     private int Version = 8;
+    private int ExVersion = 0;
+    private bool _used;
     
     // 保存UGC中，原始的 @FLAG 信息，供一些特性的支持和外部的读取
     private Dictionary<string, bool> _ugcFlags = new();
@@ -45,10 +47,10 @@ public class UgcParser: BaseChuParser
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
+        if (_used) throw new Exception(Locale.InstanceMultipleUsage);
+        _used = true;
         var chart = new ChuChart();
         var alerts = new List<Alert>();
-        _ugcFlags = new();
-        _ugcBeats = [];
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var inHeader = true;
 
@@ -77,6 +79,9 @@ public class UgcParser: BaseChuParser
 
         FinalizeUgcSflDurations(chart);
         FillAllPrevious(chart, alerts);
+        // EXVER>=1 等价于强制 EXLONG=TRUE（ugc 规范）；开启时把覆盖长条的 ExTap 消费进 HXD/SXD/SXC
+        if (ExVersion >= 1 || UgcFlags.GetValueOrDefault("EXLONG"))
+            ApplyExLongCarriers(chart);
         chart.Sort();
         if (UgcFlags.GetValueOrDefault("SOFFSET"))
         { // 根据UGC文档，@FLAG SOFFSET 表示应该给谱面开头添加一个小节的空白（“頭に 1 小節分の空白を挿入するかどうか”）
@@ -226,6 +231,11 @@ public class UgcParser: BaseChuParser
                 Version = int.Parse(value);
                 break;
 
+            case "@EXVER":
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out ExVersion))
+                    alerts.Add(new Alert(Warning, $"@EXVER 格式错误: {line}") { Line = lineNum });
+                break;
+
             case "@FLAG":
             {
                 var parts = value.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -237,7 +247,7 @@ public class UgcParser: BaseChuParser
             }
             
             // silently ignored metadata tags
-            case "@EXVER": case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
+            case "@SORT": case "@BGM": case "@BGMOFS": case "@BGMPRV":
             case "@JACKET": case "@BGIMG": case "@BGMODE": case "@FLDCOL": case "@FLDIMG":
             case "@ATINFO": case "@DLURL": case "@COPYRIGHT": case "@LICENSE":
             case "@MAINBPM":
@@ -661,6 +671,54 @@ public class UgcParser: BaseChuParser
     {
         var (m, o) = Utils.BarAndTick(note.Time, RSL);
         return $"#{m}'{o}:{code}";
+    }
+
+    /// <summary>
+    /// UGC → IR 后处理：把盖住同 tick 长条的 ExTap effect 涂到 Hold/Slide 上；
+    /// 仅当存在与之 <b>完全重合</b>（同 Cell/Width）的长条、且无 AIR 挂靠时，才移除该 ExTap
+    /// （消费进 HXD/SXD/SXC）。若 ExTap 比被盖住的长条更大（如 <c>x46</c> 盖 <c>h54</c>），
+    /// 保留 CHR，避免丢掉更宽的 Ex 起点几何。
+    /// 须在 <c>FillAllPrevious</c> 之后调用，以便判断 ExTap 是否被 Air 依赖。
+    /// </summary>
+    public static void ApplyExLongCarriers(ChuChart chart)
+    {
+        var notes = chart.Notes;
+        if (notes.Count == 0) return;
+
+        var byTime = notes
+            .GroupBy(n => n.Time)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var airParents = notes
+            .Where(NeedsTargetNote)
+            .Select(n => n.TargetNote)
+            .OfType<ChuNote>()
+            .ToHashSet();
+
+        var remove = new HashSet<ChuNote>();
+        foreach (var exTap in notes.Where(IsCHR))
+        {
+            if (!byTime.TryGetValue(exTap.Time, out var atTick)) continue;
+
+            var exactMatch = false;
+            foreach (var note in atTick)
+            {
+                if (note is not { IsAir: false, Type: ChuNoteType.Hold or ChuNoteType.Slide }) continue;
+                if (NoteCovers(exTap, note))
+                {
+                    note.Ex = exTap.Ex;
+                    if (exTap.Cell == note.Cell && exTap.Width == note.Width)
+                        exactMatch = true;
+                }
+            }
+
+            // 仅与长条完全重合且无 AIR 挂靠时才消费；有 AIR 则保留 CHR 作父音符
+            if (exactMatch && !airParents.Contains(exTap))
+                remove.Add(exTap);
+        }
+
+        if (remove.Count == 0) return;
+        notes.RemoveAll(remove.Contains);
     }
 }
 

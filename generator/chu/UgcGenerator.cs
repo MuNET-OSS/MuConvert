@@ -118,7 +118,6 @@ public class UgcGenerator : IGenerator<ChuChart>
     {
         ugc.Sort();
         FillUgcBeats(ugc.MetList);
-        var extraHeaderKeys = ExtraHeaders.Select(x => x.Item1).ToHashSet();
         
         var sb = new StringBuilder();
         sb.AppendLine($"' Created with MuConvert v{Utils.AppVersion}");
@@ -176,6 +175,8 @@ public class UgcGenerator : IGenerator<ChuChart>
         sb.AppendLine();
 
         var notes = SortedNotesForConnectingPrevious(ugc);
+        var notesByTime = notes.GroupBy(n => n.Time).ToDictionary(g => g.Key, g => (IReadOnlyList<ChuNote>)g.ToList());
+        var writtenExCarriers = new HashSet<(Rational Time, int Cell, int Width)>();
         foreach (var n in notes)
         {
             if (n.SpeedGroup != useTil)
@@ -185,6 +186,17 @@ public class UgcGenerator : IGenerator<ChuChart>
             }
 
             var (m, o) = T(n.Time);
+
+            // Hold/Slide 带 Ex 但谱面里没有覆盖 ExTap 时，先写一条 carrier（UGC 侧 ExLong 编码）
+            // 保持与PenguinTools的实现相同。详见UgcParser.ApplyExLongCarriers中的说明
+            if (n is { IsAir: false, Type: ChuNoteType.Hold or ChuNoteType.Slide, IsEx: true } && // 是HXD/SXD
+                !notesByTime[n.Time].Any(t => IsCHR(t) && NoteCovers(t, n)) && // 同时刻，并没有能够盖住我们的CHR
+                writtenExCarriers.Add((n.Time, n.Cell, n.Width))) // 这条CHR以前并没被生成过
+            { // 则我们应该（在我们主音符的上方）立即生成一个额外的 :x 音符，用于表示我们是Ex的
+                var dir = ExDirections_ToUgc[n.Ex!.Value];
+                sb.AppendLine($"#{m}'{o}:x{IToH36(n.Cell)}{IToH36(n.Width)}{dir}");
+            }
+
             var ucode = UCode(n);
             if (ucode == "")
             {
