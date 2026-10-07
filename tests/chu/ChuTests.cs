@@ -39,6 +39,46 @@ public class ChuTests
         AssertNotesEqual(chart.Notes, reparsed.Notes);
     }
 
+    [Fact]
+    public void C2sMissingOptionalAttributesPreservesAirNoteParents()
+    {
+        var c2s = string.Join('\n',
+            "BPM\t0\t0\t120",
+            "CHR\t0\t0\t0\t4",
+            "AHD\t0\t0\t0\t4\tCHR\t96",
+            "SLD\t0\t0\t0\t4\t96\t6\t4\tSLD",
+            "AHD\t0\t96\t6\t4\tSLD\t96");
+
+        var (chart, alerts) = new C2sParser().Parse(c2s);
+
+        Assert.Empty(alerts);
+        var chr = Assert.Single(chart.Notes, n => n.Type == ChuNoteType.Tap);
+        Assert.Equal(ExDirection.UP, chr.Ex);
+
+        var slide = Assert.Single(chart.Notes, n => n.Type == ChuNoteType.Slide);
+        var airHolds = chart.Notes.Where(n => n is { Type: ChuNoteType.Hold, IsAir: true }).ToList();
+        Assert.Equal(2, airHolds.Count);
+        Assert.Same(chr, airHolds.Single(n => n.TargetNote?.Type == ChuNoteType.Tap).TargetNote);
+        Assert.Same(slide, airHolds.Single(n => n.TargetNote?.Type == ChuNoteType.Slide).TargetNote);
+        Assert.All(airHolds, note => Assert.Equal(NoteColor.DEF, note.Color));
+    }
+
+    [Fact]
+    public void C2sSlideMissingEndWidthContinuesAtStartWidth()
+    {
+        var c2s = string.Join('\n',
+            "BPM\t0\t0\t120",
+            "SLC\t0\t0\t6\t4\t24\t6",
+            "SLC\t0\t24\t6\t4\t52\t5");
+
+        var (chart, alerts) = new C2sParser().Parse(c2s);
+
+        Assert.Empty(alerts);
+        var slide = Assert.Single(chart.Notes);
+        Assert.Equal(2, slide.Segments.Count);
+        Assert.Equal(4, slide.Segments[0].EndWidth);
+    }
+
     /// <summary>
     /// 绝对坐标下的一段 Slide/Hold/Crush 路径，用于跨 note 的 segment 错配回收。
     /// </summary>
@@ -690,15 +730,15 @@ public class ChuTests
     {
         var (c2s, _) = new C2sParser().Parse(File.ReadAllText(c2sPath));
         Assert.NotEmpty(c2s.Notes);
-        
+
         var (ugcText, _) = new UgcGenerator().Generate(c2s);
         Assert.Contains("@VER", ugcText);
         Assert.Contains("#5'0", ugcText);
-        
+
         // Sheriruth Expert/Master 存在同位置 CHR+HLD/SLD 叠放（非 ExLong）；默认会把 CHR 消费进长条，
         // 导致与官谱 IR 不对齐，故仅对这两张开启 NoExLong。
         var noExLong = c2sPath.Contains("2351_02") || c2sPath.Contains("2351_03");
-        
+
         // 再把转出来的ugc，parse回去，比较是否和一开始的c2s等价
         var (ugcReparsed, _) = new UgcParser(noExLong: noExLong).Parse(ugcText);
         Assert.NotEmpty(ugcReparsed.Notes);
