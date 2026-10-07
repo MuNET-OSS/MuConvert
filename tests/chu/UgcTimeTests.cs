@@ -104,6 +104,26 @@ public class UgcTimeTests
         AssertBeatEntriesEqual(LoadTerminalUgcBeats(), GetGeneratorUgcBeats(gen));
     }
 
+    [Fact]
+    public void UgcGenerator_IgnoresZeroNumeratorMeterAndKeepsMappingLaterNotes()
+    {
+        var chart = new ChuChart();
+        chart.MetList.AddRange([
+            new MET(Rational.Zero, 4, 4),
+            new MET(1, 1, 4),
+            new MET(3, 0, 4),
+        ]);
+        chart.BpmList.Add(new BPM(Rational.Zero, 120));
+        chart.Notes.Add(new ChuNote { Type = ChuNoteType.Tap, Time = 3, Cell = 0, Width = 1 });
+
+        var (ugc, alerts) = new UgcGenerator().Generate(chart);
+
+        Assert.Single(alerts);
+        Assert.Contains("@BEAT\t1\t1\t4", ugc);
+        Assert.DoesNotContain("@BEAT\t9\t0\t4", ugc);
+        Assert.Contains("#9'0:t01", ugc);
+    }
+
     public static IEnumerable<object[]> ParserTCases =>
     [
         [0, 0, Rational.Zero],
