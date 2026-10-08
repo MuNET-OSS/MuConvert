@@ -84,8 +84,8 @@ public class UgcTimeTests
         }
     }
 
-    private static void FillUgcBeats(UgcGenerator gen, List<MET> metList)
-        => InvokeInstance<object>(gen, "FillUgcBeats", metList);
+    private static void FillUgcBeats(UgcGenerator gen, ChuChart chart)
+        => InvokeInstance<object>(gen, "FillUgcBeats", chart);
 
     private static List<(int Bar, int Num, int Den)> GetGeneratorUgcBeats(UgcGenerator gen)
         => GetInstanceField<List<(int, int, int)>>(gen, "_ugcBeats");
@@ -100,8 +100,30 @@ public class UgcTimeTests
     public void FillUgcBeats_MatchesTerminalUgcBeats()
     {
         var gen = new UgcGenerator();
-        FillUgcBeats(gen, LoadTerminalMetList());
+        var chart = new ChuChart();
+        chart.MetList.AddRange(LoadTerminalMetList());
+        FillUgcBeats(gen, chart);
         AssertBeatEntriesEqual(LoadTerminalUgcBeats(), GetGeneratorUgcBeats(gen));
+    }
+
+    [Fact]
+    public void UgcGenerator_IgnoresZeroNumeratorMeterAndKeepsMappingLaterNotes()
+    {
+        var chart = new ChuChart();
+        chart.MetList.AddRange([
+            new MET(Rational.Zero, 4, 4),
+            new MET(1, 1, 4),
+            new MET(3, 0, 4),
+        ]);
+        chart.BpmList.Add(new BPM(Rational.Zero, 120));
+        chart.Notes.Add(new ChuNote { Type = ChuNoteType.Tap, Time = 3, Cell = 0, Width = 1 });
+
+        var (ugc, alerts) = new UgcGenerator().Generate(chart);
+
+        Assert.Single(alerts);
+        Assert.Contains("@BEAT\t1\t1\t4", ugc);
+        Assert.DoesNotContain("@BEAT\t9\t0\t4", ugc);
+        Assert.Contains("#9'0:t01", ugc);
     }
 
     public static IEnumerable<object[]> ParserTCases =>

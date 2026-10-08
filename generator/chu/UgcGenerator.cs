@@ -12,7 +12,7 @@ public class UgcGenerator : IGenerator<ChuChart>
     private int RSL = 480 * 4;
     private List<Alert> alerts = [];
     public List<(string, string)> ExtraHeaders = [];
-    
+
     private int useTil = 0; // 当前的 @USETIL 值
 
     /**
@@ -45,7 +45,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         // 2. 遍历 chart.Notes，对每个 ChuNote 以 DFS 方式把它本身以及它所有 Next 子孙依次加入结果。
         var result = new List<ChuNote>(chart.Notes.Count);
         var visited = new HashSet<ChuNote>();
-        foreach (var root in chart.Notes.Where(x=>x.TargetNote == null)) Dfs(root);
+        foreach (var root in chart.Notes.Where(x => x.TargetNote == null)) Dfs(root);
         return result;
 
         void Dfs(ChuNote n)
@@ -86,12 +86,24 @@ public class UgcGenerator : IGenerator<ChuChart>
     }
     // 为了实现从上述 T函数 中的换算，所必要的信息。可通过CalcUgcBeats函数算出。
     private List<(int, int, int)> _ugcBeats = [];
-    
-    private void FillUgcBeats(List<MET> metList)
+
+    private void FillUgcBeats(ChuChart chart)
     {
         _ugcBeats = [];
-        foreach (var met in metList)
+        foreach (var origMet in chart.MetList)
         {
+            var met = origMet;
+            if (met.Numerator <= 0)
+            {
+                // See https://github.com/MuNET-OSS/MuConvert/pull/7#discussion_r4217218971 ,
+                // in official game, met.Numerator == 0 means there should be no "beat lines", which cannot be easily implemented in Umiguri.
+                // But this will cause DivideByZeroException in the `T` function, so we just force met.Numerator to be equals with met.Denominator.
+                alerts.Add(new Alert(Alert.LEVEL.Info, $"UgcGenerator 不支持使用MET拍号的分子小于等于0，来取消节拍提示线的语法。" +
+                                                       $"该处MET已被等效为\"MET {met.Time.WholePart} {(met.Time.FractionPart * 384).Round()} {met.Denominator} {met.Denominator}\"，即节拍提示线还是会正常显示。", 
+                    (chart, met.Time), relevantNote: $"MET {met.Time.WholePart} {(met.Time.FractionPart * 384).Round()} {met.Denominator} {met.Numerator}"));
+                met = met with { Numerator = met.Denominator };
+            }
+
             if (_ugcBeats.Count == 0)
             {
                 if (met.Time > 0) _ugcBeats.Add((0, 4, 4)); // 鲁棒性，补 @BEAT 0 4 4。不能continue，因为马上还要添加显式的那一条。
@@ -112,13 +124,15 @@ public class UgcGenerator : IGenerator<ChuChart>
             }
             _ugcBeats.Add((ugcBar, met.Numerator, met.Denominator));
         }
+
+        if (_ugcBeats.Count == 0) _ugcBeats.Add((0, 4, 4));
     }
 
     private string Serialize(ChuChart ugc)
     {
         ugc.Sort();
-        FillUgcBeats(ugc.MetList);
-        
+        FillUgcBeats(ugc);
+
         var sb = new StringBuilder();
         sb.AppendLine($"' Created with MuConvert v{Utils.AppVersion}");
         sb.AppendLine("@VER\t8");
@@ -161,15 +175,15 @@ public class UgcGenerator : IGenerator<ChuChart>
                 tilList[((t.Time + t.Duration).CanonicalForm, groupId)] = 1;
             }
         }
-        
+
         foreach (var s in tilList.ToList()
-                     .OrderBy(x=>(x.Key.time, x.Key.groupId)))
-        { 
-            var (m, o) = T(s.Key.time); 
+                     .OrderBy(x => (x.Key.time, x.Key.groupId)))
+        {
+            var (m, o) = T(s.Key.time);
             sb.AppendLine(FormattableString.Invariant($"@TIL\t{s.Key.groupId}\t{m}'{o}\t{s.Value:0.00000}"));
         }
         #endregion
-        
+
         sb.AppendLine("@MAINTIL\t0"); // 用户没有通过ExtraHeaders指定，则提供一个默认值
         sb.AppendLine("@ENDHEAD");
         sb.AppendLine();
@@ -232,7 +246,7 @@ public class UgcGenerator : IGenerator<ChuChart>
     }
 
     private static string EncodeAirHeight(decimal value) => IToH36(Math.Clamp((int)Math.Round(Height_ToUgc(value) * 10), 0, 1295)).PadLeft(2, '0');
-    
+
     private string AirColor(ChuNote n)
     {
         var color = AirColor_ToUgc(n);
@@ -241,7 +255,7 @@ public class UgcGenerator : IGenerator<ChuChart>
         return color;
     }
     private string CrushColor(ChuNote n) => AirCrush_Color_ToUgc[n.Color];
-    private string CrushInterval(Rational? crushInterval) => 
+    private string CrushInterval(Rational? crushInterval) =>
         crushInterval != null ? Utils.Tick(crushInterval.Value, RSL).ToString() : "$";
 
     private string UCode(ChuNote n)
