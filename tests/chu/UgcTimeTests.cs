@@ -84,8 +84,8 @@ public class UgcTimeTests
         }
     }
 
-    private static void FillUgcBeats(UgcGenerator gen, List<MET> metList)
-        => InvokeInstance<object>(gen, "FillUgcBeats", metList);
+    private static void FillUgcBeats(UgcGenerator gen, ChuChart chart)
+        => InvokeInstance<object>(gen, "FillUgcBeats", chart);
 
     private static List<(int Bar, int Num, int Den)> GetGeneratorUgcBeats(UgcGenerator gen)
         => GetInstanceField<List<(int, int, int)>>(gen, "_ugcBeats");
@@ -100,7 +100,9 @@ public class UgcTimeTests
     public void FillUgcBeats_MatchesTerminalUgcBeats()
     {
         var gen = new UgcGenerator();
-        FillUgcBeats(gen, LoadTerminalMetList());
+        var chart = new ChuChart();
+        chart.MetList.AddRange(LoadTerminalMetList());
+        FillUgcBeats(gen, chart);
         AssertBeatEntriesEqual(LoadTerminalUgcBeats(), GetGeneratorUgcBeats(gen));
     }
 
