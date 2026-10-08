@@ -20,7 +20,7 @@ public class C2sParser : BaseChuParser
     private static readonly HashSet<string> TimingTags = new(StringComparer.OrdinalIgnoreCase)
         { "BPM", "MET", "SFL", "SLP" };
 
-    private bool _used;
+    private int _version;
     // C2S 会原始记录 targetNote 字符串；用于在 FillAllPrevious 推断有多个候选时优先匹配。
     private readonly Dictionary<ChuNote, string> _rawTargetNote = new();
     private readonly Dictionary<(Rational Time, int Cell, int Width), List<(Rational, int)>> _slaRecords = new();
@@ -28,8 +28,7 @@ public class C2sParser : BaseChuParser
 
     public override (ChuChart, List<Alert>) Parse(string text)
     {
-        if (_used) throw new Exception(Locale.InstanceMultipleUsage);
-        _used = true;
+        if (_version > 0) throw new Exception(Locale.InstanceMultipleUsage);
         var chart = new ChuChart();
         var alerts = new List<Alert>();
         var lines = text.Replace("\r\n", "\n").Split('\n');
@@ -81,6 +80,10 @@ public class C2sParser : BaseChuParser
         var tag = p[0].ToUpperInvariant();
         switch (tag)
         {
+            case "VERSION":
+                var segs = p[1].Split('.').Select(int.Parse).ToArray();
+                _version = segs[0] * 100 + segs[1];
+                break;
             case "MUSIC": chart.MusicId = Int(p, 1).ToString(); break;
             case "DIFFICULT": chart.Difficulty = Int(p, 1); break;
             case "LEVEL": chart.Level = Decimal(p, 1); break;
@@ -128,7 +131,7 @@ public class C2sParser : BaseChuParser
         if (note.Type is ChuNoteType.Slide or ChuNoteType.Crush)
         {
             seg.EndCell = Int(p, durationIdx + 1);
-            seg.EndWidth = Math.Max(1, Int(p, durationIdx + 2, note.Width));
+            seg.EndWidth = Math.Max(1, Int(p, durationIdx + 2, note.EndWidth));
             if (note.IsAir) seg.EndHeight = Decimal(p, durationIdx + 3, 5);
         }
 
@@ -174,9 +177,10 @@ public class C2sParser : BaseChuParser
         {
             if (type == "CHR")
             {
+                note.Ex = ExDirection.UP; // default value when CHR direction parsing failed
                 var direction = Str(p, 5);
-                if (string.IsNullOrEmpty(direction)) note.Ex = ExDirection.UP;
-                else ParseEnum<ExDirection>(direction, x => note.Ex = x);
+                if (!(string.IsNullOrEmpty(direction) && _version < 108))
+                    ParseEnum<ExDirection>(direction, x => note.Ex = x);
             }
             else if (note is { Type: ChuNoteType.Tap, IsAir: true })
             {
