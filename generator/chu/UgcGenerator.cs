@@ -87,16 +87,21 @@ public class UgcGenerator : IGenerator<ChuChart>
     // 为了实现从上述 T函数 中的换算，所必要的信息。可通过CalcUgcBeats函数算出。
     private List<(int, int, int)> _ugcBeats = [];
 
-    private void FillUgcBeats(List<MET> metList)
+    private void FillUgcBeats(ChuChart chart)
     {
         _ugcBeats = [];
-        foreach (var met in metList)
+        foreach (var origMet in chart.MetList)
         {
-            if (met.Numerator <= 0 || met.Denominator <= 0)
+            var met = origMet;
+            if (met.Numerator <= 0)
             {
-                alerts.Add(new Alert(Alert.LEVEL.Warning,
-                    $"UGC Generator忽略无效拍号: {met.Numerator}/{met.Denominator}", met.Time));
-                continue;
+                // See https://github.com/MuNET-OSS/MuConvert/pull/7#discussion_r4217218971 ,
+                // in official game, met.Numerator == 0 means there should be no "beat lines", which cannot be easily implemented in Umiguri.
+                // But this will cause DivideByZeroException in the `T` function, so we just force met.Numerator to be equals with met.Denominator.
+                alerts.Add(new Alert(Alert.LEVEL.Info, $"UgcGenerator 不支持使用MET拍号的分子小于等于0，来取消节拍提示线的语法。" +
+                                                       $"该处MET已被等效为\"MET {met.Time.WholePart} {(met.Time.FractionPart * 384).Round()} {met.Denominator} {met.Denominator}\"，即节拍提示线还是会正常显示。", 
+                    (chart, met.Time), relevantNote: $"MET {met.Time.WholePart} {(met.Time.FractionPart * 384).Round()} {met.Denominator} {met.Numerator}"));
+                met = met with { Numerator = met.Denominator };
             }
 
             if (_ugcBeats.Count == 0)
@@ -126,7 +131,7 @@ public class UgcGenerator : IGenerator<ChuChart>
     private string Serialize(ChuChart ugc)
     {
         ugc.Sort();
-        FillUgcBeats(ugc.MetList);
+        FillUgcBeats(ugc);
 
         var sb = new StringBuilder();
         sb.AppendLine($"' Created with MuConvert v{Utils.AppVersion}");
