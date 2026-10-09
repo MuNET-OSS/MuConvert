@@ -1,7 +1,5 @@
-using System.Globalization;
 using System.Text;
 using MuConvert.mai;
-using MuConvert.utils;
 using Xunit.Abstractions;
 using static MuConvert.Tests.mai.TestUtils;
 
@@ -12,7 +10,7 @@ public class Simai片段测试
     private readonly ITestOutputHelper _output;
 
     public Simai片段测试(ITestOutputHelper output) => _output = output;
-    public static IEnumerable<object[]> FragmentYamlFiles()
+    public static IEnumerable<object[]> FragmentYamlFiles(string? filter = null)
     {
         var root = Path.Combine(FindTestsetRoot().FullName, "片段");
         if (!Directory.Exists(root))
@@ -20,11 +18,22 @@ public class Simai片段测试
 
         foreach (var path in Directory.EnumerateFiles(root, "*.yaml", SearchOption.TopDirectoryOnly)
                      .OrderBy(p => p, StringComparer.Ordinal))
-            yield return [TestSegment.Load(path)];
+        {
+            var seg = TestSegment.Load(path);
+            Assert.True(seg.HasSimai || seg.HasMa2); // 至少要有一个，不然是无效测例
+            var ok = filter switch
+            {
+                "both" => seg.HasSimai && seg.HasMa2,
+                "simaiOnly" => seg.HasSimai && !seg.HasMa2,
+                "ma2Only" => !seg.HasSimai && seg.HasMa2,
+                _ => true
+            };
+            if (ok) yield return [seg];
+        }
     }
 
     [Theory]
-    [MemberData(nameof(FragmentYamlFiles))]
+    [MemberData(nameof(FragmentYamlFiles), "both")]
     public void Simai片段转MA2(TestSegment c)
     {
         var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
@@ -35,6 +44,24 @@ public class Simai片段测试
         var actual = KeepNotesOnly(ma2Full);
         var expected = NormalizeMa2Block(c.Ma2);
         AssertMa2NotesEqual(expected, actual, c.ToString());
+    }
+    
+    [Theory]
+    [MemberData(nameof(FragmentYamlFiles), "simaiOnly")]
+    public void Simai_Roundtrip(TestSegment c)
+    {
+        var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
+        var (ma2Full, genAlerts) = new MA2Generator().Generate(chart);
+        _output.WriteLine(string.Join('\n', parseAlerts));
+        _output.WriteLine(string.Join('\n', genAlerts));
+        
+        var (chart2, parseAlerts2) = new MA2Parser().Parse(ma2Full);
+        var (simaiRegenerated, genAlerts2) = new SimaiGenerator().Generate(chart2);
+        _output.WriteLine(string.Join('\n', parseAlerts2));
+        _output.WriteLine(string.Join('\n', genAlerts2));
+        
+        Assert.Equal(c.Simai.ReplaceLineEndings(""), simaiRegenerated.ReplaceLineEndings("")); // 暂时直接做字符串完全匹配，这样暂时是够用的。
+        // AssertSimaiNotesEqual(c.Simai, simaiRegenerated, chart2, _output); // 如果之后不够用了。可以优先考虑开启这个
     }
 
     private static string NormalizeMa2Block(string text)
@@ -51,68 +78,5 @@ public class Simai片段测试
         while (sb.Length > 0 && sb[^1] == '\n' && (sb.Length == 1 || sb[^2] == '\n'))
             sb.Length--;
         return sb.ToString().TrimEnd();
-    }
-
-    private static (int TimeTick, int Len, string Extra) GetSlideTime(string slide)
-    {
-        var values = slide.Split('\t');
-        return (int.Parse(values[1], CultureInfo.InvariantCulture) * 384 + int.Parse(values[2], CultureInfo.InvariantCulture),
-            int.Parse(values[5], CultureInfo.InvariantCulture),
-            string.Join("\t", values[0], values[3], values[4], values[6]));
-    }
-
-    private static bool CompareLine(string exp, string act)
-    {
-        var result = string.Equals(exp, act, StringComparison.Ordinal);
-        if (!result && exp.Length >= 5 && act.Length >= 5 && exp[..5] == act[..5] && SlideTypeTool.IsSlide(exp[2..5]))
-        {
-            var (expTime, expLen, expExtra) = GetSlideTime(exp);
-            var (actTime, actLen, actExtra) = GetSlideTime(act);
-            if (expExtra != actExtra) return result;
-            if (exp[..2] == "CN")
-            {
-                if (expTime + expLen == actTime + actLen || Math.Abs(expLen - actLen) <= 1) result = true;
-            }
-            else
-            {
-                if (expTime == actTime && Math.Abs(expLen - actLen) <= 1) result = true;
-            }
-        }
-
-        return result;
-    }
-
-    private static void AssertMa2NotesEqual(string expected, string actual, string context)
-    {
-        var expectedLines = expected.Split('\n');
-        var actualLines = actual.Split('\n');
-        var max = Math.Max(expectedLines.Length, actualLines.Length);
-
-        for (var i = 0; i < max; i++)
-        {
-            var exp = i < expectedLines.Length ? expectedLines[i] : "<EOF>";
-            var act = i < actualLines.Length ? actualLines[i] : "<EOF>";
-            var result = CompareLine(exp, act);
-            if (!result)
-            {
-                for (var j = 1; j < Math.Min(expectedLines.Length, i + 5); j++)
-                {
-                    if (CompareLine(expectedLines[j], act))
-                    {
-                        (expectedLines[j], expectedLines[i]) = (expectedLines[i], expectedLines[j]);
-                        result = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!result)
-            {
-                Assert.Fail(
-                    $"{context}: first difference at line {i + 1}:{Environment.NewLine}" +
-                    $"EXPECTED: {exp}{Environment.NewLine}" +
-                    $"ACTUAL  : {act}");
-            }
-        }
     }
 }

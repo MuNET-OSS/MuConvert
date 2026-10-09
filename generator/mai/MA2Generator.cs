@@ -33,6 +33,7 @@ public class MA2Generator : IGenerator<MaiChart>
     protected MaiChart chart;
     protected List<MA2Line> lines = [];
     protected readonly List<Alert> alerts = [];
+    private HashSet<(int, int)> _slideEnds = []; // 登记一下每个Slide的最终结束时间。用于AddSlide函数中“防止多段星星的CN连接的歧义”的逻辑。
     
     private string headTemplate = @"VERSION	0.00.00	{0}
 FES_MODE	{1}
@@ -51,6 +52,7 @@ GENERATED_BY	MuConvert v{8}
      * 把Rational的时间近似到RESOLUTION允许的最接近tick上
      */
     private (int, int) BT(Rational r, int offset = 0) => Utils.BarAndTick(r, RSL, offset);
+    private (int, int) BT(int totalTick) => (totalTick / RSL, totalTick % RSL);
 
     // 持续时间/等待时间，使用"总tick数"（可超过1小节），不是小节内tick
     protected int T(Rational r, int offset = 0) => Utils.Tick(r, RSL, offset, r > 0 ? 1 : 0);
@@ -96,6 +98,7 @@ GENERATED_BY	MuConvert v{8}
     protected virtual List<MA2Line> AddSlide(Slide slide, int bar, int tick)
     {
         List<MA2Line> result = [];
+        List<(string name, int totalTick, SlideSegment seg, int waitTime, int len)> resSegs = [];
         if (slide.OwnHead != null)
         {
             var headTap = AddTap(slide.OwnHead, bar, tick);
@@ -134,6 +137,7 @@ GENERATED_BY	MuConvert v{8}
         var toAssignValue = unassignedValue / unassignedCount; // 未分配的时间分配给所有未分配段，每段分配到的量
         # endregion
         
+        int totalTick = bar * RSL + tick;
         int segIdx;
         for (segIdx = 0; segIdx < slide.segments.Count; segIdx++)
         {
@@ -150,14 +154,31 @@ GENERATED_BY	MuConvert v{8}
                 if (slide.IsBreak) prefix = "BR";
                 waitTime = T(slide.WaitTime.Bar, -slide.FalseEachIdx);
             }
-            else prefix = "CN";
+            else
+            {
+                prefix = "CN";
+                // 对于CN段，需要主动检查并规避“它恰好和某个在先的Slide尾部完全重合”的情况，
+                // 否则游戏逻辑会把这个CN段接在这个“在先Slide”的后面，造成星星连接错误。
+                // 测试样例详见 tests/mai/testset/片段/多段星星CN连接的歧义.yaml，以及PR #8中的分析。
+                while (_slideEnds.Contains((totalTick, seg.StartKey)))
+                { // 说明命中了上述情况。此时，应该调整当前段和上一段的时间分配来规避掉问题。
+                    resSegs[^1] = resSegs[^1] with { len = resSegs[^1].len + 1 };
+                    totalTick++; // 以上两行实现的是，把当前段的时刻往后挪1tick。
+                    if (len > 1) len--; // 那么长度自然就要补偿这1tick。要么在当前段的len里补偿、从而后面段的开始时刻不受影响；
+                    else if (totalLen > 1) totalLen--; // 要么就在“剩余长度”中补偿，从而下一段也还是晚开始1tick。
+                }
+            }
 
-            var name = seg.Type.ToString();
-            
-            result.Add(new MA2Line(prefix + name, bar, tick, seg.StartKey - 1,
-                string.Join("\t", [waitTime, len, seg.EndKey - 1])));
-            tick += waitTime + len;
-            while (tick >= RSL) { tick -= RSL; bar++; }
+            resSegs.Add((prefix + seg.Type, totalTick, seg, waitTime, len));
+            totalTick += waitTime + len;
+        }
+
+        _slideEnds.Add((totalTick, slide.EndKey));
+        foreach (var r in resSegs)
+        {
+            var (b, t) = BT(r.totalTick);
+            result.Add(new MA2Line(r.name, b, t, r.seg.StartKey - 1,
+                string.Join("\t", [r.waitTime, r.len, r.seg.EndKey - 1])));
         }
 
         if (slide.IsEx) Warn(Locale.ExSlideIn105, slide);
