@@ -1,7 +1,10 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using MuConvert.mai;
 using MuConvert.utils;
+using Rationals;
+using Xunit.Abstractions;
 using YamlDotNet.Serialization;
 
 namespace MuConvert.Tests.mai;
@@ -66,7 +69,7 @@ internal static class TestUtils
 
     /// <summary>
     /// 提取 MA2 音符段至 <c>T_REC</c> 之前：跳过头部与 <c>BPM</c> 行；若存在 <c>MET\t</c> 小节行则跳过该行；
-    /// 部分旧官谱 golden 无 <c>MET</c>，则在 <c>BPM</c> 块后的首条非头行开始收集。与 <see cref="Simai片段测试"/> / <see cref="MA2_103测试"/> 断言用逻辑一致。
+    /// 部分旧官谱 golden 无 <c>MET</c>，则在 <c>BPM</c> 块后的首条非头行开始收集。
     /// </summary>
     public static string KeepNotesOnly(string text)
     {
@@ -102,6 +105,85 @@ internal static class TestUtils
         line.StartsWith("BPM\t", StringComparison.Ordinal) ||
         line.StartsWith("MET\t", StringComparison.Ordinal) ||
         line.StartsWith("CLK\t", StringComparison.Ordinal);
+
+    /// <summary>
+    /// 比较 MA2 音符行：逐行对齐；同 tick 内允许顺序不同；slide 长度允许 ±1（CN 另允许尾时刻对齐）。
+    /// </summary>
+    public static void AssertMa2NotesEqual(string expected, string actual, string? context = null)
+    {
+        var expectedLines = expected.Split('\n');
+        var actualLines = actual.Split('\n');
+        var max = Math.Max(expectedLines.Length, actualLines.Length);
+        var prefix = string.IsNullOrEmpty(context) ? "" : $"{context}: ";
+
+        for (var i = 0; i < max; i++)
+        {
+            var exp = i < expectedLines.Length ? expectedLines[i] : "<EOF>";
+            var act = i < actualLines.Length ? actualLines[i] : "<EOF>";
+            var result = CompareMa2NoteLine(exp, act);
+            if (!result && i < actualLines.Length)
+            {
+                // 尝试同一时刻的其他 expected 行：匹配则交换到当前位置
+                var j = i + 1;
+                while (j < expectedLines.Length)
+                {
+                    if (CompareMa2NoteLine(expectedLines[j], act))
+                    {
+                        (expectedLines[j], expectedLines[i]) = (expectedLines[i], expectedLines[j]);
+                        result = true;
+                        break;
+                    }
+
+                    if (IsSameTime(expectedLines[j], act))
+                    {
+                        j++;
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
+            if (!result)
+            {
+                Assert.Fail(
+                    $"{prefix}first difference at line {i + 1}:{Environment.NewLine}" +
+                    $"EXPECTED: {exp}{Environment.NewLine}" +
+                    $"ACTUAL  : {act}");
+            }
+        }
+    }
+
+    private static (int TimeTick, int Len, string Extra) GetSlideTime(string slide)
+    {
+        var values = slide.Split('\t');
+        return (int.Parse(values[1], CultureInfo.InvariantCulture) * 384 + int.Parse(values[2], CultureInfo.InvariantCulture),
+            int.Parse(values[5], CultureInfo.InvariantCulture),
+            string.Join("\t", values[0], values[3], values[4], values[6]));
+    }
+
+    private static bool CompareMa2NoteLine(string exp, string act)
+    {
+        var result = string.Equals(exp, act, StringComparison.Ordinal);
+        if (!result && exp.Length >= 5 && act.Length >= 5 && exp[..5] == act[..5] && SlideTypeTool.IsSlide(exp[2..5]))
+        {
+            var (expTime, expLen, expExtra) = GetSlideTime(exp);
+            var (actTime, actLen, actExtra) = GetSlideTime(act);
+            if (expExtra != actExtra) return result;
+            if (exp[..2] == "CN")
+            {
+                // CN：要么尾时刻完全对，要么长度至多差 1
+                if (expTime + expLen == actTime + actLen || Math.Abs(expLen - actLen) <= 1) result = true;
+            }
+            else
+            {
+                // 首段：开始时刻必须对且长度至多差 1
+                if (expTime == actTime && Math.Abs(expLen - actLen) <= 1) result = true;
+            }
+        }
+
+        return result;
+    }
     
     public static MaiChart LoadOneChart(out List<Alert> alerts)
     {
@@ -141,6 +223,14 @@ internal static class TestUtils
                 yield return [new TestInput(maidataPath, id)];
             }
         }
+    }
+
+    public static void AssertSimaiNotesEqual(string expected, string actual, MaiChart chart,
+        ITestOutputHelper? outputHelper = null)
+    {
+        var expectedTimeline = SimaiCommaTimeline.Flatten(expected);
+        var actualTimeline = SimaiCommaTimeline.Flatten(actual);
+        SimaiCommaTimeline.AssertTimelineEqual(expectedTimeline, actualTimeline, chart, outputHelper);
     }
 }
 
@@ -198,4 +288,278 @@ public record TestInput(string Maidata, int LevelId)
     }
     
     public override string ToString() => $"{Path.GetFileName(Dir)}-lv{LevelId}";
+}
+
+/// <summary>
+/// 按 Simai 文法 <c>chart: (notations ',')*</c> 将谱面切成顶层逗号分段，并在每个分段上复现与
+/// <see cref="MuConvert.mai.SimaiParser"/> 一致的 <c>now</c> / <c>step</c> 推进规则，
+/// 得到 (时刻, 原文) 序列；不构造 Note，不把片段再交给 SimaiParser。
+/// </summary>
+internal static partial class SimaiCommaTimeline
+{
+    /// <summary>与谱面语义相关的条目：BPM 标记、音符/休止以外的 met 变更等只影响 step，不单独出条。</summary>
+    public readonly record struct Entry(Rational Time, string Text);
+
+    public static List<Entry> Flatten(string simai)
+    {
+        var parts = simai.Split(',').Select(x => x.Trim()).ToList();
+        if (parts.Last() == "E") parts.RemoveAt(parts.Count - 1);
+        var now = new Rational(0);
+        var step = new Rational(1, 4);
+        var currentBpm = 60m;
+        decimal? absStepSeconds = null;
+        var list = new List<Entry>();
+
+        foreach (var part in parts)
+        {
+            if (part.Length > 0)
+            {
+                ParseNotationsSegment(part.AsSpan(), now, ref currentBpm, ref step, ref absStepSeconds, list);
+            }
+            now = (now + step).CanonicalForm;
+        }
+
+        return list;
+    }
+
+    public static void AssertTimelineEqual(
+        IReadOnlyList<Entry> expected,
+        IReadOnlyList<Entry> actual,
+        MaiChart chart,
+        ITestOutputHelper? output = null)
+    {
+        static IEnumerable<Entry> Canon(IReadOnlyList<Entry> e) =>
+            e.Select(x => new Entry(x.Time, NormalizeForCompare(x.Text)))
+                .OrderBy(p => p.Time)
+                .ThenBy(p => p.Text, StringComparer.Ordinal);
+
+        expected = Canon(expected).ToList();
+        actual = Canon(actual).ToList();
+        Assert.Equal(expected.Count, actual.Count);
+
+        for (var i = 0; i < expected.Count; i++)
+        {
+            try
+            {
+                Assert.Equal(expected[i].Time, actual[i].Time);
+                AssertNoteEqual(expected[i].Text, actual[i].Text, i, actual[i].Time, chart);
+            }
+            catch (Xunit.Sdk.XunitException)
+            {
+                output?.WriteLine(FormatNeighborhood(expected, actual, i).TrimEnd());
+                throw;
+            }
+        }
+    }
+
+    [GeneratedRegex(@"\[(?:([\d\.]+)##)?(?:(\d+):(\d+)|#?([\d\.]+))\]")]
+    private static partial Regex DurationStrRegex();
+    
+    private static bool Near(double a, double b) => Math.Abs(a - b) < 1e-3;
+    
+    private static void AssertNoteEqual(string expected, string actual, int noteIdx, Rational time, MaiChart chart)
+    {
+        var expArr = RearrangeNote(expected).Split('/', '`', '*');
+        var actArr = RearrangeNote(actual).Split('/', '`', '*');
+        var max = Math.Max(expArr.Length, actArr.Length);
+
+        for (var i = 0; i < max; i++)
+        {
+            var exp = i < expArr.Length ? expArr[i] : "<EOF>";
+            var act = i < actArr.Length ? actArr[i] : "<EOF>";
+            var result = exp == act;
+            
+            if (!result && exp.StartsWith("C1"))
+            { // groundtruth里有一部分是写成了C1，此时不要报错，应该给予兼容。
+                exp = exp.Replace("C1", "C");
+                result = exp == act;
+            }
+            
+            if (!result) result = CompareDurationStr(exp, act, time, chart);
+
+            if (!result) Assert.Fail(
+                $"First difference at Notation {noteIdx + 1} (time {time}):{Environment.NewLine}" +
+                $"EXPECTED: {expected}{Environment.NewLine}" +
+                $"ACTUAL  : {actual}"
+            );
+        }
+    }
+
+    private static bool CompareDurationStr(string exp, string act, Rational time, MaiChart chart)
+    {
+        bool result = false;
+        // 尝试是否是只有时间不匹配，如果是的话，允许一定的阈值
+        var expTime = DurationStrRegex().Match(exp);
+        var actTime = DurationStrRegex().Match(act);
+        if (!expTime.Success || !actTime.Success) return result;
+        var expRemain = exp[..expTime.Index] + exp[(expTime.Index + expTime.Length)..];
+        var actRemain = act[..expTime.Index] + act[(actTime.Index + actTime.Length)..];
+        if (actRemain != expRemain) return result; // 如果除了时间以外还有其他不一样的，那么直接返回false
+        
+        // 对act产生的时间标记，做规范性检查。对齐到标准中的每一条
+        if (actRemain.Contains('h'))
+        { // Hold / TouchHold
+            Assert.False(actTime.Groups[1].Success, $"Hold/TouchHold不应该有等待时间！{act}");
+            if (actTime.Groups[4].Success)
+            { // 绝对时长的情况
+                Assert.True(act[actTime.Groups[4].Index - 1] == '#', $"Hold/TouchHold格式不正确，绝对时长的前面必须带一个井号！{act}");
+            }
+        }
+        else
+        {
+            if (actTime.Groups[4].Success)
+            { // 绝对时长的情况，前面必须是'bpm#'或'等待时间##'。我们不考虑前面一种情况，则应该断言一定是第二种情况出现了
+                Assert.True(actTime.Groups[1].Success && actTime.Groups[1].Index + actTime.Groups[1].Length == actTime.Groups[4].Index, $"星星持续时长使用了非标准语法！{act}");
+            }
+        }
+        
+        var bpm = chart.BpmList.Find(time).Bpm;
+        if (expTime.Groups[2].Success && actTime.Groups[4].Success)
+        { // exp中是分数时间、act中是小数时间的情况
+            // 小数时间化为分数时间，看看是否对的上
+            var numer = decimal.Parse(actTime.Groups[4].Value) / (240 / bpm) * int.Parse(expTime.Groups[2].Value);
+            if (Math.Round(numer) == int.Parse(expTime.Groups[3].Value)) result = true; // 如果对的上，则不判定为比较失败
+        }
+        else if (actTime.Groups[2].Success && expTime.Groups[4].Success)
+        { // exp中是小数时间、act中是分数时间的情况
+            // 分数时间化为小数时间，看是否对的上（差距<1ms）
+            var sec = new Rational(int.Parse(actTime.Groups[3].Value), int.Parse(actTime.Groups[2].Value)) * (240 / (Rational)bpm);
+            if (Near((double)sec, double.Parse(expTime.Groups[4].Value))) result = true; // 如果对的上，则不判定为比较失败
+        }
+        else if (actTime.Groups[4].Success && expTime.Groups[4].Success)
+        { // exp中是小数时间、act中是小数时间的情况
+            var expSec = double.Parse(expTime.Groups[4].Value);
+            var actSec = double.Parse(actTime.Groups[4].Value);
+            if (Near(expSec, actSec)) result = true; // 如果对的上，则不判定为比较失败
+        }
+                
+        // 比较等待时间是否相等（没显式写出的就是1拍）
+        var expWait = expTime.Groups[1].Success ? double.Parse(expTime.Groups[1].Value) : 60 / (double)bpm;
+        var actWait = actTime.Groups[1].Success ? double.Parse(actTime.Groups[1].Value) : 60 / (double)bpm;
+        if (!Near(expWait, actWait)) result = false; // 如果等待时间对不上，则仍判定为比较失败
+        return result;
+    }
+
+    private static string RearrangeNote(string s)
+    {
+        return string.Join('`', s.Split('`').Select(x =>
+        {
+            var t = x.Split('/');
+            t.Sort();
+            return string.Join('/', t);
+        }));
+    }
+
+    private static string FormatNeighborhood(IReadOnlyList<Entry> a, IReadOnlyList<Entry> b, int i)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("--- context (expected) ---");
+        for (var j = Math.Max(0, i - 3); j < Math.Min(a.Count, i + 5); j++)
+            sb.AppendLine($"  [{j}] {a[j].Time} | {a[j].Text}");
+        sb.AppendLine("--- context (actual) ---");
+        for (var j = Math.Max(0, i - 3); j < Math.Min(b.Count, i + 5); j++)
+            sb.AppendLine($"  [{j}] {b[j].Time} | {b[j].Text}");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 去掉空白、统一 b/x/f 连续修饰符的字典序，便于与「别的转谱器」对照。
+    /// </summary>
+    internal static string NormalizeForCompare(string s)
+    {
+        s = s.Trim().Replace("\r", "").Replace("\n", "");
+        s = Regex.Replace(s, @"\s+", "");
+        s = Regex.Replace(s, @"(\[[\d\.#:]+\])b", m => "b" + m.Groups[1].Value); // 其实严格根据文档，对星星"1-4[8:3]b"是正确的，而对hold"4hb[8:3]"才是正确的。我们的SimaiGenerator是严格按标准输出的，但出于比较的简单考虑，还是全部统一到"4hb[8:3]"这种情况下，处理起来简单一点。
+        s = Regex.Replace(s, "[bxfh]{2,}", m => new string(m.Value.OrderBy(c => c).ToArray()));
+        return s;
+    }
+
+    private static void ParseNotationsSegment(
+        ReadOnlySpan<char> span,
+        Rational now,
+        ref decimal currentBpm,
+        ref Rational step,
+        ref decimal? absStepSeconds,
+        List<Entry> list)
+    {
+        var i = 0;
+        while (i < span.Length)
+        {
+            while (i < span.Length && char.IsWhiteSpace(span[i]))
+                i++;
+            if (i >= span.Length)
+                break;
+
+            if (span[i] == '(')
+            {
+                var close = span[i..].IndexOf(')');
+                if (close < 0)
+                    throw new InvalidOperationException("Unclosed '(' in simai segment: " + span.ToString());
+                close += i;
+                var inner = span[(i + 1)..close];
+                if (!decimal.TryParse(inner.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var bpm))
+                    throw new InvalidOperationException("Bad BPM: " + inner.ToString());
+                list.Add(new Entry(now, $"({inner})"));
+                currentBpm = bpm;
+                if (absStepSeconds is { } abs)
+                    step = (Rational)abs / (240 / (Rational)currentBpm);
+                i = close + 1;
+                continue;
+            }
+
+            if (span[i] == '{')
+            {
+                var close = FindClosingBrace(span, i);
+                var inner = span[(i + 1)..close];
+                i = close + 1;
+                if (inner.Length > 0 && inner[0] == '#')
+                {
+                    var num = inner[1..].Trim();
+                    if (!decimal.TryParse(num, NumberStyles.Number, CultureInfo.InvariantCulture, out var sec))
+                        throw new InvalidOperationException("Bad absolute step: " + inner.ToString());
+                    absStepSeconds = sec;
+                    step = (Rational)absStepSeconds.Value / (240 / (Rational)currentBpm);
+                }
+                else
+                {
+                    absStepSeconds = null;
+                    if (!int.TryParse(inner.Trim(), out var quaver) || quaver <= 0)
+                        throw new InvalidOperationException("Bad met: {" + inner.ToString() + "}");
+                    step = new Rational(1, quaver);
+                }
+                continue;
+            }
+
+            var bracket = 0;
+            var start = i;
+            while (i < span.Length)
+            {
+                var c = span[i];
+                if (c == '[') bracket++;
+                else if (c == ']' && bracket > 0) bracket--;
+                if (bracket == 0 && (c == '(' || c == '{'))
+                    break;
+                i++;
+            }
+
+            var noteSpan = span[start..i].Trim();
+            if (noteSpan.Length > 0)
+                list.Add(new Entry(now, noteSpan.ToString()));
+        }
+    }
+
+    private static int FindClosingBrace(ReadOnlySpan<char> span, int openIdx)
+    {
+        var d = 0;
+        for (var j = openIdx; j < span.Length; j++)
+        {
+            if (span[j] == '{') d++;
+            else if (span[j] == '}')
+            {
+                d--;
+                if (d == 0) return j;
+            }
+        }
+        throw new InvalidOperationException("Unclosed '{' in simai segment.");
+    }
 }
