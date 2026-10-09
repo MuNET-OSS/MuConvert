@@ -260,14 +260,11 @@ public sealed class TestSegment
         seg.YamlFileName = yamlFileName;
         seg.Simai = seg.Simai.Trim();
         seg.Ma2 = seg.Ma2.Trim();
-
-        if (string.IsNullOrWhiteSpace(seg.Simai))
-            throw new FormatException($"{yamlPath}: 缺少或为空 simai");
-        if (string.IsNullOrWhiteSpace(seg.Ma2))
-            throw new FormatException($"{yamlPath}: 缺少或为空 ma2");
-        
         return seg;
     }
+
+    public bool HasSimai => !string.IsNullOrWhiteSpace(Simai);
+    public bool HasMa2 => !string.IsNullOrWhiteSpace(Ma2);
 }
 
 public record TestInput(string Maidata, int LevelId)

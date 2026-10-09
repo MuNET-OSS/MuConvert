@@ -10,7 +10,7 @@ public class Simai片段测试
     private readonly ITestOutputHelper _output;
 
     public Simai片段测试(ITestOutputHelper output) => _output = output;
-    public static IEnumerable<object[]> FragmentYamlFiles()
+    public static IEnumerable<object[]> FragmentYamlFiles(string? filter = null)
     {
         var root = Path.Combine(FindTestsetRoot().FullName, "片段");
         if (!Directory.Exists(root))
@@ -18,11 +18,22 @@ public class Simai片段测试
 
         foreach (var path in Directory.EnumerateFiles(root, "*.yaml", SearchOption.TopDirectoryOnly)
                      .OrderBy(p => p, StringComparer.Ordinal))
-            yield return [TestSegment.Load(path)];
+        {
+            var seg = TestSegment.Load(path);
+            Assert.True(seg.HasSimai || seg.HasMa2); // 至少要有一个，不然是无效测例
+            var ok = filter switch
+            {
+                "both" => seg.HasSimai && seg.HasMa2,
+                "simaiOnly" => seg.HasSimai && !seg.HasMa2,
+                "ma2Only" => !seg.HasSimai && seg.HasMa2,
+                _ => true
+            };
+            if (ok) yield return [seg];
+        }
     }
 
     [Theory]
-    [MemberData(nameof(FragmentYamlFiles))]
+    [MemberData(nameof(FragmentYamlFiles), "both")]
     public void Simai片段转MA2(TestSegment c)
     {
         var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
@@ -33,6 +44,24 @@ public class Simai片段测试
         var actual = KeepNotesOnly(ma2Full);
         var expected = NormalizeMa2Block(c.Ma2);
         AssertMa2NotesEqual(expected, actual, c.ToString());
+    }
+    
+    [Theory]
+    [MemberData(nameof(FragmentYamlFiles), "simaiOnly")]
+    public void Simai_Roundtrip(TestSegment c)
+    {
+        var (chart, parseAlerts) = new SimaiParser().Parse(c.Simai);
+        var (ma2Full, genAlerts) = new MA2Generator().Generate(chart);
+        _output.WriteLine(string.Join('\n', parseAlerts));
+        _output.WriteLine(string.Join('\n', genAlerts));
+        
+        var (chart2, parseAlerts2) = new MA2Parser().Parse(ma2Full);
+        var (simaiRegenerated, genAlerts2) = new SimaiGenerator().Generate(chart2);
+        _output.WriteLine(string.Join('\n', parseAlerts2));
+        _output.WriteLine(string.Join('\n', genAlerts2));
+        
+        Assert.Equal(c.Simai, simaiRegenerated.ReplaceLineEndings("")); // 暂时直接做字符串完全匹配，这样暂时是够用的。
+        // AssertSimaiNotesEqual(c.Simai, simaiRegenerated, chart2, _output); // 如果之后不够用了。可以优先考虑开启这个
     }
 
     private static string NormalizeMa2Block(string text)
