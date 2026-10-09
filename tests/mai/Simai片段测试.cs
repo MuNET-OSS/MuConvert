@@ -60,7 +60,7 @@ public class Simai片段测试
         _output.WriteLine(string.Join('\n', parseAlerts2));
         _output.WriteLine(string.Join('\n', genAlerts2));
         
-        Assert.Equal(c.Simai, simaiRegenerated.ReplaceLineEndings("")); // 暂时直接做字符串完全匹配，这样暂时是够用的。
+        Assert.Equal(c.Simai.ReplaceLineEndings(""), simaiRegenerated.ReplaceLineEndings("")); // 暂时直接做字符串完全匹配，这样暂时是够用的。
         // AssertSimaiNotesEqual(c.Simai, simaiRegenerated, chart2, _output); // 如果之后不够用了。可以优先考虑开启这个
     }
 
